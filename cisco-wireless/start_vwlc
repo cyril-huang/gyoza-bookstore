@@ -1,0 +1,57 @@
+#!/bin/sh
+:<<EOF
+# Cisco VWLC with VLAN switch required
+EOF
+
+if [ "`id -u`" != "0" ]; then
+    echo "root privilege required to run ip link and bridge vlan commands"
+    exit 1
+fi
+
+vwlc=${1-vwlc}
+
+if [ ! -f ${vwlc}.img ]; then
+    echo ""
+    echo "No $vwlc.img available, create ${vwlc}.img with 16G size"
+    qemu-img create -f qcow2 ${vwlc}.img 16G
+    echo "run `basename $0` ${vwlc} -cdrom MFG_CTVM_SMALL_8.10.190.0.iso"
+    exit 1
+fi
+
+ip link show mgmt-br 2>/dev/null|| ip link add dev mgmt-br type bridge vlan_filtering 1
+ip link show service-br 2>/dev/null || ip link add dev service-br type bridge vlan_filtering 1
+ip link show mgmt-vwlc 2>/dev/null || ip tuntap add mode tap dev mgmt-vwlc
+ip link show service-vwlc 2>/dev/null || ip tuntap add mode tap dev service-vwlc
+ip link set dev mgmt-vwlc master mgmt-br up
+ip link set dev service-vwlc master service-br up
+ip link set dev mgmt-br up
+ip link set dev enp1s0 master mgmt-br up
+[ "`ip addr show mgmt-br 2>/dev/null | grep 192.168.1.1`" ] || ip addr add 192.168.1.1/24 dev mgmt-br
+#/sbin/bridge vlan add vid 1 dev mgmt-vwlc pvid
+/sbin/bridge vlan
+echo ""
+echo "Bridge mgmt-br details"
+echo "======================"
+ip addr show dev mgmt-br
+ip -d link show master mgmt-br
+
+/sbin/sysctl -w net.ipv4.conf.all.forwarding=1
+# masquarde rules with 2 nics,
+# eno1 is outside with 10.0.0.0/24
+# enp1s0 is inside with 192.168.1.0/24 and controller/AP/dhcpserver
+# all traffic out eno1 if src is 192.168.1.x, change src ip address
+[ "`/sbin/iptables -t nat -L | grep 192.168.1.0`" ] || /sbin/iptables -t nat -A POSTROUTING -o eno1 -s 192.168.1.0/24  -j MASQUERADE
+# /sbin/iptables -A FORWARD -i mgmt-br -j ACCEPT
+# check what we have
+/sbin/iptables-save -c
+
+[ "$1" ] && shift && qemu_extra=$*
+qemu-system-x86_64 -m 4g -smp 2 -enable-kvm -netdev tap,ifname=service-vwlc,id=service,script=no -device virtio-net-pci,netdev=service,mac=52:54:00:11:22:33 -netdev tap,ifname=mgmt-vwlc,id=mgmt,script=no -device virtio-net-pci,netdev=mgmt,mac=52:54:00:ab:cd:ef  -drive file=${vwlc}.img,format=qcow2 $qemu_extra &
+
+:<<EOF
+# DHCP server required for AP to join, if there is no one on the network
+EOF
+ip link show dhcpserver 2>/dev/null || ip tuntap add mode tap dev dhcpserver 
+ip link set dev dhcpserver master mgmt-br up
+[ "`ps -C qemu-system-x86_64 -o args 2>/dev/null | grep dhcpserver`" ] ||
+qemu-system-x86_64 -m 2g -smp 1 -enable-kvm -netdev tap,ifname=dhcpserver,id=dhcpserver,script=no -device virtio-net-pci,netdev=dhcpserver,mac=52:54:00:65:43:21 -drive file=dhcpserver.img,format=qcow2 &

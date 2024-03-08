@@ -1,0 +1,287 @@
+%      Copyright (c)  2023 Cyril Huang, Gyoza Workshop
+%      Permission is granted to copy, distribute and/or modify this document
+%      under the terms of the GNU Free Documentation License, Version 1.1
+%      or any later version published by the Free Software Foundation;
+%      with the Invariant Sections being LIST THEIR TITLES, with the
+%      Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+%      A copy of the license is included in the section entitled "GNU
+%      Free Documentation License".
+
+\documentclass[10pt,t]{beamer}
+\usepackage{xeCJK}
+\usepackage{xcolor}
+\usepackage{listings}
+\setCJKmainfont{Noto Sans TC}
+
+\usetheme{Warsaw}
+\setbeamertemplate{background}{
+  \includegraphics[width=\paperwidth,height=\paperheight]{images/bg.jpg}
+}
+
+\title{用 \LaTeX 做簡報}
+\author{
+  大頭
+  \inst{1}
+  \and
+  大雄
+  \inst{2}
+}
+
+\institute {
+  \inst{1} 餃子出版社
+  \and
+  \inst{2} 餃子出版社
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{大綱}
+  \tableofcontents
+\end{frame}
+
+\section{簡介}
+使用 beamer 文件，主要在 document 裡面多一個 frame 環境夾住一張簡報。如下
+\begin{verbatim}
+\documentclass[t]{beamer}
+\usepackage{xeCJK}
+\setCJKmainfont{Noto Sans CJK TC}
+
+\title{簡介} \author {大頭}
+\begin{document}
+\maketitle
+\begin{frame} \frametitle{大綱}
+  \tableofcontents
+\end{frame}
+
+\section{第一段}
+一
+\subsection{次段}
+次
+
+\begin{frame} \frametitle{幻燈片標題一之一}
+\end{frame}
+\begin{frame} \frametitle{幻燈片標題一之二}
+\end{frame}
+
+\section{第二段}
+\begin{frame} \frametitle{幻燈片標題二之一}
+\end{frame}
+\end{document}
+\end{verbatim}
+
+\begin{itemize}
+\item 主要用 section, subsetion, frame 做層次的分門別類，
+\item 在 section, subsection 內跟一般 \LaTeX 的用法一樣就可，
+      也可以插圖表等等。它們的內容就會一直呈現出來像紙張大小變小的頁面。
+\item frame 內定就只會出現一頁，如果長度太長，下面內容會被砍掉。
+\item tableofcontents 也變成一張 frame 成為總綱，會自動編 section subsection。
+\item frame 下也是很多用法一樣，只是內定是單張，所以像 verbatim 使用會不一樣，
+      要注意。
+\item 對齊選項 t, c, b 表示 top, center, bottom 對齊。內定是 center。
+      可用在 documentclass 或單張 frame
+\item bug: section 下用 verbatim, listings 會跑出一大段中間空白。
+      解決方法就是盡量都放進一個 frame 中，不要用 section 寫東西，這也是對的。
+\end{itemize}
+
+\begin{frame}[fragile] \frametitle{frame 特殊選項}
+  \begin{itemize}
+  \item fragile 選項，如果有 verbatim, listings， 不管 inline 或環境的都要用
+        fragile。
+  \item plain 選項，所有 title headline .... 通通消失，就一張大白紙給你，
+        通常用來插圖。
+  \item bug: 就是在 frame 下面用 verbatim 時，如果裡面有 begin end frame 環境
+        的語法，xelatex 會出錯。
+  \end{itemize}
+  \begin{center}
+  \verb=\=begin\{frame\}\verb=[fragile]=\[\dots\]\verb=\=end\{frame\}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  還在用不入流非專業的 copy/paste 剪貼 word/ppt 製作簡報!!? 看看數學式子多美麗
+  \begin{equation}
+    \sum_{\substack{
+     0<i<m \\
+     0<j<n
+     }}
+     P(i,j)
+  \end{equation}
+
+  \[ f(n) =
+  \begin{cases}
+    n/2       & \quad \text{if } n \text{ is even}\\
+    -(n+1)/2  & \quad \text{if } n \text{ is odd}
+  \end{cases}
+  \]
+
+\end{frame}
+
+\section{動態效果 overlay}
+\begin{frame}[fragile] \frametitle{用 pause}
+光靜態 list 列舉是很簡單，動態效果就是把單張 frame 再切成更多小單元呈現。
+在之前每一次右鍵就是下一張，左鍵就是上一張 slide。現在要把 frame
+切割成更多單元，然後右鍵左鍵變成是上下一個單元而已。
+\begin{verbatim}
+\begin{itemize}
+  \item 用 \verb=\pause= 來分割單元。
+  \item 以上為第一單元，在每個呈現不管文字或圖表後加個 pause 就可以了。
+  \pause
+  \item 第二單元
+\end{itemize}
+不用 item 也可以 \\
+\pause
+哈哈
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{itemize}
+  \item 用 \verb=\pause= 來分割單元。
+  \item 以上為第一單元，在每個呈現不管文字或圖表後加個 pause 就可以了。
+  \pause
+  \item 第二單元
+\end{itemize}
+不用 item 也可以 \\
+\pause
+哈哈
+\end{frame}
+
+\begin{frame}[fragile] \frametitle{用 bracket<> 來指定}
+  \begin{itemize}
+    \item \verb=\only<1>{文字\\}= 只出現在第一次。
+    \item \verb=\uncover<2-5>{文字\\}= only 的反操作在第二到第五次右鍵都出現。
+    \item \verb=\visible<1,4>{文字\\}= 出現在第一與第四次，
+          跟 only 不一樣是會佔空間留下空白。
+    \item \verb=\invisible<-3>{文字\\}= visible 的反操作。
+          -3 表示從第3之前，3-表示第3之後所有。
+  \end{itemize}
+  例子
+  \begin{verbatim}
+  \only<1>{我是 only 第一次\\}
+  \uncover<1-3>{我是 uncover 1-5\\}
+  \visible<2,4> {我是visible第2次第4次\\}
+  \invisible<5> {我是invisible第5次\\}
+  \end{verbatim}
+\end{frame}
+
+\begin{frame}
+  \only<1>{我是 only 第一次\\}
+  \uncover<1-3>{我是 uncover 1-3\\}
+  \visible<2,4> {我是visible第2次第4次\\}
+  \invisible<5> {我是invisible第5次\\}
+\end{frame}
+
+\begin{frame}[fragile] \frametitle{用 itemize 或其他 text 命令}
+直接用整個 itemize 環境
+\begin{verbatim}
+  \begin{itemize}[<+->]
+    \item 在環境 itemize 直接用選項 <+-> 就會自動一次一個 item
+    \item 不然可以用\verb=\item<2>= 跟上面一樣的 <> 規則。
+    \item 在其他原本 {\LaTeX} 的 text 命令像 
+          \verb=\color \textbf= 都可以。
+  \end{itemize}
+  \visible<4->{\color{blue}直接用 item <> 的例子}
+  \begin{itemize}
+    \item<4> {\color{blue}step 1}
+    \item<5,7,9> {\color{red}step 2}
+    \item<4-4> step 3
+    \item<6> step 4
+    \item<7,8> step 5
+    \item<4-9> step 6
+  \end{itemize}
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+  \begin{itemize}[<+->]
+    \item 在環境 itemize 直接用選項 <+-> 就會自動一次一個 item
+    \item 不然可以用\verb=\item<2>= 跟上面一樣的 <> 規則。
+    \item 在其他原本 {\LaTeX} 的 text 命令像 \verb=color textbf= 都可以。
+  \end{itemize}
+  \visible<4->{\color{blue}直接用 item <> 的例子}
+  \begin{itemize}
+    \item<4> {\color{blue}step 1}
+    \item<5,7,9> {\color{red}step 2}
+    \item<4-4> step 3
+    \item<6> step 4
+    \item<7,8> step 5
+    \item<4-9> step 6
+  \end{itemize}
+\end{frame}
+
+\section{columns}
+\begin{frame}[fragile] \frametitle{使用 column}
+除了用 table 外，其實是應該用 column 來切割幻燈片的，就像 powerpoint 的兩
+個大物件分別在左右兩邊。很簡單沒有 row 。
+\begin{verbatim}
+  \begin{columns}[c]
+    \column{.45\textwidth}
+     第一欄位插個圖吧 \\[2cm]
+     \includegraphics[width=0.8\textwidth]{images/sphinx.png}
+    \column{.45\textwidth}
+     第二個欄位就寫字
+     \begin{itemize}
+       \item 1
+       \item 2
+     \end{itemize}
+  \end{columns}
+\end{verbatim}
+選項中一樣是對齊選項 t,c,b
+\end{frame}
+
+\begin{frame}
+  \begin{columns}[c]
+    \column{.45\textwidth}
+     第一欄位插個圖吧 \\[2cm]
+     \includegraphics[width=0.8\textwidth]{images/sphinx.png}
+    \column{.45\textwidth}
+     第二個欄位就寫字
+     \begin{itemize}
+       \item 1
+       \item 2
+     \end{itemize}
+  \end{columns}
+\end{frame}
+
+\section{theme}
+\begin{frame}[fragile] \frametitle{內定 theme}
+內部已經有很多 theme 可以套用，都必須在 preamble 設定
+  \begin{itemize}
+  \item \verb=\usetheme{Warsaw}= 設定整個長相。
+  \item \verb=\usecolortheme{beaver}= 設定配色
+  \item \verb=\useoutertheme{infolines}= 設定標題跟腳註長相。
+  \item \verb=\useinnertheme{rectangles}= 設定 item 前面的點點形狀。
+\end{itemize}
+\vfill
+\begin{center}
+\begin{tabular}{cp{0.5\textwidth}}
+  選擇 theme & 參考選項\\
+  \hline
+  theme & \href{https://hartwork.org/beamer-theme-matrix/}
+	{{\color{blue}theme matrix}}\\
+  outertheme & 8 種 infolines shadow smoothbars	split miniframes sidebar smoothtree tree\\
+  innertheme & 四種 rectangles inmargin circles rounded\\
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}[fragile] \frametitle{自訂 theme}
+最簡單就是貼一張公司的 background 圖像或者網路上找背景圖設在最前面
+\begin{verbatim}
+\setbeamertemplate{background}{
+  \includegraphics[width=\paperwidth,height=\paperheight]{bg.jpg}
+}
+\end{verbatim}
+其他的比較複雜要一個個選項去設定， 要去看
+\href{https://tug.ctan.org/macros/latex/contrib/beamer/doc/beameruserguide.pdf}
+ {\color{blue}beamer 的使用手冊}，
+有詳細的細部說明，主要用 setbeamercolor setbeamertemplate去設定。
+  \begin{itemize}
+  \item \verb=\setbeamercolor=
+  \item \verb=\setbeamertemplate=
+  \end{itemize}
+\end{frame}
+
+\end{document}

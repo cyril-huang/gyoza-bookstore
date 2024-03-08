@@ -1,0 +1,245 @@
+\chapter{進階使用}
+上面的基本介紹應該足夠知識了解粗淺的{\LaTeX} 系統，
+但還是有很多細微龜毛調整是我們要知道的，尤其前面我們完全不管
+一些粗細長寬等設定，只專注在文章邏輯結構，章節目錄等等。
+可是它的長相都是 {\LaTeX} 內定的，當我們想讓本文寬度更大些就要
+來改變內定設定。 最後要來知道 macro 是怎麼寫出來，將來我們要自己增加功能。
+\\\\
+要先了知的是整個版面的相關術語與知識，然後其實電子排版就是在一張虛擬畫布
+上，把物件擺來擺去，所以設定各物件空白的命令 macro 很重要。最後我們要能
+用原始命令增加自己的新命令。
+
+\section{參數設定}
+包括一些內定counter，點線面的設定。
+\subsection{幾何設定}
+排版對於字型的定義是很嚴格的，以下為一個字的定義
+\begin{center}
+\includegraphics[width=0.5\textwidth,keepaspectratio]{images/sphinx.png}
+\end{center}
+大寫字一律要站在 baseline，很多的對齊參考基準都是根據這些定義而來丈量的。
+\\\\
+設定直線或黑盒子，直線就是一塊細長的黑盒子
+\begin{center}
+\begin{tabular}{ccc}
+命令 & 效果 & 意義 \\
+\hline
+\verb=\rule[-1mm]{5mm}{3mm}= & \rule[-1mm]{5mm}{3mm} Sphinx & 
+   從baseline下1mm 升起5mm寬3mm厚的黑盒子\\
+\verb=\rule{5mm}{.1pt}= & \rule{5mm}{.1pt} Sphinx &
+   從baseline升起5mm寬.1pt厚的黑盒子\\
+\end{tabular}
+\end{center}
+設定文字盒子
+\begin{center}
+\begin{tabular}{cm{4cm}m{4cm}}
+命令 & 效果 & 意義 \\
+\hline
+\verb=\parbox{4cm}{paragraph 盒子}= &
+  \parbox{4cm}{paragraph 盒子如果文字長度太長，會自動折行，
+  跟 tabular 的 p 設定一樣。} & 段落盒子 \\
+\verb=\mbox{mbox}= & \mbox{mbox} & 無框盒子 \\
+\verb=\makebox[3cm][s]{make a box}= & \makebox[3cm][s]{make a box} & 寬3cm，文字spread盒子 \\
+\verb=\fbox{fbox}= & \fbox{fbox} & 有框盒子 \\
+\verb=\framebox[3cm][r]{frame a box}= & \framebox[3cm][r]{frame a box} & 寬3cm，文字從右邊寫起 \\
+\end{tabular}
+\end{center}
+設定某參數長度在 preamble 區使用 setlength，它會影響全部，例如
+\begin{verbatim}
+\documentclass{book}
+\setlength{\hoffset}{0mm}
+\setlength{\oddsidemargin}{20mm-1in}
+\setlength{\paperwidth}{210mm}
+\setlength{\textwidth}{\paperwidth-40mm}
+\begin{document}
+...
+\end{verbatim}
+{\LaTeX}設新長度名字方法，其中可以用一群文字來把
+新變數的寬度高度深度設成後面文字的寬度高度深度。
+\begin{verbatim}
+\newlength{\mylength}
+\setlength{\mylength}{100cm}
+\settowidth{\mylength}{大頭 大頭你好長}
+\settoheight{\mylength}{大雄 大雄你好高}
+\settodepth{\mylength}{大家 大家你好深}
+\end{verbatim}
+原本 {\TeX} 的方法
+\begin{verbatim}
+\newdimen\mylength
+mylength=1.5pt
+\end{verbatim}
+印出長度用the 會印出。
+\begin{center}
+\begin{tabular}{ccc}
+命令 & 效果 & 意義\\
+\hline
+\verb=\the\textwidth= & \the\textwidth & 文字區域寬度 \\
+\verb=\the\paperwidth= & \the\paperwidth & 紙張真正寬度 \\
+\verb=\the\paperheight= & \the\paperheight & 紙張真正高度 \\
+\verb=\the\tabcolsep= & \the\tabcolsep & 表格內欄位間距離 \\
+\end{tabular}
+\end{center}
+這裡面的單位除了簡單的公英制單位外
+\begin{itemize}
+\item pt 前面說過大約是0.35mm
+\item em 這是目前使用字型M的寬度
+\item ex 這是目前使用字型x的高度
+\end{itemize}
+
+\subsection{版面設定}
+layout 是整個版面的定義，長寬高各種術語與設定。
+先用 layout package 的 \verb=\layout{}= 印出來如下
+\clearpage
+\layout
+一頁是奇數，一頁是偶數，這個要用 geometry package 來設定。
+\begin{verbatim}
+\usepackage[a4paper]{geometry}
+
+\usepackage[
+  paperwidth=5.5in, 
+  paperheight=8.5in]
+{geometry}
+\end{verbatim}
+還有一些簡單的設定
+\begin{verbatim}
+\usepackage[
+  top=1in,
+  bottom=1.25in,
+  left=1.25in,
+  right=1.25in]
+{geometry}
+
+\usepackage[margin=1in]{geometry}
+\end{verbatim}
+表示設定四周紙張到文字的距離，用margin=2cm 是比較快速設定四周距離。
+
+\subsection{\LaTeX 空白設定}
+基本小空白設定
+\begin{itemize}
+\item \verb=~= 多出一個小空白
+\item \verb=\hspace{1cm}= 向右多出1cm空白，負數向左。
+\item \verb=\vspace{1cm}= 向下空出1cm空白，負數向上。
+\item \verb=\quad \qquad= 向右空出1em 與 2em 的空白。
+\end{itemize}
+行間的空白， 要注意的是 big, med, small 這些 skip 在隔開文字時，只有在空白
+一行段落後面才是對的。 因為它們是垂直的，所以只能是垂直物件間的距離。
+\begin{itemize}
+\item \verb=\bigskip= 產生 12pt 的垂直空白。
+\item \verb=\medskip= 產生 6pt 的垂直空白。
+\item \verb=\smallskip= 產生 3pt 的垂直空白。
+\end{itemize}
+多空白的產生
+\begin{itemize}
+\item \verb=\stretch{1.5}= 產生 1.5 倍原有的空白，例如\verb=\hspace{\stretch{3}}=
+\item \verb=\linespread{1.5}= 產生原本 1.5 倍的行距空白。
+\item \verb=\hfill= 如果這段文字寬度不夠充滿整行，就從 hfill 開始填空白使得
+這段文字充滿一行，這跟前面說的用 makebox 的 spread 不一樣，只是單純分開文字。
+\item \verb=\vfill= 類似 hfill，但 vfill 兩邊的字填上空白直到佔滿整頁。
+\end{itemize} 
+paragraph 段落對齊設定，這就是在 一般 word 等軟體看到的三種對齊，
+如果文字不夠一行, 這會自動補上本文寬度的前後空白。例如
+\begin{flushright}
+哈哈 MS Word: 我可以對齊右邊耶
+\end{flushright}
+\begin{center}
+\begin{tabular}{ccc}
+對齊 & 環境命令  & 基本命令\\
+\hline
+左對齊 & flushleft & \verb=\raggedright= \\
+右對齊 & flushright & \verb=\raggedleft= \\
+中對齊 & center & \verb=\centering= \\
+\end{tabular}
+\end{center}
+段落空白
+\begin{itemize}
+\item \verb=\parindent= 段落縮排時的空白。
+\item \verb=\parskip= 每個段落間距離。
+\item \verb=\indent= 恢復縮排 indent
+\item \verb=\noindent= 不要縮排 indent
+\end{itemize}
+整頁空白，有時在大文件時或者有些 floating 物件讓頁面看起來排的不好
+\begin{itemize}
+\item \verb=\newpage= 結束這一頁，另起新頁。
+\item \verb=\pagebreak[num]= 在這命令之後  break 這一頁。num 是 0-4 的 priorty 。
+\item \verb=\clearpage= 結束這一頁，而且任何在這頁前的 float 物件印出。
+之後的新 float 物件都重新計算，從新頁開始，
+這個對付一些跑來跑去的大物件很有效。前面兩個對大圖表都沒有重計算影響，必須用
+這個才行。
+\end{itemize}
+
+\subsection{設定 counter}
+排版中還有一些數字常常要加總，頁數，圖表數目，參照數目等等。
+\begin{itemize}
+\item \verb=\newcounter{mycounter}[section]= 命名一個 mycounter ，然後每次
+      section counter 增加時，就會變成0
+\item \verb=\setcounter{mycounter}{7}= 設 mycounter 7
+\item \verb=\addtocounter{mycounter}{8}= mycounter 加8
+\item \verb=\stepcounter{mycounter}= mycounter 加 1
+\end{itemize}
+counter 取值
+\begin{center}
+\begin{tabular}{ccc}
+命令 & 效果 & 意義 \\
+\hline
+\verb=\thesection= & \thesection & section counter 值\\
+\verb=\thepage= & \thepage &  page counter 值\\
+\verb=\value{section}= & x & value 回傳不是字串，不能印 \\
+\verb=\arabic{chapter}= & \arabic{chapter} &  印出 chapter counter 的阿拉伯符號\\
+\verb=\roman{page}= & \roman{page} & 印出 page counter 的羅馬符號\\
+\end{tabular}
+\end{center}
+
+\section{寫新macro}
+\subsection{new}
+使用 newcommand 來定義新函數。參數用 \#1 \#2 \#3 ...這樣
+\begin{verbatim}
+\newcommand {\name} [參數數目][default] { this is new command with #1 #2 ...}
+\end{verbatim}
+參數數目就是包含選擇性與必要性的參數數目總和，
+default 就是內定值，就是之前用命令時，選擇性的命令，可給可不給。所以給一個例子：
+\begin{flushleft}
+\begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
+命令 & 
+\begin{verbatim}
+\newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
+\bighead{\color{blue}人家}\newline\bighead{大雄}{小叮噹}
+\end{verbatim}  \\
+\hline \\[0.2cm]
+效果 &
+\newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
+\bighead{\color{blue}人家}\newline\bighead[大雄]{小叮噹} \\[0.2cm]
+\hline \\[0.2cm]
+&
+由上面可以知道，它只是很像 C 的 macro ，字串完全代換而已，然後看得出來
+使用\{\} 像是 shell, perl 可以解決很多事情。
+\end{tabular}
+\end{flushleft}
+而新環境，在 default 後面有兩個中括號，before 裡面是會先執行的東西，
+然後就是夾在 before end 中間的東西，最後執行 end 裡面的東西。
+\begin{verbatim}
+\newenvironment{name}[num][default]{before}{after}
+\end{verbatim}
+例子是
+\begin{flushleft}
+\begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
+命令 & 
+\begin{verbatim}
+\newenvironment{mybox}
+{\rule{1ex}{1ex}\hspace{\stretch{1}}}
+{\hspace{\stretch{1}}\rule{1ex}{1ex}}
+\begin{mybox}我的新盒子\end{mybox}
+\end{verbatim}  \\
+\hline \\[0.2cm]
+效果 &
+\newenvironment{mybox}
+{\rule{1ex}{1ex}\hspace{\stretch{1}}}
+{\hspace{\stretch{1}}\rule{1ex}{1ex}}
+\begin{mybox}我的新盒子\end{mybox}
+\end{tabular}
+\end{flushleft}
+一般程式都會有判斷，迴圈語法，\TeX{} 自然也提供，
+hooks 是撞到一個條件時，去呼叫之前特別定義的函數。
+
+% TODO plain tex and customized macro
+%\subsection{plain \TeX{}}
+%\subsection{custom macro}
+\clearpage

@@ -1,0 +1,105 @@
+\chapter{數學式子}
+基本上有了以上的觀念，不管是排版，還是 {\TeX} 的運作機制後，剩下的都只是
+參考小抄而已。數學也是一樣，只不過數學式子在 {\TeX} 中有一個重要觀念就是它有
+inline mode 與 equation mode 就是夾在文字中 與單獨一塊大 object 形式而已。
+\begin{center}
+\begin{tabular}{m{3cm}m{4cm}m{3cm}}
+mode 例子 & 呈現 & 說明\\
+\hline
+\verb|$ x^2+2xy+y^2=0 $|&$x^2+2xy+y^2=0 $& 用 \$ 夾住，inline mode\\
+\verb|\[x^2+2xy+y^2=0\]|&\[x^2+2xy+y^2=0\]& 用 \verb=\[ \]= 夾住, equation mode\\
+\verb|\begin{equation}|
+\verb|x^2+2xy+y^2=0|
+\verb|\end{equation}|&\begin{equation}x^2+2xy+y^2=0\end{equation}&
+	 用環境, equation mode with label \\
+\end{tabular}
+\end{center}
+
+\section{注意事項}
+\begin{itemize}
+\item 由於應用情況不同，所以佔據空間大小排版對齊會不同。
+\item 用環境會自動編號 label 。counter 是 equation。
+\item 在 tabular 裡面使用 equation mode 時， 由於它是一塊物件，
+      只能用 paragraph mode, \verb|p{3cm}| 這樣，是用 parbox 做到容納物件的。
+\end{itemize}
+關於編號 label ，基本的還有 \AmS-\LaTeX 的 amsmath 提供了 
+\verb| \eqref{mark} \tag{5} \multitag{6}| 連原本 euqation 環境的編號，都可以
+強迫改掉後面的編號成自己隨心所欲的樣子。 例如
+\begin{verbatim}
+\begin{equation}
+E=mc^2 \label{eq:einstein} \tag{\ding{37}}
+\end{quation}
+從 \eqref{eq:einstein}\ldots 看來，這是隻光速電話
+\end{verbatim}
+\begin{equation}
+E=mc^2 \label{eq:einstein} \tag{\ding{37}}
+\end{equation}
+從 \eqref{eq:einstein}\ldots 看來，這是隻光速電話
+
+\section{簡單數學}
+剩下的就是小抄 cheetsheet 與一些排版微調。網路上有很多人把常用的
+  \begin{itemize}
+    \item 上標
+      \begin{verbatim}
+{a}^{2}
+      \end{verbatim}
+      ${a}^{2}$
+    \item 下標
+      \begin{verbatim}
+{a}_{2}
+      \end{verbatim}
+      ${a}_{2}$
+    \item 分號
+      \begin{verbatim}
+\frac{2}{5}
+      \end{verbatim}
+      $\frac{2}{5}$
+    \item 根號
+      \begin{verbatim}
+\sqrt[n]{5}
+      \end{verbatim}
+      $\sqrt[n]{5}$
+    \item 向量
+      \begin{verbatim}
+\vec{c}
+      \end{verbatim}
+      $\vec{c}$
+    \item 加總
+      \begin{verbatim}
+\sum_{k=1}^{N} k^2
+      \end{verbatim}
+      $\sum_{k=1}^{N} k^2$
+    \item 矩陣
+      \begin{verbatim}
+\begin{Bmatrix}
+x & y \\
+z & v
+\end{Bmatrix}
+      \end{verbatim}
+      $\begin{Bmatrix}
+      x & y \\
+      z & v
+      \end{Bmatrix}$
+    \item 極限
+      \begin{verbatim}
+\lim_{n \to \infty}x_n
+      \end{verbatim}
+      $\lim_{n \to \infty}x_n$
+    \item 積分
+      \begin{verbatim}
+\int_{-N}^{N} e^x\, dx
+      \end{verbatim}
+      $\int_{-N}^{N} e^x\, dx$
+    \item 希臘符號
+      \begin{verbatim}
+\theta
+      \end{verbatim}
+      $\theta$
+  \end{itemize}
+都做了整理，主要就是根據命令格式， 通用 \{\} 包住一個想要的表示範圍，
+其他就自行 google 就有了。
+\\\\
+\href{https://www.ams.org/arc/tex/amsmath/amsldoc.pdf}{美國數學協會\AmS-\LaTeX}
+的數學式子 macro 提供一些比標準 macro 還好的功能。有些學術單位或者出版商是有他
+們的個別要求或者更進一步的加強，所以要看投稿單位與要求做設定。\LaTeX 的好處之一就是
+套上出版商或投稿單位的設定後，同樣文章內容不變，版型就改變，一稿多投很方便。
