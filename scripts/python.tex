@@ -1,0 +1,1843 @@
+\chapter{python}
+\section{準備}
+python 是後來的後起之秀，主要是perl當初的目標只是要統一一個
+unix script 介面，這當初的 script 只是單純的 sed/awk/shell 之類
+的統一替代品，沒想到越做越複雜，語法變得很複雜，物件語法也不是很完整，
+很多東西都是後來補東牆補西牆的加上去的。因此全新的 script 設計就萌芽了。
+python 是個物件 script，語法設計考慮到很多已經屬於正統型態
+語言所具有的特性，但又不失為一個 script 的簡便性。目前很多大公司的 project
+都是用 python 去實作的。他有一些特點我想是 perl/shell 轉過來的人比較不太習慣
+\begin{itemize}
+  \item python的型態比 perl 等 strong 點，不太能任意變換，所以喜歡 C 之類的人
+    上手 python 可能會簡單些，但如果習慣了shell,perl 之類的人就覺得他怪怪的，
+    不太像 script ，在字串連接，目錄檔案測試上等習慣上他已經不像傳統的 script
+    了。在跟環境的溝通上例如 shell backquote，不像 script 般的直覺，必須寫的像
+    一般 C 一樣的 popen 之類的才能達到。如果熟悉用 c/c++ 來寫東西，那會喜歡
+    python，如果從 shell/perl 過來的就頭大了。 主要是大部分的資料，都要盡量用 
+    API 來獲得，而不是從系統 shell 命令來。
+  \item python 的版本差異相當大，一樣是2.x的版本，內定的 function call 差異
+    很大，版本號碼的定義不知道在哪裡，這算是我比較不喜歡的一點，在3.x
+    以上的 API 變動更大。
+  \item python本身是個物件語言，語言本身的算符定義可以說是有 overloading，
+    例如=，到底是 assign 還是 copy，他會根據後面資料改變而沒有一致性，這也是從
+    傳統語言過來的人要小心。
+  \item regular express 的表現手法也比較偏c語言，沒有很方便的轉換方式。
+\end{itemize}
+但用久了，其實在物件導向的寫法中，python比perl簡潔，語法也正確多了。
+\\\\
+有了之前的經驗，我們不再用一般介紹，而直接改用進階的觀念介紹。
+\subsection{工具與特性}
+python 有她蠻不錯的特性
+\begin{itemize}
+  \item interactive 的環境，可以直接打 python 進入互動模式，像以前的 BASIC 一樣
+    ，現在去 http://www.python.org 還有 shell 可以馬上線上玩。
+  \item pyc byte code，跟傳統 script 不一樣的是 python 是以 byte code 來執行的。
+\end{itemize}
+
+由於python程式可以在 interactive 的環境跟 standalone 的環境執行，所以程式
+可以透過\verb=__name__= 的值來區別目前是在什麼環境下，如果 \verb=__name__=
+是字串 \verb=__main__= 那就是一般 standalone 的環境。
+\\\\
+python跟java很像的他也有個 virtual machine，負責解讀 python 所編譯的 bytecode
+，他不像c那樣繁瑣有 assemble,compile,link 這些，但會把.py檔先編成.pyo, .pyc並
+且存檔起來，下次執行時就會比較快，python內部的解譯器CPython才會讀進這些
+bytecode，執行他。bytecode 原理就跟機器語言 assembly 很像，他把+ - * ...if else, 
+while 等等語法先轉成虛假的 assembly, and or xor 等等，這種 bytecode 也只有他自己
+讀得懂但有先特殊資料排列處理，能讓真的執行時，少掉一些動作而使得快一點。python
+的 bytecode 並沒有宣佈說能跨平台甚至跨不同版本 python 的能力，所以每次都應該重來。
+但一般使用者是感受不到的。
+
+\subsection{coding convention}
+python其實是跟unix c style的，只有一點點不同，所以寫系統c過來的人會很習慣。
+\begin{itemize}
+  \item indentation 4與expandtab，由於語法上block是由indentation來的，
+        所以不建議tab與space混用。要就全用tab，然後告訴editor顯示幾格，不然
+        就全用spaces。目前標準是空四格與space，vim可用set expandtab命令。
+  \item 模組檔名 小寫
+  \item Class名 開頭大寫，匈牙利命名。
+\end{itemize}
+其他常數，變數，函數名等都是傳統ansi c的方法。
+
+\subsection{文件pydoc}
+他這文件系統也很簡潔，很不錯，在interactive mode下看到的help()就是。
+\begin{itemize}
+\item 多行文字時，必須用三個quote """ 表示。
+\item 第一行必須第一個字大寫開始，句點結束。這行就是標題"Capital letter
+  and end with a period."
+\item 第二行必須空白
+\item 第三行開始Description，要小心的就是indentation而已。
+\item module 的 description 起始於檔案最開頭，所以 \_\_init\_\_.py 
+  的最上面必須是三個 quote 起始表示文件。
+\item 每個method下開始的敘述就是help(method)時跑出來的。
+\item 內定變數 \_\_version\_\_ 表示這個package版本， \_\_author\_\_ 表示
+  作者， \_\_all\_\_ 表示public method與變數字串。 如果有用 \_\_all\_\_，則才會
+  這裡面的變數會跑出document來。
+\end{itemize}
+範例
+\begin{verbatim}
+""" MyClass implementation. """
+#vim: sts=4 sw=4 et :
+
+MY_CONST = 0
+NO_EXPORT = 1
+
+class MyClass():
+  """ MyClass is my class.
+
+  MyClass is really my class
+  """
+  def __init__(self, arg1 = 1):
+      """ Constructor:
+
+      Constructor for MyClass
+      """
+      self.a = arg1
+
+  def get_a(self):
+      """ get_a:
+
+      get_a return member data a
+      """
+      return self.a
+
+__all__ = ['MY_CONST', 'MyClass']
+
+if __name__ == "__main__":
+  mo = MyClass(5)
+  print "my a is %d \n" % m0.get_a()
+\end{verbatim}
+pydoc命令有以下選擇
+\begin{itemize}
+  \item pydoc module會跑出man page的help。例如 pydoc re 或 pydoc sys
+  \item pydoc 路徑檔名或./myclass.py也可以
+  \item pydoc -p 1234會跑一個在 localhost:1234的 http server，列出目前系統上所有API。
+  \item pydoc -g 需要裝python-tk，會跑出一個GUI的API reference。
+\end{itemize}
+
+\section{模組與函式}
+很多函式或者class定義的組合成一個檔案叫module,很多個module檔組合叫package。
+有以下基本觀念用法
+\begin{itemize}
+\item 函式定義 def xyz(arg0 = 0, arg1 = 'init', arg2 = \verb=[]=):
+	可以看出他有 default value 的觀念在裡面，除了 default value 外，我
+	喜歡 python 的呼叫可以光指定變數給值，xyz(arg1='myvalue') 這樣表示 arg0,
+	arg2 用 default value，arg1 用 user 指定的，這比 perl,C 的要方便多。
+        但要特別特別特別注意的是，python的mutable argument default value 只會
+        在第一次建造 method/function 時產生，所謂 mutable 是指 \verb=[] {} object=
+        ，immutable 有 string, tuple 等。所以這搞了我很久，我看很多人大概都
+        不曉得。這很笨的是每次都要用 \verb|xxx = xxx or []|，有 default value
+        等於沒有。
+\item 變化長度的參數數目def xyz(*args)，在C裡面用...與va\_start, va\_end，
+	在 perl 等 script 是比較簡單，愛怎麼亂搞都可以，python算是兩者間，
+	呼叫上只能少不能多，要多的話要用 *args, **kargs 來作變化，*args 是用來
+	給沒有 default value 的參數用的，**kargs 是用來給有 default value 用的，
+	這其實有 c 的 pointer 味道了。一個假裝看成是 tuple 的 pointer，
+        一個假裝看成是 dictionary的 pointer。
+        \begin{verbatim}
+        def test_var_args(farg, *args):
+            print "formal arg:", farg
+            for arg in args:
+                print "another arg:", arg
+
+        test_var_args(1, "two", 3)
+
+        def test_var_kwargs(farg, **kwargs):
+            print "formal arg:", farg
+            for key in kwargs:
+                print "another keyword arg: %s: %s" % (key, kwargs[key])
+
+        test_var_kwargs(farg=1, myarg2="two", myarg3=3)
+        \end{verbatim}
+	用來傳參數時的用法
+        \begin{verbatim}
+        def test_var_args_call(arg1, arg2, arg3):
+            print "arg1:", arg1
+            print "arg2:", arg2
+            print "arg3:", arg3
+
+        args = ("two", 3)
+        test_var_args_call(1, *args)
+
+        def test_var_args_call(arg1, arg2, arg3):
+            print "arg1:", arg1
+            print "arg2:", arg2
+            print "arg3:", arg3
+
+        kwargs = {"arg3": 3, "arg2": "two"}
+        test_var_args_call(1, **kwargs)
+        \end{verbatim}
+	*args這種用法主要還有可以讓參數進來的型態是變化的，不是死的，
+	例如可以讓進來的參數是物件或者string，進來後再判斷用什麼方法
+	去初始。這是overloading。還有就是子class繼承父class時的參數，也可以
+        用這作彈性的interface。
+        \begin{verbatim}
+        def my_overriding(self, *args, **kargs):
+        \end{verbatim}
+\item 變數scope是跟C一樣的，自動就有local variable，不像shell,perl當初是
+	沒有的，還要鱉腳的宣告才有。python有幾個scope,
+        \begin{itemize}
+          \item global變數 這像c的global宣告，只要在檔案內最外block定義就有，
+            但不同的這只在這模組檔內有效，也可以在任何 block 地方用 global var
+            宣告。
+        \item class變數 這是所有instance都會共有的,在class宣告底下一開始的地
+          方定義，例如
+          \begin{verbatim}
+          class MyClass():
+              class_var = 1	
+          \end{verbatim}
+          存取時用 MyClass.class\_var
+
+        \item instance變數 這是單一個instance有的，在class內通常用self.var來使用。
+        \item block local變數 函數內變數宣告, for, while內變數
+        \item 從function return 回來的，跟C一樣是copy一個新的物件在原呼叫
+          context範圍內。
+        \end{itemize}
+
+\item pass by reference/value與assign/copy算符，
+	基本上python完全是物件語言，如果是基本型態像是數值字串是pass by 
+	value的，複合型態像物件，list等是pass by reference，在C中就是pass by
+	address。
+	\\\\
+	python的型態是強型態語言，但是他的=這種assign不像perl/c的定義一致，
+	由於沒有pointer與perl的reference，所以他的 = 其實是有算符overloading，
+	當他碰到數值字串時，是創造一個新的數值字串空間並copy原來內容過來，
+	但如果碰到物件或者list, tuple,arry等，卻是等於是把pointer指過去。
+	總之python內的字串跟數字都把他當成基本
+	型態，其他當成pointer，要改變物件或list內容只能用物件提供的method。
+	\\\\
+	所以在一個function中，傳數值或字串進來要真的去改變他的內容時，而不能
+	用=這種assign物件的方法去改變物件內容。如果傳進來的是一般數值或者string
+	，那就不好處理，只能用return的方式。而return回去的東西，也就是在原本
+	的namespace中的一個新物件reference。
+	\\\\
+	但如果是傳進一個list,dict或者物件等，那就要小心，亂搞是會把原本傳進
+        的東西給改變，只能用list(), dict()等另建list, dict來操作他。
+        \\\\
+        所以真正要會電腦語言，還是要從 C/C++ 學起，不然我看過有人講解這個
+        ，又引進一堆新名詞，什麼deep,shallow copy ...blabla...，根本就不必要
+        也胡搞瞎搞，所有電腦只有記憶體與值兩件事，其他都是XX。
+\item 函式return
+	如果 return 一個 function 內部物件，會傳回一個在原本namespace上的一個
+        物件 copy。但如果 return 一個外部傳進去的物件，則回傳同一個 reference
+        。
+\item 模組檔名與定義class 建立一個檔名mymodule.py
+        \begin{verbatim}
+        class myclass(parent_class):
+            def __init__(self):
+                my_member_init...
+            def mymethod(self):
+                myimplement...
+        \end{verbatim}
+        \verb=__init__=是為資料init的自動呼叫函式。
+\item import 模組
+	把sys這個模組引進來使用
+        \begin{verbatim}
+        import sys
+        sys.xx()
+        sys.yy()
+        \end{verbatim}
+	上面自訂模組就是import mymodule。
+\item from time import localtime
+	從time模組引進localtime 這個symbol，在程式中可以直接使用 localtime
+	也就是說只有 import 後面的字串才能直接使用，所以當 import time 時，要使
+	用 localtime，還必須用time.localtime()才行。但只要用
+	from time import *或者from time import localtime，就可以直接用
+	\verb=localtime()=這樣呼叫。這其實是如果模組中有定義\verb=__all__=
+	import只會import\verb=__all__=裡面的symbol，如果沒有會import所有不
+	是underscore起始的全域變數。from time import *，會把namespace給毀了，
+        除非確定完全沒有同名的symbol。
+\item 重複import同一個模組，並不會使得模組中的程式碼被重複執行多次，如果想
+	要重新執行模組，則使用imp.reload()函式
+\item PYTHONPATH 與sys.path 跟 PERL5LIB 與 @INC 是一樣的道理的。在 python 中有
+        自動本來就有的 standard 模組，這些是在 PYTHONPATH 中看不到的。但使用上
+        卻還是要 import 進來，sys 這個模組就是這樣子的。如果 python 的
+        safe-path 或 isolate mode 是 false，那麼只由被執行 script 的目錄會在
+        sys.path 前面，所以 interactive mode 執行 script 目錄不會放在 sys.path
+        前。
+\item 如果使用python指令跑.py檔案，python xyz.py則\verb=__name__=在xyz.py內的值
+	為\verb=__main__=，如果是import xyz，則\verb=__name__=在xyz.py內為
+	模組名。
+\item 用dir()來找出目前import的模組，用dir(sys)找出在sys下所有的函數名，用
+	help(sys)列出sys模組的man page
+\item 製作自己的package，從 PYTHONPATH 下有如下的目錄跟檔案結構
+	\begin{verbatim}
+	mypkg/
+                __init__.py
+                module1.py
+                modeul2.py
+                mysubpkg1/
+                        __init__.py
+                        submodule1.py
+                mysubpkg2/
+                        __init__.py
+                        submodule2.py
+	\end{verbatim}
+	使用 package 跟 module 很像，也是 import mypkg 或者 from mypkg import
+        module1， 在以前 from mymodule import * 會把所有的 class 或變數引用
+        進來，但是在 from pkg import * 是不會引進所有模組，他只會引進
+        \_\_init\_\_.py 裡的東西而已，其他的模組檔案還是要一個個引進，通常就
+        是在\_\_init\_\_.py 裡面import。
+	\\\\
+	\_\_init\_\_.py 在 import package 時叫用，通常裡面設定變數 \_\_all\_\_
+	與從這 package 下的模組 import，如果沒有這檔案，python 不會把目錄視為
+	package 目錄。\_\_init\_\_.py 是 package ，不是 class 的。所以不用幻想
+        可以呼叫i = package()然後會自動呼叫 \_\_init\_\_py 裡面的 \_\_init\_\_()
+        來創造出一個新instance。
+        \\\\
+        同一 package 下的 module 檔，可以用 import .moduleName 來彼此 import，
+        例如上面例子中的 module1.py 裡面可以用 import .module2 來 import 
+        module2。如果要 import 上層目錄的就是 ..moduleName 類似相對路徑使用。
+\item 目前的python錯誤檢查，如果編譯 py 檔出錯，其實可能卻是import的
+  自己的 library 出錯，而不是 error message 所顯示的目前這個檔的錯誤。
+\end{itemize}
+package/module 的用法在於命名與 library 的組織規劃更有結構。但要小心規劃這些命名
+，這有兩個使用方法，一種是傳統的 utility 的建立方法，也就是函式就只是很
+單純的工具函式而已，但分門別類的收集在一起，python 很多內定的函式就是這
+樣，例如 time.localtime(),這 localtime 可能只是單純的傳回 localtime 的功能
+，而在 time.py 裡面有很多這樣的工具函式而已，裡面可以完全沒有 class 的宣告。
+這很像 perl 但卻不像 perl 有 class 在裡面。這樣的模組用 import xxx 使用就可。
+\\\\
+另一種是帶有 class 的模組與想要物件建立，但這種的命名就有點麻煩，例如一個模組叫
+device.py，那裡面有 Device 這 class時，在建立物件時變成dev = device.Device()，
+這變成很重複的名稱是很不好用。
+他這問題在於不像C++的命名空間是整個.h或.c且有個new()來產生物件，所以c++
+裡面可以單純的用dev = new Device(x,y)，或者perl的namespace是整個檔案跟著整個
+class所以可以定義new，\verb|$dev = Device->new()|，這個解決方法可以用
+\begin{itemize}
+  \item 仍然用很醜的device.Device
+  \item 在device.py內多定義一個global function叫new()。但每個都寫會抓狂。
+  \item 用 import device.Device as Device。
+  \item 用 package 方式，把 symbol 放在 \_\_init\_\_.py ，使用 import package。
+  \item 用 from device import Device 藏在 \_\_init\_\_.py 內，但這破壞原本
+    python import 的意思，或者只能讓使用者自己from device import Device。
+    畢竟這是一個模組一個 class 才有的情況，用這樣可能是比較好的方法了。
+\end{itemize}
+如果沒有開 device package 目錄，會被迫把所有 device 的 class 定義在一個檔案內，
+維護起來 就很沒有條理。所以把 Device 這 class 藏在 device/\_\_init\_\_.py 內，
+外面用 device 目錄，裡面可以放各種device的模組檔，繼承 Device 這 class。
+\\\\
+如果PYTHOHPATH 裡不同名目錄，但下面的模組同名，則會根據 PYTHONPATH 先找到的先用
+，第二個就不會import進來了。
+\\\\
+如果已經有別的模組或 package 同名了，例如 PYTHONPATH下 有兩個目錄，下面都有一
+個叫 test 的目錄，也就是 package 名相同，但下面的模組名跟 class 名不同，則一樣
+只會抓 PYTHONPATH 下先抓到的 package。所以要小心不要跟系統已有的 package 名相
+同。並不會所有的全部放進同一個 package，ruby 可以這麼作，但整個 namespace 是蠻
+亂的。
+\\\\
+如果已經有別的模組或package同名了，例如 PYTHONPATH 下有一個叫 device/power 
+的目錄， 也就是 package 名，然後我在 device 這個 \verb=__init__.py= 中裡面有個
+power() 的 global function，則這樣也不行。
+\\\\
+就是說 python 不會去區別變數名，函數名，class 名，模組名，套件名，只要是在同一
+個 name scope 下，管你是什麼東西，通通不准同名。
+\\\\
+如果要動態的 import，那麼就只能用 \verb=__import__()=，用法是
+\begin{verbatim}
+import pkg
+pkg = __import__('pkg')
+
+import pkg.mod
+pkg = __import__('pkg.mod')
+
+from pkg import mod, mod2
+pkg = __import__('pkg', ['mod', 'mod2'])
+mod = pkg.mod
+mod2 = pkg.mod2
+
+from pkg.mod import func, func2
+pkg_mod = __import__('pkg.mod', ['func', 'func2'])
+func = pkg_mod.func
+func2 = pkg_mod.func2
+
+from pkg.mod import submod
+pkg_mod = __import__('pkg.mod', ['submod'])
+submod = pkg_mod.submod
+\end{verbatim}
+如果fromlist是空的，則只import pkg，如果fromlist不是空的import pkg.mod
+最後都是return一個module物件。所以光是用\verb=__import__()=是沒有名字的，
+必須得到那個module物件後，再用名字代換一次。
+
+  \subsection{其他特殊形式用法}
+    \subsubsection{Lambda form}
+    python還有像C的inline的這種用於簡單邏輯的小函式定義，
+    \begin{verbatim}
+    f = lambda x, y: x if x > y else y
+    \end{verbatim}
+
+    可見lambda回傳的是一個function pointer的東西，或者就是函式
+    物件，可以直接拿f來使用。在C中f可以丟來丟去，也就是作為
+    callback function.當然一般def的函式也是一樣可以作為callback
+    我猜這很像inline function，可能實作上沒有stack。
+    \\\\
+    \subsubsection{yield generator與iterator物件}
+    函式裡面如果有 yield 語句，那他是一個 generator 函式，表示他回傳的是一個
+    iterator 物件。python 的語法特性裡面除了物件導向外，有個很重要的 iterator
+    的物件與 iteration 用法。 iteration 用法很多地方都會用，最重要是這種物件有
+    next() 這個 method 可以呼叫，如果函式中有 yield，那這函式自動回傳一個
+    iterator物件。
+    \\\\
+    \begin{verbatim}
+    def myiter(mylist = []):
+        for e in mylist:
+            yield "element %s" % e
+
+    iter = myiter(['a', 'b', 'c'])
+    \end{verbatim}
+    從現在開始有next()可以使用了，就可以 print iter.next()
+
+  \subsection{基本的內建函數}
+  基本函數中有一些跟物件，還有iterator有關的函數。
+  \begin{itemize}
+    \item hasattr(o,'m') 看是不是有這member data
+    \item getattr/setattr/delattr，這等於o.x， 例如o.getattr("x")
+      這參數是可以變化的。
+    \item isinstance(o,C) 看是不是某個class的instance, 這必須是class的定義symbol。
+    \item type(o) 這回傳變數的型別，分別有int, str, list, instance, classobj等，
+      這會跟class定義時有沒有繼承 object 這廣義的class有關。
+    \item id(o) 這就是像c的\&，傳回reference,在本機中就是記憶體位址。
+    \item map(o,f) 把一個iterator物件內的物件一個個丟給一個函數處理。回傳一個list
+    \item str()與repr() 當使用print object時，回傳出的代表此物件的字串。
+    \item bin(o),int(o),float(o),str(o)可以做type casting
+    \item vars(o) 會傳回一個list，裡面是物件的members。
+  \end{itemize}
+  注意不同的 class 定義方法，新的定義繼承 object 這廣義的class。
+  \begin{verbatim}
+>>> class Test(): pass
+... 
+>>> t = Test()
+>>> t.__class__
+<class __main__.Test at 0x7f682b5d2328>
+>>> type(t)
+<type 'instance'>
+>>> class Test1: pass
+... 
+>>> t1 = Test1()
+>>> type(t1)
+<type 'instance'>
+>>> t1.__class__
+<class __main__.Test1 at 0x7f682b5d2390>
+>>> class Test2(object): pass
+... 
+>>> t2 = Test2()
+>>> type(t2)
+<class '__main__.Test2'>
+>>> t2.__class__
+<class '__main__.Test2'>
+>>> isinstance(t, Test)
+True
+>>> isinstance(t1, Test1)
+True
+>>> isinstance(t2, Test2)
+True
+>>> type(t1) == t1.__class__
+False
+>>> type(t) == t.__class__
+False
+>>> type(t2) == t2.__class__
+True
+>>> class Test3(object):
+...     __class__ = 'alibuda'
+...     pass
+... 
+>>> t3 = Test3()
+>>> type(t3)
+<class '__main__.Test3'>
+>>> t3.__class__
+'alibuda'
+  \end{verbatim}
+
+\subsection{模組安裝}
+像perl有 Makefile.pl，python 他的 module 套件打開來目前是規定要有setup.py
+\begin{verbatim}
+# python setup.py install
+\end{verbatim}
+但這個安裝並不會順便安裝 dependency，所以像 perl 有 cpan，除了本身系統上的 
+package 外，大量的 library 的安裝也有他定義的一套。目前為 pypi.python.org 
+維護大量的模組， 比較久的是 easy\_install 這命令，但是他跟 cpan 不太一樣的是他
+這是像 deb/rpm 的 binary 套件管理，不是 cpan 類似 BSD 的作法，所以他的套件是叫
+egg 格式的python package。 但其實他也只是一個 zip 檔，所以可以用 7z 來看他。可
+以用 easy\_install xxx.egg來安裝 。他裡面有 dependancy 的資訊，會自己去下載其他
+egg 檔。目前 python3 換到更新的 pip這個安裝程式去。debian 系統上的
+package 在 python-setuptools 與 python3-pip，其實也是用 python 寫的程式。
+\begin{verbatim}
+$ python3 -m pip --version
+$ pip install setuptools wheel
+$ pip uninstall
+$ pip list
+$ python3 -m pip install --upgrade pip setuptools wheel
+\end{verbatim}
+如果沒有權限裝在系統上，通常我們裝在家目錄裡面，並且使用全新自己裝的 library
+，而不是用系統的，這叫建立一個虛擬環境 venv，必須先裝 venv 模組，python3-venv。
+\begin{verbatim}
+$ python3 -m venv mypythonenv
+$ source mypythonenv/bin/activate
+或者
+$ python3 -m virtualenv mypythonenv
+$ source mypythonenv/bin/activate
+\end{verbatim}
+從此使用的 python, pip 裝的modules 都相對於這個venv 目錄下。
+\\\\
+也有一種早期的方法就是用 target
+\begin{verbatim}
+$ pip install --target mypythonlib requests
+\end{verbatim}
+這樣就會把所需 library 裝到 mypythonlib，但這個是會跟系統上使用相同
+python, pip，所以要多指向 PYTHONPATH 跟 PATH。
+
+\section{基本控制語法}
+block與indentation
+與一般語言用 \{ \}當成block方法不同，python 用 : 與 indentation 來作為程式
+block，
+\\\\
+if elif else
+\begin{verbatim}
+if xxx < yyy:
+    actionx
+elif yyy:
+    actiony
+else:
+\end{verbatim}
+
+沒有C的 ? : 但 python 2.5 後可以直接 if else寫在一行\\
+
+\verb|x = 'value_when_true' if condition else 'value_when_false'|
+
+for loop
+\begin{verbatim}
+
+for i in range(1, 10):
+    print i
+
+for c in "mystring":
+    print c
+
+for i in [1, 2, 3]:
+    print i
+
+for a,b in [(1,2), (3,4)]:
+    print a,b
+
+for key,value in {'k0':'v0', 'k1':'v1'}.items():
+    print key, value
+\end{verbatim}
+
+for loop
+\begin{verbatim}
+for :
+    break
+    continue
+    else
+\end{verbatim}
+
+while loop
+\begin{verbatim}
+while xxxxx:
+    print 1
+\end{verbatim}
+for loop的用法很靈活，只要是iteration物件傳回，且可以同時設定給多個變數。
+\\\\
+資料型別與boolean， 其中要注意的還是
+\begin{itemize}
+\item 沒有定義變數 : 不行作為判斷，exception error跳出
+\item 空字串	   : 可以作為判斷。
+\item 空list       : 可以
+\item 數值非零與零 : 可以
+\item 字串非零與零 : 不可，會把他當成字串，這跟shell,perl不一樣
+\item 特殊保留字   : 有True/False與None，其中None相當NULL
+\end{itemize}
+
+基本上python太像傳統C了，所以沒有定義變數是比較不允許的，但還是可以用
+\begin{itemize}
+  \item try: var
+        except NameError: print "not existed"
+  \item if 'var' in locals():
+  \item if 'var' in globals():
+  \item if hasattr(obj, 'objAttr'):
+\end{itemize}
+來測試。
+測試上面沒有像 shell,perl 那樣豐富簡單的有 -e -f ...這樣的檔案測試，必須使用
+os.path.isfile()這樣的函式，所以基本上 python 已經很不像傳統的 script 了。但是
+有人卻比較喜歡這樣，認為一些 sciprt 的語法很難懂，尤其 perl 裡面很多奇怪的內定
+變數。python的測試上還是只有傳統的C上的 \verb|==, >, <|這些，加上新語法，is,
+is not 等等。== 與 is的差別在於 == 是對物件的值做比較，is是對物件的reference做
+比較。所以 x == y 是比較其值而is 其實是id(x) == id(y)。
+\\\\
+一般說來 script 都不會給 case switch 這種東西，因為 if else 跟
+associate array(hash, dictionary...)已經
+可以建造自己的 case switch，沒有必要多加一個case switch語法。
+\\\\
+exception是一般物件導向設計時的錯誤處理，在perl中是要另外import特別的模組才有
+的，可是在python中是屬於語言的部份。exception主要在於複雜的資料結構的處理中，
+不要再一層層的回報上去，傳統的 error handling 在簡單的 return 處理，但系統越來
+大後，一件工作其實是好多步驟完成，所以try except就是一大串的步驟執行，只要某個
+執行發生錯誤就raise一個exception，算是軟體 error 中斷處理。語法為
+\begin{verbatim}
+try:
+    statement
+except SomeException as e:
+    statement
+except:
+    statement
+else:
+    statement
+finally:
+    statement
+\end{verbatim}
+else是除了正常與想抓的exception外的所有情況，finally是最後用來作cleanup的動作
+，一定會被執行。exception在python中也是一種物件，所有的exception都是
+BaseException的子class，當抓到exception時，可以把這物件assign給變數e，
+\\\\
+自訂的exception class必須是Exception的子class。
+\begin{verbatim}
+class MyException(Exception):
+    pass
+\end{verbatim}
+而在程式中可以用raise發出exception了，這個python process就會死掉，並且backtrace
+\begin{verbatim}
+if something_wrong:
+    raise MyException, "Something Wrong"
+\end{verbatim}
+
+\section{literal與資料型別}
+除了int, str, float, bin外有四種基本複合型別比較重要
+\begin{itemize}
+\item list = []  就是傳統的陣列
+\item tuple = () 這是不可變化陣列內物件的陣列。
+\item dictionary = \verb={}= 就是hash, (key,value) pair的陣列。
+\item set = set() 沒有重複element的集合。
+\end{itemize}
+python把int,str,tuple稱為immutable types，表示這些都是不可變動。
+所謂不可變動是沒有任何語法方法能經由物件reference 去改變一個已經存在的物件內容
+。一般literal
+\begin{verbatim}
+n = 1
+
+nb = 0b10111011
+
+nh = 0xffabcd
+
+s = "string"
+
+multiline = """
+多行的資訊可以用三個"前後包起來
+這很像shell裡的
+cat <<EOF
+blablabl
+blablabla
+EOF
+"""
+
+list = [ 'no1', 'no2', 'no3', 'no4', 'no4' ]
+list[-1] = 'no5'
+list[3:]
+list[1:4]
+list[:] = []  # 表示全部清除
+list.append('no6')
+list.remove('no2')
+del list[2:4]
+other_list = list([ 1, 2, 3, 4])
+[i+1 for i in other_list]
+
+dictionary = { 'key1' : 'value1', 'key2' : 'value2' }
+dictionary['key3'] = 'value3'
+del dictionary['key2']
+other_dict = dict(dictionary)
+
+tuple = (['no1', 'no2', 'no3'])
+tuple[2]
+
+set = set(list)
+\end{verbatim}
+他這list要增加減少都不像perl那樣隨意可以加上去，而是都要透過 API 來增減。
+\\\\
+list中有很好用的slice，加上冒號就可以切出陣列中的一部份出來，範圍是第1
+index跟第2 index - 1。使用負數的index可以從屁股拿出陣列來。這slice後來標準的
+形式是\verb=[start:end:step]=，也就是那個step如果是2，那就每隔兩個元素挑出來
+成為一個新陣列。如果step 是負的，start, end內定值是None,
+在c語言中很喜歡考的一題是反轉string，在python中，只要
+\begin{verbatim}
+"hello world"[::-1]
+\end{verbatim}
+就能反轉一個string了。反轉一個sentence
+\begin{verbatim}
+' '.join("hello world".split()[::-1]
+\end{verbatim}
+也就是看到\verb=[::-1]=，就是把所有陣列反轉，如果是字串那就是字串變陣列反轉。
+實在比c還方便。
+\\\\
+list literal中還有使用 list comprehension，也就是從一個list中 iterate 每個元素
+，然後此元素可以經由運算得到新list的新元素。就像是perl 的map, 或python本身的map
+一樣。
+\begin{verbatim}
+[ express for e in a_list ]
+\end{verbatim}
+像perl可以光用一個split就將一個string轉成想要的hash，python可以做類似的事情
+\begin{verbatim}
+strl = 'a:1,b:2,c:3'
+dict(i.split(':') for i in strl.split(','))
+
+d = { 'a':'1', 'b':'2', 'c':'3' }
+",".join([i[0]+":"+i[1] for i in d.iteritems()])
+\end{verbatim}
+所以同樣從dictionary轉成一個string也是可以的
+\\\\
+這也可以看出string 只是 char 的list而已，所以對於substring, 或每個字元的
+iteration，都可以用 list 的slice與for loop使用。
+\\\\
+另外tuple跟list是一般人比較容易混淆的，tuple跟list很像差別只有
+\begin{itemize}
+\item tuple的element是不能改變的，也就是原本只有3個元素，不能再加。
+\item tuple沒有append, remove跟index這些操作method
+\item tuple在內部處理是有事先sorting的，iterate處理會比list快。
+\item tuple是不可變的，可以拿來作dictionary的key，list不行。
+\end{itemize}
+
+所以要作key/value時，只有tuple才行。
+\begin{verbatim}
+>>> a=1; b=2; c=(a,b); d={c:"testing"}
+>>> a=1; b=2; c=[a,b]; d={c:"testing"}
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  TypeError: unhashable type: 'list'
+  >>> 
+\end{verbatim}
+
+一般script都有的整數與字串型別，但其實python中這些都是
+物件，所以都是物件methods。也就是把所有變數都看成是C的pointer變數就對了。
+但如果
+\begin{verbatim}
+n1 = n
+s1 = s
+list1 = list
+dictionary1 = dictionary
+tuple1 = tuple
+set1 = set
+\end{verbatim}
+這時的 = 就有差別，對於數值與字串，他是創造新物件並且 copy原本內容，但其他型
+態的就只是pointer指向而已。加上算符又不一樣
+\begin{verbatim}
+a = 10 + 10
+b = 10 * 5
+c = "1st string" + "2nd string"
+d = "string" * 5
+l = list1 + list + ['alibuda']
+\end{verbatim}
+這上面的 + * 都是物件的overloading方法。
+運算中=是copy還是assign是非常重要的。在perl中由於一開始是沒有複雜資料結構，所
+以一開始並沒有定義reference，然後有所謂的\verb=@var %var =這些型別，所以
+使用這些型別時都是很單純的創造一個新物件然後copy內容，但是後來有了reference，
+使用\verb=$var=，這時就跟原本的純量變數一樣用assign的了。在python中反而不是
+這樣，python的=都是物件指向，只有literal上用上算符才是copy。
+所以傳值進function，不想改變原本的物件內容又要操作他時，要小心先創造一個新物件
+，然後再操作。所以perl是=還有算符都是固定定義，但他的資料型別跟pointer定義是
+死的，這比較像傳統c，而python的=是動態變化的，會根據前後資料不同有不同定義。
+對於list 與 dictionary要產生一個真的物件，而不只是新變數指向同一物件，要用
+list() 與 dict()產生
+\begin{verbatim}
+a = [1,2,3,4]
+b = list(a)
+
+h0 = { 'key0' : 'value0', 'key1' : 'value1'}
+h1 = dict(h0)
+\end{verbatim}
+沒有constant
+因為直接定義就好了，何必多個保留字constant，但coding style還是遵循c的方法。
+\\\\
+字串concantation，不像shell, perl的處理反而比較像傳統C++的處理
+\begin{itemize}
+  \item +算符的overloading newstr = str1 + str2
+  \item 不同型別的串接在C中都是用sprintf，在這邊有兩種方法
+    \begin{itemize}
+      \item 舊的形式比較像sprintf newstr = \verb='%s %d\n' % ('this is ', 1)=
+      \item 新的物件形式str.format() newstr = \verb='{} {}'.format('this is', 1)=
+      \item \verb='{:b}'.format(27)=表示27的binary表示法。或者用bin(27), 
+        hex(27)轉換。
+    \end{itemize}
+\end{itemize}
+可以看出來 \verb=''或者""=他已經是個string object，後面可以直接帶上method的。
+
+\section{物件與class}
+一個程式是不是物件導向最重要的是要作到
+\begin{description}
+  \item [封裝] \hfill \\
+    abstraction, 良好的資料結構定義，這就是像一般c的struct宣告。
+  \item [繼承] \hfill \\
+    inheritance, 有父子關係的資料結構，c就沒有辦法作很好的繼承。這是變
+       數的生命期與scope有更複雜的變化定義。在python中使用
+       \begin{verbatim}
+       class Son(Parent):
+          def __init__(self, *args):
+              xxxxx
+              Parent.__init__(self, arg0, arg1)
+       \end{verbatim}
+       來定義一個class Son繼承自Parent，其中\_\_init\_\_=是初始化 function，
+       其中Parent.\_\_init\_\_(self)為呼叫爸爸的init的方法。python 有新的 class
+       叫 object，所有 class 只要宣告時是class xxx(object):這樣的話，就是新型態
+       class，這樣的子 class 呼叫爸爸的 init 的方法改用 super([type, [object]])，
+       他是回傳一個相對後面 object 的 type 的爸爸 class，所以呼叫要用
+       super(Son, self).\_\_init\_\_(arg0,arg1)。 python 並不會自動對應參數
+       並呼叫父 class 的 init ，必須自己額外用上述方法，使用 Parent 或 super 
+       呼叫都可以。 python 3.x 後用 super 的方法不用那麼囉唆了，用
+       super().\_\_init\_\_(arg0,arg1) 就可以。
+       \\\\
+       python 的繼承可以多個 class, class Son(Parent0, Parent1):
+       搜尋相關 variable,methods 的順序是從左到右依次往上。
+  \item [多型] \hfill \\
+    polymorphism, 有幾種如 overriding, overloading 與 subtype(dynamic binging)
+    \begin{itemize}
+      \item 當子 class 跟父 class 的同名函式一模一樣時，稱為overridding，整個蓋掉。
+      \item 當子 class 跟父 class 的函式同名但傳的參數不同時，稱為overloading，此
+            時根據傳進來的參數型別或者個數自動使用相對應的呼叫。有名的如
+            compare()，傳進去是 integer 跟 string，會自動用相對應的比較方法。
+            這也叫 overloading。python 也沒有 overloading，只可以用判斷傳進的參數
+            型態來作不同執行。但也就是說一個 class 下只能有一個函數名稱。
+      \item subtype是需要有繼承的 class 才行的，也就是當呼叫時某函式時，傳進去
+        雖是同一種父型別，這跟 overridding 有點像，c++ 的 virtual function 跟
+        polymorphism 是不提供原始碼給人編譯時，只提供更高階 abstraction 的 class
+        參數的API，就能自動呼叫到該有的同名函式呼叫，這在c++內為 dynamic binding
+        。binding 是說一個 method 連結上一個 object 稱為 binding，在執行期才決定
+        object 的 type 稱為 dynaminc binding，請看例子：
+        \begin{verbatim}
+class Animal:
+    def __init__(self, name): # Constructor of the class
+        self.name = name
+    def talk(self):           # Abstract method, defined convention only
+        raise NotImplementedError("Subclass must implement this method")
+ 
+class Cat(Animal):
+    def talk(self):
+        return 'Meow!'
+ 
+class Dog(Animal):
+    def talk(self):
+        return 'Woof! Woof!'
+ 
+def talk(animal=Animal('myanimal')):
+    animal.talk()
+
+animals = [Cat('Missy'), Dog('Lassie')]
+ 
+for animal in animals:
+    print talk(animal)
+        \end{verbatim}
+    \end{itemize}
+    不過執行上面程式是錯的結果，主要是 python 不是那麼強型態的語言，所以不支
+    援 subtype，只要有 overriding 就夠了，這要在更強型態的 c++ 上才看得出來他
+    的用途。
+\end{description}
+  因此 python 只有 overridding 跟 使用 *args **kargs 方法的 overloading，無法
+  在同一 class 下定義兩個同名的 methods。
+  如果沒有用上這些結構與方法，只是在那邊呼叫來呼叫去的程式，即使號稱使用了c++,
+  python, ruby, java, blabla，其實一點都不是物件導向的程式，物件導向的程式適
+  合複雜的資料結構的程式，像GUI或有關人的管理程式。但如果是平常的小作業，用上
+  物件導向，那就是殺雞用牛刀。甚至像OS kernel這麼複雜的程式都只用C而已。不過話
+  說回來很多語言到最後都是在語句的表達上作到像人表達的語法，在語句的表達上盡量
+  對所有型別一致性，例如簡單的a + b這樣的運算可以通用所有的型別，不用像c一樣，
+  兩個字串相加要spriintf()。不過有時候想想為漂亮的語句，光在那邊搞這些資料型別
+  就昏倒了。
+  \\\\
+  嚴格說起來，python是沒有所謂整數字串型別的，python中，所
+  有東西都是物件，連10, 0.5等等全是物件。只是他們的算符有特別overloading
+  處理。所以在tuple(1,2,3) 中，無法改變t[0]的數值，但tuple ([1,1],[2,2],[3,3])
+  中， 卻可以改變t[0][0]的數值。
+
+  \subsection{reference}
+  物件最重要的就是參照reference，就是在一個時空中，這物件能夠被使用者參考到，
+  所以必須像身份證號碼一樣，本機實作上通常就是記憶體位址。在網路元件架構像
+  CORBA, SOP，他必須是一個在這時空中唯一的一個號碼id。
+  這有兩個語言上的標準問題
+  \begin{itemize}
+    \item 空物件 在C++中的空物件 就可以用NULL來表示。在python中以None表示。
+    \item pass by value與pass by reference，這在前面說過了。
+  \end{itemize}
+
+  \subsection{constructor與initializer}
+  python 的物件建立是用\verb=__new__(cls), __new__(cls)=將會建立一個 cls 的 instance
+  ，如果還回一個 cls 的 instance，則繼續呼叫\verb=__init__(self)=，如果沒有還回一個
+  cls 的 instance，\verb=__init__=將不會被呼叫。 特別需求在於建立一個父 class 的
+  instance，但使用自己的 initializer , super(currentclass, cls).\verb=__new__(cls[, ...])=
+  所以一般程式基本上用\verb=__init__= 就可以了。
+
+  \subsection{overloading}
+  function overloading 也是物件導向的重要特色，也就是我們希望物件的運算能夠像
+  傳統資料用一些基本算符就能表達，物件導向有很多其實是在於語句的表達上，能
+  夠簡單的讀懂與一致性。所以算符與 function 的 overloading 就必須給程式師更大方便。
+  \begin{itemize}
+    \item \verb=__add__= 取代 + 的算符
+    \item \verb=__sub__= 取代 - 的算符
+    \item \verb=__mul__= 取代 * 的算符
+    \item \verb=__truediv__= 取代 / 的算符
+    \item \verb=__eq__= 取代 = 的算符
+    \item \verb=__str__= 當用print obj時，會去叫用 \verb=__str__= 這個function
+    \item \verb=__repr__= 當用repr()時，會去叫用 \verb=__repr__= 這個function，
+                        也就是光 print obj 時，會印出 \verb=__repr__= 結果，如果沒有
+                        \verb=__str__= 則會用 \verb=__repr__= 代替。
+  \end{itemize}
+  但 python 的 overloading 是爸爸跟小孩的class 間而已，同一 class 內的 function
+  是沒有 overloading 的，這很麻煩。
+
+  \subsection{class method與變數namespace}
+  每一個 class 都有一個\verb=__dict__= list，裡面就是 class 的變數，
+  在宣告時，其實在 class 這行後馬上跟著的變數宣告就是 class 變數。
+  當用 SomeClass.var1時，其實是SomeClass.\verb=__dict__.var1=，
+  而一個 instance 的變數其實會先去找 instance 上的，找不到最後才會去
+  找 Class 裡面的。 instance 上也有\verb=__dict__=，就是我們在
+  \verb=__init__=裡面用的self.x時，這是x是在instance的\verb=__dict__=。
+  member function 跟 member data 是無法區別的，也就是定義a.x跟a.x()是沒有意義的，
+  會只有a.x。在同一 namespace 中，變數名跟函數名不能相同。
+  另外還有個\verb=__all__=是另一個 list，只有在這裡面的才會 export 出去，這有點
+  算 perl 的 Export 或者C的 extern。如果沒有\verb=__all__=，則內定是所有前面
+  不帶\verb=_=的變數在使用 import 時會被帶進來。
+
+  \subsection{accessors}
+  物件導向的程式有一個特點是 private/public member 的 get 與 set，這
+  會影響使用物件的外圍程式使用物件內部資料，傳統物件導向程式是盡量
+  不允許直接取值而使用methods來取用，這有兩個好處
+  \begin{enumerate}
+  \item 保護內部資料不被任意取得，有的時候有些程式員，為了交出東西來，
+    會直接進class裡面亂拿變數就來用，但會破壞原本程式的架構，前面還好，
+    但隨著程式維護，結果後面會越改越亂，整個就亂掉了。
+  \item 取用或傳值時，能夠對資料作進一步的檢查與錯誤處理，其實我們在寫程式，
+    幾乎都在作這些使用者的錯誤處理，真正完成事情的code就那麼一行，但前
+    面一大段都在錯誤處理檢查與return。當取值只能經由get/set這樣的呼叫時，
+    get/set進來的參數可以作進一步的錯誤處理。
+  \end{enumerate}
+  accessors就是這些get/set成員資料的methods。
+  使用物件導向的方法會有 function call 的 overhead，在電腦內部運算中
+  使用 function call，其實要多好多步驟才能完成，跟只是單一取值的
+  速度是有差別的，也就是\verb=obj.get_x()=跟obj.x取值是有 performance 差別的。
+  但現在電腦很快，所以為了程式可讀性與維護性，這是需要作取捨決定的。
+
+    \subsubsection{accessors建立}
+    在perl中可以用特殊型別 typeglobs，來作到快速建立 accessors，並且 member function
+    跟 member data 可以同名，但在 python 中卻無法作到 member data 跟 member function 同名，
+    所以假設有個 member data, a,那就必須實作get\_a / set\_a / del\_a。
+
+    \subsubsection{property函數}
+    在已有的程式碼中如果已經使用了直接取用 member data，那怎麼辦呢，全部重寫嗎，
+    或者有人就是這麼不長眼，或者 member data 有跟 member function 一樣的名字怎麼辦。
+    我們只需改寫 class 並且在 class 最下面用 property 這個函數。
+    x = property(fget, fset, fdel, doc) ，其中
+    fget...fdel 就是存取 x 時get / set / del 對應的函數
+
+\begin{verbatim}
+class myclass():
+    def __init__(self, a=1, b=2, c=3):
+        self._a = a
+        self._b = b
+        self._c = c
+    def geta(self):
+        print 'I am a'
+        return self._a
+    def seta(self, value):
+        print 'I am setting a'
+        self._a = value
+    def dela(self):
+        print 'I am deleting a'
+        del self._a
+    
+    a = property(geta, seta, dela, "This is for a's accessors")
+
+if __name__ == '__main__':
+    mo = myclass()
+    print mo.a
+\end{verbatim}
+則 mo.a 的值實際上是由 geta 傳回來的，不再是直接拿 a，而 mo.a = xx 也變成是
+呼叫 seta()。
+
+
+    \subsubsection{descriptor class}
+    當class有\verb=__get__ __set__ __del__=三函數時，此 class 稱為 descriptor class
+    ，當 instance 有定義像\verb=self.__get__/__set__/__del__=時，那 instance 上帶有
+    descriptor。
+\begin{verbatim}
+class my_descriptor():
+    def __get__(self):
+        return self.a
+    def __set__(self, value):
+        self.a = value
+    def __del__(self):
+        del self.a
+class
+    def __init__(self):
+        a = my_descriptor()
+\end{verbatim}
+    descriptor的binding為當取用a.x時或者A.x，真正binding到的執行是
+    \begin{itemize}
+      \item direct \verb=x.__get__(a)=
+      \item instance \verb=type(a).__dict__['x'].__get__(a, type(a))=
+      \item class \verb=A.__dict__['x'].__get__(None, A)=
+      \item super \verb=super().=
+    \end{itemize}
+    當用上 property 函數時，這個 class 其實就是一個 descriptor class,
+    fget / fset / fdel 實際上是相對應於 \verb=__get__= / \verb= __set__= /
+    \verb= __del__=，基本上在 python 裡面是不寫傳統的 get / set 這種東西，而是用
+    property decorator， 而取值時就用原本的 obj.v 這樣 C 的方法就好，在語意上會
+    簡潔多而把後面的事情交給 python 處理。
+    \\\\
+    總結就是當我們用 obj.a 時，他其實尋找 a 這個 member data 有很多順序的，
+\begin{verbatim}
+如果有__getattribute__()，就永遠先傳回這個，這恐怖，最好不要用
+-> instance的__dict__ 如果有instance的__get__ 就再呼叫__get__傳回
+-> class的 __dict__ 如果有class的__get__ 就再呼叫__get__傳回
+-> 呼叫__getattr__() =
+\end{verbatim}
+    所以其實可以不必定義self.x，而光定義\verb=__getattr__=也可以。
+
+    \subsubsection{不使用\_\_dict\_\_改用\_\_slots\_\_}
+    在物件產生時，\verb=__dict__=同時也會被建立，如果建立大量物件但是有的物件卻
+    只有1,2個變數需要設定，其他變數都沒用到的話，則用\verb=__dict__=來存變數名稱
+    與值是很浪費記憶體的，這時可以用\verb=__slots__=這個 list，裡面是 member data
+    名字，例如 obj.a, obj.b 則\verb|__slots__ = ['a','b'] |，這樣a,b在沒有設值前，
+    都不會在記憶體中存在，存取a,b也會失敗。他是個 class 變數，宣告了他，這個 class
+    就不會自動建立\verb=__dict__=，不過\verb=__dict__=是vars(o)傳回的值，要小心。
+
+  \subsection{iteration與iterator物件}
+  python 的特性就是物件，還有他提供很多跟資料 iteration 的語法工具。這是很特別的，
+  由於在程式中，其實我們大部分都在處理這樣的東西，所以這是很 powerful 的。
+  一個 iterator 的 class 必須要
+  \begin{itemize}
+    \item 實作next()與\verb=__iter__()=這兩個methods
+    \item \verb=__iter__()=必須 return 一個 iterator object
+    \item next 必須 return 下一個物件，結束必須 raise StopIteration 這個exception.
+    \item 函數中若使用 yield，則此函數自動為 iterator generator。
+  \end{itemize}
+
+  \subsection{decorator}
+  對於已經存在的function或class加工，稱為decorator，以@wrapper使用
+  \\\\
+  例如func1已經存在原本的code base中很久了，不想動他，而新的func2,func3
+  都可以用到func1的功能則
+\begin{verbatim}
+def func3(arg):
+    xxx
+    return callable_function
+def func2(arg):
+    xxx
+    return callable_function
+
+@func3(arg)
+@func2
+def func1
+    xxx
+\end{verbatim}
+  其中func3跟func2必須return一個callable物件，也就是function pointer，通常可以
+  用lambda來作。則當呼叫func1時，會變成相當於多層的function呼叫，
+\begin{verbatim}
+func1 = func3(arg)(func2(func1))
+\end{verbatim}
+  所以我們常常看到人家在class裡面這麼寫
+\begin{verbatim}
+@property
+def myfunc(self):
+    self.xxx
+\end{verbatim}
+  這等於是把之前講的property函數用來作decorator，因為property的第一參數是get，
+  所以這樣會把myfunc變成一個read only的member data。obj.myfunc會是由這個func
+  return的值。
+\\\\
+  還有常見到
+\begin{verbatim}
+@classmethod
+def myfunc(cls, arg):
+    xxxx
+\end{verbatim}
+  這是說myfunc呼叫時，會傳進cls而不是self object，由於python的同 class中沒有
+  overloading，這通常拿來作不同init的方法，只是不同函數名。最後要還回一個
+  init instance
+\begin{verbatim}
+class Date(object):
+    day = 0
+    month = 0
+    year = 0
+
+    def __init__(self, day=0, month=0, year=0):
+        self.day = day
+        self.month = month
+        self.year = year
+    @classmethod
+    def from_string(cls, date_as_string):
+        day, month, year = map(int, string_date.split('-'))
+        date1 = cls(day, month, year)
+        return date1
+
+date1 = Date('11', '09, '2012')
+date2 = Date.from_string('11-09-2012')
+\end{verbatim}
+  既然class名稱是可以呼叫的，同樣decorator也能在class這麼運作，
+\begin{verbatim}
+@func
+class class0():
+\end{verbatim}
+  表示
+\begin{verbatim}
+class0 = func(class0)
+\end{verbatim}
+  但這個func必須這麼定義
+\begin{verbatim}
+def func(cls)
+    class class1():
+        xxxx
+        cls()
+    return class1
+\end{verbatim}
+  他自動會pass一個class object, class0給這func，可以在裡面呼叫cls()，最後必須
+  return另一個class。他不像classmethod還回一個instance，而是一個class物件。
+  \\\\
+  另外還有個@staticmethod，這就是把某個函數視為像c一般的static function，scope
+  在同個檔案內的global function，他這個function的第一個參數，不像一般member
+  function是self instance，而是實在定義的參數。不過我不太清楚完全的global
+  function跟一個 class 內故意用@staticmethod 呼叫有什麼特別的差異。而且覺得好像
+  脫褲子放屁，在import上的naming變得多此一舉，但可能在歸納整理上有好處吧。
+
+  \subsection{with statment與context manager}
+  with statement搭配函式的使用在於簡化一些函式的必要處理，最常見的例子是開檔
+  ，有開檔就要有關檔，如果程式小，一下做完了那就沒什麼注意，但在長迴圈時，如
+  果沒關檔，一直開檔就會把file descriptor開爆了，有很多類似的情形，
+  在python內定的open中，就有實作這種處理，所以我們可以直接用 with open as f
+  \begin{verbatim}
+  with open("x.txt") as f:
+      data = f.read()
+      do something with data
+  \end{verbatim}
+  這樣即使使用者忘了關檔，或即使with下面的level很長很亂，只要一出with敘述，就自動
+  會關檔。有兩種作法，一種為context manager class，一種為context manager generator。
+  \\\\
+  在class中，一個有實作
+  \begin{itemize}
+    \item \_\_enter\_\_ 進來函式做的事
+    \item \_\_exit\_\_ 出去函式做的事
+  \end{itemize}
+  的class為context manager class，class可以被呼叫，\verb=__enter__ __exit__=
+  為相對應的呼叫，例如lock/unlock, save/restore, open/close可以放在enter / exit
+  中。例如
+  \begin{verbatim}
+class MyException(Exception):
+    pass
+
+class Sample:
+def __enter__(self):
+    return self
+def __exit__(self, type, value, trace):
+    print type
+    print value
+    print trace
+
+def raise_exception(self):
+    raise MyException, "Something Wrong"
+
+with Sample as s:
+    s.raise_exception()
+  \end{verbatim}
+  會看到如果member function出問題了，會自動跑去叫\verb=__exit__=，通常我們會在
+  裏面放cleanup的code。也就是整段class為一個context，enter為init code, exit
+  為cleanup code,無論context怎麼死的，都會執行cleanup。
+  \\\\
+  但以open為例子，我們只要function 不要class，至少with的時候我們想要小寫的
+  呼叫，我們可以用python標準庫裏面的 contextlib 並用yield做 iteration generator。
+  \begin{verbatim}
+from contextlib import contextmanager
+@contextmanager
+def tag(name):
+    print "<%s>" % name
+    yield
+    print "</%s>" % name
+
+>>> with tag("h1"):
+...    print "foo"
+...
+<h1>
+foo
+</h1>
+  \end{verbatim}
+  所以用contextmanager作為 decorator ，則yield前放\verb=__enter__=的code，
+  之後放\verb=__exit__=的code，變得很簡單。
+
+  \subsection{class的內定變數與相對應的內定函數}
+  在 python 中有很多有用的內定函式對物件操作，例如 isinstance(), type()...
+  這些其實都可以改變內部變數與一些函式，像之前講的 +-/*= 外作到 overloading 的。
+  了解這些特殊的變數與函數也算是了解 python 對 class 的細部操作為何，對於
+  進階的程式控制有更進一步的幫助。type() len() print()...相對應的內部實作
+  +-/* ==
+  \\\\
+  變數名
+\begin{verbatim}
+__name__    : 物件名字，可能是function, class, module名
+__module__  : 模組名
+__dict__    : 所有class參考的symbol與值
+__slots__   : 這個list阻止class自動建立__dict__，並且沒有設值之前不能取用
+__file__    : 檔案名
+__doc__     : 檔案內可被pydoc解讀的document文字
+__bases__   : 所有super class的一個tuple
+__class__   : 物件所屬class名稱
+__all__     : 所有exoprt出去的symbol
+\end{verbatim}
+  特殊 method
+\begin{verbatim}
+__new__     : 物件的建造
+__init__    : 物件的初始
+__del__     : 物件的刪除
+__repr__    : 物件的表示
+__str__     : print(o) 物件時的表示
+__call__    : 有__call__()，則 instance i 可以用i()傳入引數，呼叫__call__()
+\end{verbatim}
+  Accessors method
+\begin{verbatim}
+__getattr__ : o.member 的內部實作的最後呼叫
+__setattr__ : 跟前面一樣意思
+__delattr__ : 跟前面一樣意思
+\end{verbatim}
+  property descriptor
+\begin{verbatim}
+__get__     : 用在property descriptor
+__set__     : 用在property descriptor
+__delete__  : 用在property descriptor
+\end{verbatim}
+  context manager
+\begin{verbatim}
+__enter__   : 使用 with 時，一進來執行的code
+__exit__    : 使用 with 時，不管如何出去執行的cleanup
+\end{verbatim}
+  其他
+\begin{verbatim}
+__len__     : 物件的長度，用len(o)時，呼叫這個函式。
+__iter__    : 實作 class 為一個可以有 iterator物件
+__getitem__ : 跟getattr()很像，但主要是可以用o['member']取回值。
+__setitem__ : 一樣可以用 hash 設值
+__delitem__ : 跟前面兩個一樣意思
+\end{verbatim}
+
+\section{I/O與系統溝通}
+  \subsection{檔案系統 File I/O}
+  file I/O 有以下
+  \begin{itemize}
+    \item open 類似fopen的模組，os.open則是類似system call,open
+    \item os.path  處理有關path，例如abspath, exists, islink等等
+    \item tempfile 處理temp檔用的，等於 c 裡面mktemp或tmpfile之類的呼叫
+    \item shutil 提供像shell的檔案命令類似copy/move/delete的API。
+  \end{itemize}
+
+  一般的開檔存取使用open傳回的是file object
+\begin{verbatim}
+f = open('myfile', "w+")
+f.read()
+f.write("a line")
+f.readline()
+sys.stdout.write("haha")
+\end{verbatim}
+  而像一般system call的傳回file descriptor的是用os.open，這傳回fd
+  ，並且os.write/os.read就是system call的read/write fd來操作。
+  檔案的檢查，不像一般script的-e -f -x用法而必須用
+  \begin{itemize}
+    \item os.access()
+    \item os.path.isfile() os.path.exists()
+  \end{itemize}
+  這其實就是一般程式的呼叫了，已經不像script了。
+
+  \subsection{subprocess/thread}
+  在與其他命令的合作上，python 又一次比較偏向c的作法，他並沒有像 backquote 這
+  樣簡單的與系統溝通的方法，而必須用 fork/exec/popen 這種傳統的 system call 
+  的觀念來跟其他命令溝通，很不方便。也就是如果要得到某些 infromation，例如 ip,
+  檔案名等等，請不要用現有的命令，而盡量用c語言的作法，直接去 /proc, /sys 
+  或者 system call 或者 ioctl 的方法拿，這是比較傳統的方法。當然要不就是有人
+  寫好模組 API，去搜尋與使用。
+  \\\\
+  但在2.7以後也有一些新 function，但很不方便，因為2.x的API變化
+  我覺得有點大，實在不是很好。有些系統還在2.4, 2.6下就不能用。
+  \\\\
+  os模組
+\begin{itemize}
+  \item os.execl
+  \item os.spawn
+  \item os.fork
+  \item os.popen
+  \item os.system 這是跟c的system()一樣的，return就是exit status，
+\end{itemize}
+  subprocess模組
+\begin{itemize}
+  \item subprocess.call 這跟os.system用法一樣。
+  \item subprocess.check\_output("ls") 等於backquote，但這2.7以後才有。
+\end{itemize}
+  subprocess.Popen模組
+\begin{itemize}
+  \item supbrocess.Popen([cmd, arg1, arg2], shell=True)
+  \item subprocess.Popen("/bin/cmd arg1 arg2") 這必須用絕對路徑
+  \item subprocess.Popen.communicate()回傳tuple，(stdout資料,stderr資料)
+\end{itemize}
+  不過他這有點 confused 的就是 stdout 是 sys.stdout 呢還是 
+  subprocess.Popen.stdout。
+  \\\\
+  shell與perl裡面的backquote
+  \begin{verbatim}
+import subprocess
+p = subprocess.Popen(["ls", "-l"], stdout=subprocess.PIPE)
+output = p.communicate()[0]
+
+subprocess.call("ls -l", shell=True)
+  \end{verbatim}
+  2.7以後可以用
+  \begin{verbatim}
+output = subprocess.check_output("ls")
+  \end{verbatim}
+  或者可以用pexpect的run
+  \begin{verbatim}
+import pexpect
+output = pexpect.run("/bin/ls")
+  \end{verbatim}
+  但其實這都不是正常我們想要的，因為那都只是類似exec的作法，命令後面無法隨心所欲
+  加上自己想要的參數，或者像一般使用的命令，真正我們想要的是像面對terminal般執行
+  shell命令，必須在一個 shell 環境下執行的，尤其shell的多命令 pipe 例如 
+  \verb-output=`dmesg | grep hda`-，這就要在以上的 os.system, pexpect.run 
+  等等使用上加上option來先產生shell環境再來執行命令
+  \begin{verbatim}
+import os
+status = os.system("shell_cmd | sed '3' | awk '{print $2}'")
+
+import subprocess
+output = subprocess.check_output("shell_cmd", shell=True)
+
+import pexpect
+s = pexpect.spawn("/bin/bash --norc", timeout=10)
+s.sendline("export PATH=$PATH:$HOME/bin")
+  \end{verbatim}
+  check\_output必須要有shell=True的參數，才會產生shell，pexpect要先spawn一個sh
+  出來，然後帶著這個fork出的物件執行shell命令，只是pexpect的output會在expect物
+  件內。
+  \\\\
+  使用svr4 system(), os.system, shell=True這些東西都會被警告說如果你帶入的字串
+  沒有被控制的話，有可能會成為buffer overflow的漏洞，別人可以帶入一長串亂七八糟
+  的字串，讓你的shell執行他的code，所以除非確定所有的輸入都在自己掌握中才使用。
+  \\\\
+  基本上python對於資訊的取得，不太用系統命令，要得到一些資料盡量直接用API跟系統
+  拿，而不要用其他命令去拿，這在跨平台寫作也是有好處的，不會綁在某一平台命令上。
+  所以如果要靠sed/awk/sort/uniq/find/...這些shell命令一堆pipe得到結果的方法，也
+  都不要再用了。但像 dmidecode 這種東西，如果要很痛苦的去 /dev/mem 拿，這時就不知
+  道怎麼取捨了。不然就是得等看看是否有人做了 package 讓我們用。
+
+  \subsubsection{process與thread}
+    有兩種作法，
+    除了用os模組下的fork, exec等傳統system call的方式，但python提供比這種更high
+    level點的multiprocessing模組，這跟thread的使用非常像，必須要指定一個function
+    來讓一個Process物件啟動。而第2的參數是argument，必須是一個tuple，所以如果args
+    只有一個參數必須用(arg1,)表示一個tuple。
+    \begin{verbatim}
+from multiprocessing import Process
+def myfunc(i, v):
+    v[0] -= 1
+    print i, v[0]
+
+if __name__ == '__main__'
+    for i in range(10):
+        v = [10]
+        p = Process(target=myfunc, args=(i, v))
+        p.start()
+    \end{verbatim}
+    除了Process外，還有一個threading內的Thread物件，用法兩者可以說是一樣的
+    \begin{verbatim}
+from threading import Thread
+def myfunc(i, v):
+    v[0] -= 1
+    print i, v[0]
+
+    for i in range(10):
+        v = [10]
+        t = Thread(target=myfunc, args=(i, v))
+        t.start()
+    \end{verbatim}
+    兩者的差別就是傳進去的參數，在不同的process 中當然是各自獨立的，在thread
+    間就是global variable，這正常來說要有lock機制來存取的。另外一點很重要的
+    是python的文件中說明，python的thread實作是沒有，
+    所以如果為了performance考量，python是建議用multiprocessing而不是用
+    threading的。這點是跟c很不一樣的。
+
+  \subsection{IPC}
+  另外最重要常用到的就是IPC，傳統上UNIX系統上的IPC有pipe, fifo, socket, mmap,
+  svr4 ipc有message queue, shared memory, semaphore，這些在python中的使用方法
+  可以更簡便，另外thread也是後來常用到的多工手段，python在兩者提供的API讓使用
+  者感到很一致，是很不錯的抽象實作。
+
+  \subsubsection{signal}
+  signal是最簡單的unix系統提供的軟體中斷，可以由系統或另一process發出signal給
+  一個process，可以自己做signal的處理function並註冊之。只是這個handler必須要
+  有兩個參數，一個是signum, 一個是function call frame
+  \begin{verbatim}
+# 2 args are required
+def my_handler(signum, frame):
+    print "\nEntering my territory"
+
+signal.signal(signal.SIGINT, my_handler);
+time.sleep(3)
+  \end{verbatim}
+  在三秒內趕快按Ctrl-C。
+
+  \subsubsection{mmap}
+  mmap本來只是檔案I/O的performance增進的方法，但python利用這種需要kernel參與
+  的記憶體空間來做為不同process共享memory的方法之一，這很像system的shared memory
+  的想法，但mmap主要是兩個有關的爸爸小孩間可以溝通，兩個無關的process就要用
+  shared memory才行。
+  \begin{verbatim}
+import mmap
+import os
+
+# mmap used for ipc like shared memory
+mm = mmap.mmap(-1, 13)
+mm.write("Hello world!")
+
+pid = os.fork()
+
+if pid == 0: # In a child process
+    mm.seek(0)
+    print mm.readline()
+    exit(0)
+mm.close()
+
+# real mmap usage as svr4
+with open("hello.txt", "r+b") as f:
+    # memory-map the file, size 0 means whole file
+    mm = mmap.mmap(f.fileno(), 0)
+    # now mm is a string array to be operated
+    mm.readline()
+    mm[5:] = "Hello\n"
+  \end{verbatim}
+    \subsubsection{pipe與fifo/queue}
+    傳統上兩個process間的通訊可以用pipe與fifo來實作，這
+    \begin{itemize}
+      \item pipe是同一個process所fork的相關的process共用,通常是爸爸跟小孩兩個，
+        一個寫一個讀。
+      \item fifo相對於一個檔名，可以給很多process 只要open這個fifo檔就能一起用
+    \end{itemize}
+    \begin{verbatim}
+from multiprocessing import Pipe, Queue, Process
+import time
+import random
+
+def msgp(child):
+    child.send([1,2,3])
+    child.close()
+
+def msgq(queue, i):
+    time.sleep(random.randrange(0,3))
+    print 'child input %s' % i
+    queue.put(i)
+
+if __name__ == '__main__':
+    parent_conn, child_conn = Pipe()
+    p = Process(target=msgp, args=(child_conn,))
+    p.start()
+    print parent_conn.recv()
+    p.join()
+
+    q = Queue(10)
+    for num in range(10):
+        p = Process(target=msgq, args=(q, num))
+        p.start()
+    time.sleep(20) # wait for all process return
+    for num in range(10):
+        print 'get all queue after children input'
+        print q.get()
+    \end{verbatim}
+    即使在系統呼叫的open/read/write, pipe/fifo本身的sync問題是由kernel解決掉，
+    在python 裏面也是thread safe，不需要sync的機制去存取這通道。pipe/fifo在c
+    的系統中有大小限制的問題，目前是65535，也就是說如果一直寫，超過65535，則
+    沒有人去讀他，再繼續write，就會 block。
+
+    \subsubsection{synchronization}
+    lock與semaphore是最基本的sync工具，大家要存取一個共同的記憶體時，一定要先
+    取得存取權力，就是lock，或者這個共同的資源存取是有容量的，例如買票時，售票員
+    只有一個，那就是lock，有兩個以上就是semaphore。有些更細微的通常會說，lock
+    是不能等待的spin lock, binary semaphore是可有wait queue的。但最基本的用法
+    是binary semaphoe是lock。在process中的共同記憶體通常就是shared memory，
+    在thread間的通常就是global變數。先以threading這個模組示範
+    \begin{verbatim}
+from threading import Thread, Lock, Semaphore
+import random
+import time
+
+common = 0
+lock = Lock()
+
+sema = Semaphore(3)
+
+def inc_common(item):
+	global common
+	global lock
+	time.sleep(random.randrange(3))
+	lock.acquire()
+	common = common + 1
+	lock.release()
+	print "thread id : %d common : %d\n" % (item, common)
+
+def inc_resource(item):
+	global resource
+	global sema
+	sema.acquire() # P()
+	print "I am %d" % item
+	time.sleep(10)
+	print "increase the resource after 10 seconds"
+	sema.release() # V()
+	
+if __name__ == '__main__':
+	print "lock test\n"
+	for i in range(10):
+		Thread(target=inc_common, args=(i,)).start()
+	time.sleep(10)
+	common = 0
+	print "semaphore test\n"
+	for i in range(10):
+		Thread(target=inc_resource, args=(i,)).start()
+
+    \end{verbatim}
+    semaphore的使用，有很多在限制的資源使用，例如資料庫的連線最多只有5個process，
+    那就可以設定一個Semaphore(5)，每次要使用資料庫連線時，都要先取得semaphore，
+    這樣就可以把process資源的限制交給semaphore來幫忙就可以了。
+    \\\\
+    shared memory 由Array與Value兩個API完成。也就是跟mmap很像，所有kernel的記憶
+    體的對應，在python中都由array, list來負責。這個就multi process示範了。
+    \begin{verbatim}
+import random
+import time
+from multiprocessing import Array, Value, Process
+
+def smem(l, v, a):
+    l.acquire()
+    # multiprocess and the parameter are shmeme so get changed
+    print "before shared v : %d" % v.value
+    v.value = random.randrange(1, 10)
+    print "after shared v : %d" % v.value
+    time.sleep(1)
+    l.release()
+
+if __name__ == '__main__':
+    smeml = Lock()
+    smemv = Value('i', 0)
+    smema = Array('i', [1, 2, 3])
+    for num in range(10):
+        p = Process(target=smem, args=(smeml, smemv, smema))
+        p.start()
+    \end{verbatim}
+    這邊很重要的Array與Value的第一個參數是typecode，'i'表示signed integer，詳細
+    typecode在python文件中有列出。另外value的值取出也很特別的使用v.value。類似
+    message queue svr4或posix的message queue，其實可以用這來實作。
+    \\\\
+    condition variable是說當你獲得某全域變數的使用權時，卻發現要操作的條件不足，
+    則此時必須把之前獲得的lock丟出，並且去等待，這裡有兩件事要同時完成，也就是
+    丟出lock與sleep，所以要靠底層的幫忙才能做到atomic的操作，例如你要去考駕照，
+    所以先到監理所排隊，好不容易排到你了(就是拿到服務人員的lock)，卻發現你不滿
+    18歲，所以讓出lock，乖乖必須去等到18歲(wait)，等到18歲了，再通知(wake)你。
+    通常標準作法就是
+    \begin{verbatim}
+cv = Condition()
+
+def get_lock_and_do_something():
+    cv.acquire()
+    while condition_matched
+        cv.wait()
+    operate_on_global_resource():
+    cv.release()
+
+# 另一條process/thread要來打醒
+def wake_up_all_sleeping():
+    cv.acquire()
+    try_to_make_condition_ok()
+    cv.notify()
+    cv.release()
+    \end{verbatim}
+    while loop的條件判斷是一定要的。也就是醒來後，還要再去檢查一遍條件是否又不
+    行，如果在被打醒到檢查中間，條件又變不行，還要再進queue睡覺，等待下一次的wake。
+    \begin{verbatim}
+from multiprocessing import Process, Array, Value, Condition
+import time
+
+age = Array('i', [15, 19, 11, 17])
+driver_license = Value('i', 0)
+cv = Condition()
+
+def go_to_dmv(id):
+    global cv
+    global age
+    global driver_license
+    cv.acquire()
+    print "my id is %d and my age is %d" % (id, age[id])
+    while age[id] < 18:
+        print "my id is %d and I am %d not over 18, wait" % (id, age[id])
+        cv.wait()
+    driver_license = 'yes'
+    print "I am #%d and %d years old so the driver license set to yes" % (id, age[id])
+    cv.release()
+
+def a_year_passed_by():
+    global cv
+    global age
+    global driver_license
+    inc_year = True
+    while inc_year == True:
+        cv.acquire()
+        inc_year = False
+        for i in range(len(age)):
+              age[i] += 1
+              if age[i] < 18:
+                  inc_year = True
+        cv.notify_all()	# it's random wakeup all threads
+        cv.release()
+        time.sleep(1)
+        print "a year has passed"
+
+if __name__ == "__main__":
+    for i in range(len(age)):
+        Process(target=go_to_dmv, args=(i,)).start()
+    Process(target=a_year_passed_by).start()
+
+    \end{verbatim}
+    上面的共同資源是age這個list，所以有個看不見的lock會在cv產生時，也會產生，如果
+    cv.acquire時的參數沒有給，就自動是這個看不見的lock在裏面。
+    \\\\
+    process pool是產生一堆固定數量的工人，裏面的工人會由python控制，當哪個工人
+    有空時，python就會把一個job丟給他做，jobs的產生由map這個函式內丟一個list
+    給他，每個element就是一個jobs，他很像原本內建的map函式，只是這裡用Pool物件時
+    ，python會自己做平行處理，做完後所有的工作結果會放在list內傳回。
+    \begin{verbatim}
+import multiprocessing
+def worker(x):
+    return x*x
+
+p = multiprocessing.Pool(processes=5)
+result = p.map(worker, range(10))
+print result
+    \end{verbatim}
+    以上可說是基本的python多工使用方法。
+
+\section{string 與 regex}
+字串在 python 來看就只是 char 的 array ，因此操作例如 length，就是原本
+array 的操作即可。但 string 的 印出處理一直就是 script 的好處之一，pyhton
+有兩個方法處理 format。一種類似 c 的 printf， 另外則是使用 python string
+object methods。
+\\\\
+python的regular express，也是跟c的一樣，反而不像傳統 script 的語法
+用 // 就好。regular express pattern 的表示法r""等於一般的 //，要用
+\verb=\1\s\w= 這些 regular express 時要多加 \verb=r""=。類似的其他 string
+object 像 bytestring 則要加 \verb=b""=，這在文件中要小心，他的 string 物件
+有很多種。
+
+\subsection{string format}
+類似 c 的 print，但是用 \% 而不是逗號，後面要用 ( ) 做運算
+\begin{verbatim}
+print("%d" % (5 * 6))
+\end{verbatim}
+3.x 以後多了 string 物件 format()，以
+\begin{verbatim}
+'{}'.format(express)
+\end{verbatim}
+來建構單引號內新 string，主要是 \{\} 內的格式有很多新花樣，有三種形式
+field\_name conversion 跟 format\_spec
+\begin{verbatim}
+{ [field_name] [! conversion] [: format_spec] }
+\end{verbatim}
+
+field name 一些例子，可以是 index, 也可以是 argument name
+\begin{verbatim}
+>>> '{2}, {1}, {0}'.format('a', 'b', 'c')
+'c, b, a'
+
+可以使用 argument name 指定
+
+>>> 'Coordinates: {latitude}, {longitude}'.format(latitude='37.24N', longitude='-115.81W')
+'Coordinates: 37.24N, -115.81W'
+\end{verbatim}
+format\_spec 基本
+\begin{verbatim}
+[[fill]align][width] [.precision][type]
+
+fill  : 任意字元，可以 padding 在 align 前後的字元
+align : > 向右對齊  < 向左對齊 ^ 中間對齊
+width : 整個字串寬度
+type  : 就是跟 C 一樣的 d, f, s, x ...
+
+precision 就是數字 d, f, x ... 的精準度
+\end{verbatim}
+例子
+\begin{verbatim}
+不寫任何東西等於自動{:s}
+>>> '{}'.format('string')
+'string'
+
+>>> '{:>30}'.format('right aligned')
+'                 right aligned'
+
+>>> progress=10
+>>> '[{s:=>{n}}'.format(s='>]',n=progress)
+'[========>]'
+
+>>> '{:.1f}'.format(2.57 * 3.1415926)
+'8.1'
+
+用 # 會自動對 hex, octal, binary 前面補完
+field_name ＋ format_spec
+>>> "int: {0:d};  hex: {0:#x};  oct: {0:#o};  bin: {0:#b}".format(42)
+'int: 42;  hex: 0x2a;  oct: 0o52;  bin: 0b101010'
+
+類似 date 命令的使用
+>>> import datetime
+>>> d = datetime.datetime(2010, 7, 4, 12, 15, 58)
+>>> '{:%Y-%m-%d %H:%M:%S}'.format(d)
+'2010-07-04 12:15:58'
+\end{verbatim}
+
+\subsection{比對}
+\begin{verbatim}
+import re
+re.match("blablabla", string_to_search, re.IGNORECASE)
+re.search(r"^2012-10-05.*", string_to_search)
+
+>>> re.match("c", "abcdef")  # No match
+>>> re.search("c", "abcdef") # Match
+>>> re.findall("c", "abcdefcdef")
+\end{verbatim}
+match與search會只找到一個就return了，
+match 跟search 的差別在於 match 是從頭開始，search是只要string裡面有substring
+就算有match。可以copmile一個RE，來一直作比對，這基本上就是SVR4的regcomp
+\begin{verbatim}
+r = re.compile("^abc.*")
+if r.search("abcdef"):
+    print "got it"
+
+regex = r"^(\d+)\.\(\d+)"
+r = re.compile(regex)
+\end{verbatim}
+另外對於multiline string的處理，如果用上\verb=^ $=，則當加上re.MULTILINE這個
+flag 給 search 時
+\begin{verbatim}
+re.search(r'^\w+', mstring, re.MULTILINE)
+\end{verbatim}
+會去跟每行都做一次\verb=^=的搜尋，但 match()還是只會 match string 的開頭。等於
+search() 有MULTILINE 時，相當於很多string search，但match()沒有。
+\\\\
+search與match傳回來的是RE match object，所以還需要更進一步
+的處理來抓出想要的部份。
+
+\subsection{擷取}
+\begin{verbatim}
+m = re.search(r"(\w+) (\w+)", "first second")
+m.group(0)
+\end{verbatim}
+是整個match到的字串所以是first second
+\begin{verbatim}
+m.group(1)
+\end{verbatim}
+回傳第一個match到的字串所以是first
+\begin{verbatim}
+m.group(1,2)
+\end{verbatim}
+回傳一個tuple，("first", "second")
+\begin{verbatim}
+m.groups()
+\end{verbatim}
+都回傳一個tuple，裡面的內容就是所有match到的，如果第二個
+match不到東西，就是None.
+
+\subsection{取代}
+幾個function, sub,subn與translate
+\begin{itemize}
+  \item newstr = re.sub(\verb=r'\sAND\s'=, ' \& ', 'Baked Beans And Spam', flags=re.IGNORECASE)
+  \item (newstr, n) = re.subn(\verb=r'(\w+) (\w+)'=, \verb=r'\2 blabla \1'=, 'Baked Beans And Spam')
+  \item mystr.translate(string.maketrans('ab','AB'))
+\end{itemize}
+subn跟sub是一樣的，只是回傳時不是string而是一個tuple，第二個元素是代換的次數。
+他這translate就相當於perl的tr///。
+
+\subsection{其他處理}
+\subsubsection{greedy regex的處理}
+跟perl一樣，\verb=*+?= 都是 greedy 的 match，python也有 non-greedy 的用法，跟 perl
+是一樣的用 \verb=.*? .+? .?? {m,n}? = 。
+\begin{verbatim}
+>>> import re
+>>> s = '<html><head><title> TITLE </title></head></html>'
+>>> re.match('<.*?>', s).group()
+'<html>'
+\end{verbatim}
+
+\subsubsection{一些常用的regex}
+\begin{description}
+  \item [刪掉前後空白] \hfill \\
+    這個用string.strip()就可以了
+  \item [刪掉不是可印出ascii字元] \hfill \\
+    \verb=re.sub(r'[\x00-\x1F\x7F-\xFF]+', '', line)=
+  \item [最後一行] \hfill \\
+    \verb|$last_line = re.search(r'([^\r?\n]+)$', mline).group(1)|
+  \item [取得最後一個] \hfill \\
+    \verb|$last = re.search(r'([^\s]+)$', s).group(1)|
+  \item [把目錄加上斜線] \hfill \\
+    \verb|$newdir = re.sub(r'(.*\w)$', r'\1/', dir)|
+\end{description}
+
+%\subsubsection{多行處理}
+
+\section{setup.py的撰寫}
+在程式最後是要 release 的，release 不是你 copy 給我，我 copy 給你就玩完了。python 的
+relase基本的要寫 setup.py 讓別人能輕易的安裝。跟 perl 的 Makefile.PL 一樣有規矩的
+
+\subsection{基本setup.py}
+python 本身就有內定 distribution 的 package，可以根據這個內定來寫 setup.py
+\begin{verbatim}
+from distutils.core import setup
+setup(
+    name = 'mypkg',
+    version = '1.0.0',
+    description = 'Quark: Quality Running Kit',
+    author = 'Cyril Huang',
+    author_email = 'cyril@costco.net',
+    url = 'http://www.python.org/sigs/distutils-sig/',
+    scripts = [ 'src/bin/run.python' ],
+    packages = ['quark', 'quark.device'],
+    package_dir = {
+        'quark' : 'src/lib/quark',
+        'quark.device' : 'src/lib/quark/device'
+        }
+)
+\end{verbatim}
+
+\begin{itemize}
+  \item 模組 使用packages與package\_dir來指定
+  \item 可執行檔 使用scripts來指定
+  \item 相依package 使用
+\end{itemize}
+其中packages是此目錄下所有的package，以上面例子來說，quark, quark.device
+而且這表示這一定有\verb=__init__.py=在相對應的目錄下。他這distutils很笨
+不會自動一直往下找，一定要特別每個都要寫在packages與\verb=package_dir=中
+。scripts表示是一個可執行python script，最後會被裝在/usr/local/bin下。
+命令如下
+\begin{verbatim}
+$ python setup.py --help-commands
+$ python setup.py build
+$ python setup.py install
+$ python setup.py sdist
+$ python setup.py bdist
+$ python setup.py bdist_rpm
+\end{verbatim}
+會產生dist跟build這兩個目錄，最後的source跟binary package都在dist下。
+install則會把所有該裝的裝到/usr/local/lib/python-x.x/下
+sdist表示產生source distribution, bdist是binary distribution,
+\verb=bdist_rpm=產生rpm。
+
+\subsection{egg的產生}
+在python安裝中有一種是easy\_install egg的binary package。
+這個蛋蛋不是原本python基本內定的，必須額外裝python-setuptools這系統package，
+裡面有setuptools這library。可能以後會進到python的裡面。跟內定setup.py很像的
+也有setup()這個設定。最簡單的setup.py
+\begin{verbatim}
+#!/usr/bin/env python
+#-*- coding:utf-8 -*-
+
+from setuptools import setup
+
+setup(
+    name = ''
+    version = ''
+)
+\end{verbatim}
+然後用
+\begin{verbatim}
+$ python setup.py bdist_egg
+\end{verbatim}
+就會產生空的egg。7z l dist/UNKNOWN-0.0.0-py2.7.egg可以看出裡面的內容。
+其實也就是多了\verb=bdist_egg=這個動作。

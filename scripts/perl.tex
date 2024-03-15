@@ -1,0 +1,1194 @@
+    \chapter{perl}
+    相對於sed, awk, shell script 等工具，當初 Larry Wall 覺得要發明一種可以取代
+    這些雜七雜八 script 泛通用型的 script 工具，比起所有的 script 還要 power，
+    處理起regular express也更方便，解決了一些如greedy的問題。perl 最後跟
+    system call 的連結與檔案, process，socket program, OO 等等的處理，讓他變成很
+    強大的 script 語言。
+    \\\\
+    perl 跟其他不管 shell, TCL/expect...等 script 語言其實還是用 C 寫出來的，
+    每一種 script 解譯器其實都還是一個執行程式，只不過這個解譯器懂得一些內定語法，
+    會去解釋這些規則然後轉換這些script變數，控制迴圈等等變成自己的 c 變數跟迴圈
+    （當然啦!其實最後還是都是 cpu 內的暫存器跟迴圈）來執行。就跟 shell, awk 一樣。
+    \\\\
+    perl 其實真的博大精深，man page 裡面的文件就相當的棒了。在/usr/bin, 
+    /usr/lib/perl, /usr/share/perl 下也有很多很棒的人家寫的perl，在 debian 中，
+    /usr/lib/perl 表示裡面的模組會跟機器有關例如 tty，/usr/share/perl 表示裡面
+    是platform-independent 的模組。從裡面可以學到很多。
+    \begin{itemize}
+    \item man perl
+    \item man perldata
+    \item man perlop
+    \item man perlretut
+    \item man perlboot
+    \item file /usr/bin/* \verb=|= grep -i perl
+    \end{itemize}
+    \section{基本語法與資料型態}
+    \subsection{資料型別}
+    以 c 來說，我以為只有兩種資料型別，一種是 primitive type 就是int, char, ...
+    還有就是 pointer type 對記憶體的處理。perl 是種 script 語言，有三種基本型別
+    \begin{itemize}
+    \item scalar 字串數字物件等等 也是基本的變數使用
+    \item array 就是標準傳統 array，也叫做 list，正式文件中都用 list.
+    \item hash 就使用者角度看沒什麼，就是index 是有意義的字串(也就是 hash 的 key)
+	  的array.
+    \end{itemize}
+    分別用
+    \begin{itemize}
+    \item \$var
+    \item @var
+    \item \%var
+    \end{itemize}
+    \subsection{literal}
+    literal表示是一個定義集合，用來表示合法的表現方式。
+    例如
+    \begin{verbatim}
+    $var = ""; $var = '';
+    @var = ('a', 'b' , "c" , "d");
+    $var[1] = 'a';
+
+    %var = ('key1', 'value1', 'key2', "$replace_value2");
+    %var = (key1 => 'value1', 
+            key2 => "$replace_value2"
+    );
+    $var{'key1'} = 'value1';
+    @var = (1..100);
+
+    print $var[1];
+    print $var{'key1'};
+
+    use constant FALSE	=>	0;
+    use constant TRUE	=>	1;
+
+    \end{verbatim}
+    這裡面的"value", 1..100 等表現方式就是 perl 為它的 scalar, array 定義的 literal
+    也就是像在shell裡面的' "等這些意義，這邊有個規則就是單一變數永遠都用\$var
+    來表示，所以array內的變數是\verb=$var[1]=或者\verb=$var{'key'}=
+    其中單引號雙引號跟shell一樣，就是單引號內的東西不會做代換。\\\\另外我想
+    perl 把string, array 等等物件的作法跟 C 的 struct一樣 C++ 的 class 一樣。
+    assignment 一個物件變成是copy 所有member到新物件上去也不用理會記憶體問題。
+    當然 copy 的方法效率比較慢，但是語法比較適合初學者吧。
+
+    \subsection{quote}
+    跟shell一樣，single quote, double quote也是有所不同的。
+    single quote 也是一樣裡面的變數不做代換，double quote 一樣作代換還有backslash
+    \verb=\=也是有特別意義，如果用上regular express 
+    \verb=\w \s \d=這些東西如果是放在變數裡面，必需用 single quote，
+    不然會得不到想要的結果。所以perl裡面也有eval可以用
+
+    \subsection{String, Array and Hash處理}
+    大部份的script好用就是不用管pointer，其中最重要的就是字串的處理了。這也是
+    大部份寫一般程式的人要面對處理的。perl是這個中好手。
+    陣列中我們最常要的是陣列長度 \$\#array 是最後一個index數字，所以長度是
+    \$length = \$\#array + 1;
+    \begin{itemize}
+      \item length(string)	傳回字串長度
+      \item join(string, @array)  把一個array用字串string作連結傳回新字串。
+      \item split(regex, string)  把一個字串string用regex表示切成陣列或hash。
+      \item keys(hash)		傳回一個hash中所有的keys的陣列。
+      \item push/pop/unshift/shift陣列的pop/unshift
+      \item delete		array/hash的delete
+      \item scalar		傳回陣列長度。
+      \item grep                搜尋陣列元素。
+      \item map                 用一個陣列經由map運算變成另一個陣列。
+    \end{itemize}
+    其中split相當神奇，例如字串可以展成hash
+    \begin{verbatim}
+    my $string = "1:one;2:two;3:three";
+    my %hash = split /[;:]/, $string;
+    \end{verbatim}
+    則hash會自動變成一個如下hash
+    \begin{verbatim}
+    { '1' => 'one', '2' => 'two', '3' => 'three' }
+    \end{verbatim}
+    用map可以轉換某個陣列到另一個陣列，原先陣列元素在map中變成\verb=$_=，加以
+    操作後，就每個操作完結果是另一陣列之元素，例如
+    \begin{verbatim}
+    %chksums = (
+        'file1' => '3f53afcba16980402f21f167ff826785',
+        'file2' => 'ef5cf88a49c3a2910d17ac231fbfc48b'
+    );
+    $chksumstr = join(",", map { "$_:$chksums{$_}" } keys %chksums);
+    print $chksumstr;
+
+    file1:3f53afcba16980402f21f167ff826785,file2:ef5cf88a49c3a2910d17ac231fbfc48b,
+    \end{verbatim}
+    很是方便。
+
+    \subsection{reference}
+    物件導向中，有個重要的reference，他的廣義定義是指參照一個物件的索引，
+    也就是這個物件的ID, 例如一個人物件的參照可以是一個身份證號碼，可以
+    是名字等等。在程式理論中，就是要能代表這個物件就好。在一般local電腦
+    的實作中，就通常是記憶體位址，代表一塊記憶的物件。在網路程式架構，
+    CORBA，SOAP等等就可能只是在此系統下的一個數字號碼。
+    \\\\
+    在perl5.0後對物件或像array這種物件存取時提供了這樣的位址
+    reference使得struct或巢狀的hash等複雜資料結構有了更好的表示方法。
+    其實這實在很有趣，很多script就是當初不要pointer這樣的東西，因為對於剛學電腦
+    的人覺得很麻煩，可是最後越來越複雜的程式就一定要有這樣的結構。
+    \\\\
+    用\verb=\=就像用c裡面的\verb=&=傳回一個像pointer的reference。
+    \begin{verbatim}
+    $scalar_ref = \$scalar;
+    $array_ref = \@array;
+    $hash_ref = \%hash;
+    $func_ref = \&function;
+    \end{verbatim}
+    不同於傳統的array或hash用()建造方法，新的建造literal傳回一個reference
+    \begin{verbatim}
+    $array_ref = [1, 2 ,3];
+    $hash_ref = { APR => 4,
+                  AUG => 8 };
+
+    $func_ref = sub { my $code = 1; }
+    \end{verbatim}
+    所以
+    \begin{verbatim}
+    $array_ref = [1, 2, 3];
+    等於
+    @array = (1, 2, 3);
+    $array_ref = \@array;
+    \end{verbatim}
+    所以反操作的operator
+    \begin{verbatim}
+    @array = @{$array_ref};
+    %hash = %{$hash_ref};
+    \end{verbatim}
+    只是要記住，\verb=@var或者%var=都是創造一個新var物件，=都是copy所有成員。
+    reference取值的方法就像c裡面的struct pointer取法用\verb=->=
+    \begin{verbatim}
+    @a = ( [1, 2, 3],
+           [4, 5, 6],
+           [7, 8, 9]
+         );
+
+    $a[1]->[2] 跟 $a[1][2]是一樣的
+    \end{verbatim}
+    因為這是個array reference所以用\verb=$a->[]=的方法，如果是
+    hash reference就要用\verb=$a->{}=，如果是function reference
+    就要用\verb=$a->()=。所以callback function可以用傳reference來作。
+    以下是從texi2html看來的code
+    \begin{verbatim}
+    $T2H_DEBUG = 0;
+    $T2H_OPTIONS -> {debug} =
+    {
+        type => '=i',
+        linkage => \$main::T2H_DEBUG,
+        verbose => 'output HTML with debuging information',
+    };
+    \end{verbatim}
+    所以
+    \verb=T2H_OPTIONS=
+    這個reference裡面有個debug這個變數同時又是個reference, 裡面又有
+    type, linkage 和verbose這3個key，其中type, verbose是個字串，linkage又是個
+    reference。
+    \\\\
+    由於reference只是一個數字，想要知道這個變數是什麼樣的資料型別可以用函數庫
+    ref或者Scalar::Util::reftype來取得。傳回值是字串，"SCALAR", "ARRAY", 
+    "HASH"與"CODE"。或者UNIVERSAL::isa來比較也可以。但是只能用在reference跟
+    物件上，無法用在一般\verb=$ @ %=變數上。
+    \\\\
+    reference跟傳統的array, hash, string的assignment operator不太一樣，因為已
+    經有pointer的概念了，不是物件概念。所以=的assignment，不能保證有copy。而是
+    assign一個reference, 在implementation上就是記憶體位址。
+
+    \subsection{內定變數與special literal}
+    看man perlvar可以看到所有的內定變數不過有些比較重要常用的。這邊有的跟下面的
+    function或者regex或者scope有關。先看看
+    \begin{itemize}
+    \item @ARGV 這是程式開始的args, 跟C不一樣的是\verb=$ARGV[0]=
+	  是第一個argument．
+    \item \$0	這是程式名
+	    
+    \item @INC	這是package的include path,在use, require, 這樣的library的搜
+		尋路徑。
+    \item @ENV	這是環境變數，例如取用時PATH時用\$ENV\{'PATH'\}
+    \item @SIG	signal handler的陣列，指定時用\$SIG\{'INT'\} = "func\_name";
+    \item STDIN	 標準輸入file stream
+    \item STDOUT 標準輸出 stream
+    \item STDERR standard error stream
+
+    \item @\_	在函數中傳進來的parameters
+    \item \$\_  超級重要的內定的輸入與RE pattern內定搜尋的地方，
+	    例如一些莫名的像if(1..100)的控制值都是在測試\$\_。
+	    很多時候一些operator在程式碼
+	    裡面常會覺得到底在對誰作用阿，就是這個perl內部的內定變數，
+	    例如print不寫print甚麼其實就是print \$\_ 。
+
+    \item \verb=$|=  file buffer flush 的狀態。\verb=$|== 1;表示立刻寫入硬碟。
+    \item \$\$	process id
+
+    \item \verb=__FILE__=	    檔案名
+    \item \verb=__PACKAGE__=	    PACKAGE名
+    \item \verb=__LINE__=	    目前行數
+    \end{itemize}
+
+    \subsection{條件控制}
+    比較字串用ne, lt, gt, eq, ge, le，比較數字用符號 \verb.!=, <, >, ==, >=, <=.
+    \begin{verbatim}
+    if (condition) { } elsif { } else { }
+
+    while (condition) {}
+
+    until (condition) {}
+
+    unless {}(condition)
+
+    for($i = 0; $i < $max; $i++) { print $i; }
+
+    foreach $element (@array) { print $element; }
+
+    while (condition) { last LABEL if (condition); }
+    break LABEL ;
+    \end{verbatim}
+    基本上perl沒有switch case，主要是switch case可以用if elsif else達成，但
+    最重要的因素是其實這可以宣告一個hash, 利用hash快速的取得相對應的處理。
+    \\\\
+    condition中比較重要的是
+    \begin{itemize}
+    \item undefined 變數的判斷 \hfill \\
+    	可判斷，如果變數第一次出現在condition，傳回false
+    \item undef常數的判斷 \hfill \\
+    	可判斷，傳回false
+    \item null的判斷 \hfill \\
+    	不可判斷，沒有null,傳回true
+    \item true/false的判斷 \hfill \\
+    	不可判斷，沒有true/false,傳回true
+    \item 空字串的判斷 \hfill \\ 
+	可判斷，空字串傳回false
+    \item 空白字元的判斷 \hfill \\
+	可判斷，空字元傳回false
+    \item 空陣列的判斷 \hfill \\
+	可判斷，數字0傳回false
+    \item 數字0, 1的判斷 \hfill \\
+	可判斷，數字0傳回false
+    \item 字串0, 1的判斷 \hfill \\
+	可判斷，字串'0'傳回false
+    \end{itemize}
+    這也是大部份寫作script時要小心的，例如在javascript中的undefined就很頭大囉
+    。主要是perl內部沒有null跟true/false的保留字，所以這些不能作為常數判斷。
+    但undef, "", "0", 0等可以作為判斷。
+    \\\\ 
+    另外迴圈控制的 continue 跟 break 與 C 的用法不太一樣，可以靠 LABEL 跟 last, next
+    的運用做出一些跳躍的 goto，不過亂跳還是蠻亂的。last 就是 C 的 break; next
+    就是 C 的 continue。 也有 goto label 跟 C一樣使用。
+    \subsection{operator}
+    除了一些傳統或C標準的operator外perl有些operator比較奇怪的，可以看man perlop
+    \begin{itemize}
+    \item \verb@=~@	    REGEX找到後，assign operator
+    \item \verb=~!=	    如果不等於這個REGEX
+    \item \verb=<>=	    stream read, \verb=<STDIO> <$file_handler>=
+    \item \verb=<<=	    這跟C的\verb=<<=一樣，perl也能處理bit.當然也有\verb=>>=囉
+    \item .	    連結兩個字串
+    \item ..	    range operator,例如(1 .. 100,'a'..'z','01' .. '10')
+    \item ...	    跟..一樣，只是..運作是先測左邊再測右邊...不去測右邊的boolean
+    \item \verb@<=>@	    分別還回-1, 0, 1如果左邊數值小於等於大於右邊。
+    \end{itemize}
+    quote operator
+    \begin{itemize}
+    \item q(string)	這是single quote \verb=''= 字串裏面變數不展開，其他不變。
+    \item qq(string)	這是double quote \verb=""= 字串裏面變數會展開，其他不變。
+    \item qx(command)	這是執行一個命令後，得到的string加quote
+    \item qw(string)	這是用space split一個string後，全部加個single quote.
+    \item qr	        這是quote regex，裡面是regex.
+    \item \verb=``=	這跟shell的\verb=``=一樣，執行一個外部命令把結果傳回。
+    \item m		pattern比對, match
+    \item s		pattern代換, substitution.
+    \item tr		truncate，去掉不要的字元
+    \item \verb=<<EOF=  跟shell 很像的使用 \verb=<<= 方法來quote所有的字元。
+    \end{itemize}
+    
+    \section{系統程式}
+    系統程式是跟作業系統有關的I/O, multiprocess之類的，在perl中也通常用unix
+    system call的方法在perl上implement類似的API而已。
+    \subsection{一般檔案I/O控制}
+    跟一般用shell的語法很像。
+    \subsection{簡單的檔案I/O}
+    Read
+    \begin{verbatim}
+    open my $file_handle, "< foo";
+    $line_content = <$file_handle>;
+    close $file_handle;
+    \end{verbatim}
+    Write
+    \begin{verbatim}
+    open my $file_handle, "> foo";
+    print $file_handle "content";
+    close $file_handle;
+    \end{verbatim}
+    所以就是shell的io導向的符號來決定開檔的屬性。很簡單
+    然後\verb=<>=operator是拿出一行來。放在內定變數\$\_，如果沒有file handle的
+    話，那就是從stdin拿一行出來。所以把檔案中有alibuda的行找出來的小perl。
+    \begin{verbatim}
+    $ cat find_alibuda.pl
+    #!/usr/bin/perl
+    while (<>) {
+      print if m/alibuda/;
+    }
+
+    在shell 中執行
+    $ perl find_alibuda.pl xxx.txt
+    \end{verbatim}
+    比較注意的是print時，不需要逗號來區隔file handle與內容。不過說實話，後來
+    我用 shell/sed/awk 用習慣了，覺得這些開檔讀檔寫檔還真沒有shell方便。
+
+      \subsection{檔案與process}
+      perl也有fork，一般fork出的child process會繼承parent的一些特性，在這裡面最
+      重要的就是file descriptor跟file offset是跟parent一樣的。這有兩個問題，一個
+      是stdin/stdout/stderr被shared了，一個是file redirect的問題。在perl中可以跟
+      shell 一樣很簡單的用backquote \verb=`cmd`= 執行命令，也有fork()可以用。
+      \begin{verbatim}
+$pid = fork()
+if ($pid) {
+    # parent
+    builder::logger("forked child for package $package pid=$pid");
+    $children{$pid} = $package;
+} elsif ($pid == 0) {
+    # child
+    exit buildPackage_childMain($bt, $package);
+} else {
+    builder::printer("ERROR - fork child for package $package failed");
+    $error_build = 1;
+    goto cleanup;
+}
+
+while (waitpid(-1, 0)) {
+    builder::logger("Return $? from build package $children{$pid} : $pid");
+    if ($pid == -1) {
+        builder::logger("All components built are done");
+        last;
+    } elsif ($?) {
+        builder::printer("ERROR - build of package $children{$pid} failed");
+        $error_build = 1;
+        goto cleanup;
+    }
+}
+      \end{verbatim}
+      fork與waitpid的用法跟system call用法幾乎是一樣。
+
+      
+      \subsection{IPC}
+      \subsubsection{mmap}
+      mmap是最簡單的fork出的兩個相關process共同可以access一段memory內容。
+      但mmap只能是有相關的爸爸小孩間的memory sharing。要真正不同process間的溝通
+      ，使用 POSIX IPC，也可以使用SVR4 IPC，但後來POSIX出了比較light的API後，
+      個人是比較喜歡POSIX的lock/unlock的方法，比較直觀。
+      \begin{verbatim}
+      use Sys::Mmap;
+      mmap($foo, 0, PORT_READ, MAP_SHARED, FILEHANDLE) or die "mmap: $!";
+      $foo = "alibuda";
+      munmap($foo);
+      \end{verbatim}
+
+      \subsubsection{signal}
+      signal handler使用就是把SIG這個hash填進handler名字。
+      \begin{verbatim}
+sub reaper {
+      $waitpid = wait;
+      $SIG{CHLD} = \&reaper;
+}
+$SIG{CHLD} = \&reaper;
+或者
+$SIG{CHLD} = "reaper";
+      \end{verbatim}
+      \subsubsection{posix IPC}
+      \begin{verbatim}
+      use POSIX::RT::Semaphore;
+      $sem = POSIX::RT::Semaphore->init(0, 1);
+      $sem->wait;   # down() / P()
+        ... do something
+      $sem->post;   # up() / V()
+
+      if ($sem->trywait) {  # non-blocking try P()
+        ... do something
+        $sem->post;
+      }
+      \end{verbatim}
+
+    \section{更power的regular expression}
+    RE的3個主要功能 
+    \begin{itemize}
+    \item matching比對
+    \item substitute代換
+    \item extract擷取
+    \end{itemize}
+    \subsection{多一點點的新字元}
+    \begin{verbatim}
+    \d  數字        =  [0-9]
+    \D  非數字      =  [^0-9]
+    \w  字元        =  [0-9a-zA-Z_] 多一個底線_
+    \s  空白        =  [\ \t\r\n\f]
+    \W  非字元      =  [^\w]
+    \S  非空白      =  [^\s]
+    \b  定位字元    =  \b\b夾住words來區隔像cat category的搜尋
+    .   除了\n的任何字元
+    \Q	脫逃        = single quote的意思 一直到\E的字串都不是pattern
+    \E
+    \end{verbatim}
+
+    \subsection{比對 - match}
+    比對的重點在於有沒有比到，傳回是boolean，有下列幾個重點
+    \begin{enumerate}
+    \item 比對pattern m//  由m跟pattern的delimiter識別字元組成。m通常不寫，
+	  delimiter識別字元通常是//。
+    \item 如果光寫比對pattern在condtion內，自動比對\verb=$_=變數。
+    \item 想要跟某個變數比對用比對operator \verb@=~ 跟 !~。$var =~ /regex/@。
+    \item 可以改變delimiter，在比對pattern中直接改m@re@就可以用@當delimiter
+    \item 可以加modifier在後面m//modifier，
+	    \begin{enumerate}
+	    \item modifier s表示 . 也可以代表\verb=\n=, s有single line的
+	          意思。
+	    \item modifier m表示 \verb="^" 跟 "$"=代表任何在頭跟尾巴的串接
+	          下一行， m有multiline的意思。
+	    \end{enumerate}
+    \end{enumerate}
+
+    使用例子
+    \begin{verbatim}
+$x = "There once was a girl\nWho programmed in Perl\n";
+
+       $x =~ /^Who/;   # doesn't match, "Who" not at start of string
+       $x =~ /^Who/s;  # doesn't match, "Who" not at start of string
+       $x =~ /^Who/m;  # matches, "Who" at start of second line
+       $x =~ /^Who/sm; # matches, "Who" at start of second line
+\end{verbatim}
+    常用搜尋
+    \begin{itemize}
+    \item 空白行 \verb=/^$/=
+    \end{itemize}
+
+
+    \subsection{代換}
+    代換是比對到我們要的然後換成我們想要的字串。底下是幾個重點
+    \begin{enumerate}
+    \item 代換pattern s///  由s跟pattern的delimiter識別字元組成。
+	  delimiter識別字元通常是//。
+    \item 如果光寫比對pattern在condtion內，自動比對\verb=$_=變數。
+    \item 想要跟某個變數比對用比對operator\verb#=~ 跟 !~。\$var =~ s/regex//#。
+    \item 不保留原本變數字串，並替換一個新字串成為一個新變數。用(\$new) = (\$old =~ s///;)
+    \item modifier
+	    \begin{enumerate}
+	    \item modifier g表示global，所有符合的都換。
+	    \item modifier i表示不分大小寫。
+	    \end{enumerate}
+    \end{enumerate}
+
+    例子
+    \begin{description}
+      \item[幹掉字串前後空白] \hfill \\
+      \verb=for (@string) {s/^\s+//;s/\s+$//;s/\s+/ /g;}=
+      \item[取代所有陣列裡面的元素] \hfill \\
+      \verb=s/big/large/g for @all_element;=
+      \item[不改變舊有變數將取代結果指給新變數] \hfill \\
+      \verb|($new = $original) =~ s/big/large/g;|
+    \end{description}
+
+    常用的代換
+    \begin{description}
+      \item[幹掉空白行] \hfill \\
+      \verb=s/^\s*\n//mg= 這邊要注意的是雖然\verb=/^$/=找得
+          到空白行，但是\verb=s/^$//=的代換是不會換掉任何的特殊字元所
+	  代表的意義。也就是說\verb=^$=怎麼樣就是不會被s換掉。
+    \end{description}
+
+
+    \subsection{擷取}
+    擷取是比對到我們要的，把他抓下來變成一個新變數。
+    \begin{enumerate}
+    \item 用predefined 變數獲得的
+	\begin{enumerate}
+	\item \verb=$'=	在比對前面的字串
+	\item \$\&	比對中的字串，這很像其他的script中的\&
+	\item \verb=$`=	在比對後面的字串
+	\end{enumerate}
+    \item 用括號括起來的\$1\$2\$3，跟sed \verb=\1\2\3=是一樣的。
+    \end{enumerate}
+    例子
+    \begin{verbatim}
+
+    $x = "There once was a girl\nWho programmed in Perl\n";
+    $var = ($x =~ /^Who/m);
+    print "$&\n";
+
+    會得到Who
+
+    ($var1 $var2 $var3) = ($search =~ /re(re1)re(re2)re(re3)/);
+    @$var = ($search =~ /re(re1)re(re2)re(re3)/);
+
+    對應到括號中找到的3個字串分別是 $1 $2 $3，跟sed用\1 \2 \3是一樣的道理。
+    \end{verbatim}
+    例如比對ipv4的位址對不對
+    \begin{verbatim}
+    if ($ip =~ /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/ &&
+        ($1<=255 && $2<=255 && $3<=255 && $4<=255)) {
+        print "correct";
+    }
+    \end{verbatim}
+    常用的比對
+    \begin{enumerate} 
+      \item 最後一行 \verb|($last_line) = ($multiline =~ /([^\r?\n]+)$/);|
+      \item 取得最後一個\verb|$a='this is my world'; ($x) = ($a =~ /([^\s]+)$/);|
+      \item 把目錄加上斜線 \verb|$dir =~ s/(.*\w)$/$1\//g;|
+    \end{enumerate}
+
+    \subsection{變數與pattern}
+    我們除了自訂的已知pattern外，其實常常會用一個變數來作pattern match，
+    已知pattern的好處是他在perl compile time時就已經決定，如果是變數
+    qr//可以有效的解決
+    \\\\
+    還有一種情形是我們不要變數裡面的字串是pattern，例如 . ? * \verb=[ ]=等字元，
+    我們可以加上\verb=/\Q$variable\E/=，這樣則variable會先被轉成變數內的字串，
+    然後這整個字串不會有pattern上的意義，例如*就是*。
+    \subsection{greedy RE的處理}
+    greedy and non-greedy的例子在介紹RE時提到，可是一般是沒有辦法處理的。
+    例如
+    \begin{verbatim}
+    <t1>text</t1><t2>text</t2> <t3>text</t3>
+    \end{verbatim}
+    perl可以多加一個 ? 在一個 re後面表示non-greedy的RE搜尋。
+    例如\verb=<.*?>= 這樣的RE就可以找到\verb=<t1>=而不會找到
+    \verb=<t1xxxxx...../t3>=
+    \\\\
+    另外在\verb=[]=的字元使用也有greedy的限制，例如有可能出現以下的pattern
+    \begin{verbatim}
+    xxxxxxixx
+    xxxxxxuxx
+    xxxxxxixx,uxx
+    \end{verbatim}
+    那我們如果用\verb=/(.*)[ui].*/= 則第三種 pattern 的 \$1 會是xxxxxxixx,
+    的greedy match.不會只是xxxxxx。
+
+    \subsection{使用perl command line}
+    而當系統上有perl時而sed/awk沒有支援非greedy時，可以使用 perl -e來做命令列的
+    使用，或者很多情況下使用 perl 內部的豐富函式幫我們做些簡單快速的檢查，計算等
+    例如密碼的crypt應用, 我們可以在 shell 中馬上傳參數叫出 perl 一行就搞定很多複
+    雜的使用。比sed -e 多出 -ne, -pe 等用法。　
+    \begin{verbatim}
+    perl -e 'print "Hello World\n"'
+    \end{verbatim}
+
+    load 模組使用-M
+    \begin{verbatim}
+    perl -MLWP::Simple -e 'print head "http://www.example.com"'
+    \end{verbatim}
+
+    loop檔案使用-ne 與 -pe
+    \begin{verbatim}
+    perl -ne 'perl code' file
+    
+    其實是
+
+    LINE:
+    while (<>) {
+       perl code
+    }
+    \end{verbatim}
+
+    -pe 是每次會自動印出\$\_
+    \begin{verbatim}
+    perl -pe 'perl code' file
+
+    其實是
+
+    LINE:
+    while (<>) {
+      perl code
+    } continue {
+      print or die "-p destination: $!\n";
+    }
+    \end{verbatim}
+
+    所以如果要跟shell作用，可以用
+    \begin{verbatim}
+    echo xxxx | perl -pe 's///'
+
+    例如xml的取值，不管white space與"跟'的使用
+
+    echo '<Property   oe:key="DNSIp"  oe:value =10.8.8.8/>' |
+      perl -pe 's/.*Property +oe:key *= *['"'"'"'"]?DNSIp["'"'"'"']? +oe:value *= *['"'"'"'']?(.*?)['"'"'"'']? *\/>.*/$1/'
+    \end{verbatim}
+    所以使用 -pe 時，是把每次讀進來的\$\_，做s///，然後自動perl會印出在stdout上。
+    \\\\
+    跟 sed -i 一樣的 perl -i
+    \begin{verbatim}
+    perl -i -pe 's/\bPHP\b/Perl/g' file.txt
+    \end{verbatim}
+
+    \section{function，模組與OO}
+    每一種語言工具一定都有提供副程式用法，perl也不例外，每個function都有
+    arguments, return value 還有scope的問題，最後perl也有OO的解決方案的。
+    \subsection{基本function}
+    定義
+    \begin{verbatim}
+    sub subfunc
+    {
+        my $fh = 'xxx';
+    }
+
+    \end{verbatim}
+    呼叫用 subfunc()或者 \&subfunc()。內定傳進來的參數用 \verb=@_=這個陣列來，所以
+    \verb=$_[0]=...是第一個參數。
+    \begin{verbatim}
+    sub maybeset
+    {
+        my($key, $value) = @_;
+        $Foo{$key} = $value unless $Foo{$key};
+    }
+    \end{verbatim}
+    函數return可以是任何物件，array, string...等等在傳統上需要pointer來表達的。
+    這跟C的struct很像。這也是C++的call by reference處理。如果
+    \begin{verbatim}
+    @var = func();
+    \end{verbatim}
+    不用考慮pointer問題，會把整個array的member一一填上相對應的值。這到object時
+    ，還是一樣成立的(其實這邊的array就是一種新定義的object)，不用考慮pointer的
+    scope問題。這其實是C/C++的assignment。當然這比較耗時間，比起pass pointer填
+    值，還回pointer沒有效率。所以如果真有performance考量，可以用
+    call by reference，傳值時用\verb=\$var, \@arrary, \%hash=來傳值。
+    \\\\
+    而callback function由於一定是傳reference，所以就用reference的呼叫方式，
+    \verb=func(\&callback, $param0, $param1) { $arg->($param0, $param1); }=
+    一般函數的參考請看man perlfunc。
+
+    \subsection{module, package, library}
+    要將一堆寫好的函數兜成一個library檔案用package包好作成library。以下是個例子
+    \begin{verbatim}
+    package Foo;
+
+    our $var, $bar;
+    $var = 20;
+
+    sub func1 {
+        print $var;
+    }
+    \end{verbatim}
+    其實package真正的講法是定義一個namespace(命名空間)，這檔案下的變數宣告在這
+    namespace下有效。如果是module的perl script，副檔名就用pm，這在
+    /usr/share/perl, /usr/lib/perl/下面看到。
+    \\\\
+    對於程式的再利用，將已寫好的module包含進來，使用下面方法
+    \begin{enumerate}
+    \item do 'module.pl'
+    \item require module\_name;
+    \item use module\_name "name1 name2";
+    \item eval xxx.pl; 當然也可以用 eval 像是shell裡的eval "xxx.sh"
+    \end{enumerate}
+    這裡面是根據@INC這個內定變數下的目錄再分類而已。do是等於eval "cat
+    module.pl'，即使之前有do過這檔案了，他會重複的執行，而且直接引用檔名，
+    所以如果是想要include同目錄下的module，可以用do去蓋掉原本的定義，
+    。require是比較像library的用法了，
+    其中use等於BEGIN { require Module; import Module LIST; }，BEGIN是指在
+    compile time時，就會馬上被執行。如果已經有include了，不會include兩次。
+    作為perl library檔案，必須return true，表示整個檔案import成功，所以通
+    常會看到這種檔案最後是"1;"。現在比較多用require/use，但由於use其實是包在
+    begin的，所以動態的eval內只能使用require，不能用use。當我們要
+    程式去搜尋library時，可以把path加在@INC或者加在PERL5LIB這個環境變數中。
+    用其他檔案中的變數與函數。有用double::或者單一quote'的用法。
+    \begin{itemize}
+    \item \$Foo::var
+    \item \&Foo::func1()
+    \item \$Foo'var
+    \item \&Foo'func1()
+    \end{itemize}
+    這個還要跟Export搭配一起回答。請看下一章。
+
+    \subsection{Typeglobs}
+    在一個package內部的namespace中，名字有可能重複，例如\$foo, \%foo, @foo
+    \&foo，這在perl內部是以特別型別所謂typeglobs來存取所有同名的不同資料型別
+    資料。是以*foo來表示的。也就是*foo可以同時是上面四種型別的代表。因此*foo
+    可以代表任意的一種資料型別變數，甚至也拿來當作constant用，
+    \\\\
+    Constant
+    \begin{verbatim}
+    *TRUE = \1;
+    *FALSE = \0;
+    \end{verbatim}
+    Filehandles
+    \begin{verbatim}
+    \*STDERR
+
+    \end{verbatim}
+    Class Accessors
+    \begin{verbatim}
+for my $field (qw(member1 member2 member3)) {
+    my $slot = __PACKAGE__ ."::$field";
+    no strict "refs";
+
+    *$field = sub {
+        my $self = shift;
+
+        $self->{$slot} = shift if @_;
+        return $self->{$slot};
+    }
+}
+    \end{verbatim}
+    上面的 accessors 是 class 內有 member data, member1, member2, member3，
+    如果使用了 class\verb=->=member1()，則只會傳回 member1 的值，如果有參數，
+    就會設值。
+    \subsection{變數scope與多檔結構化程式}
+    正常的script是應該沒有變數scope等問題的，不過perl越來越強大，也就有了這樣
+    的考量。也就是變數在副程式裡面應該是彼此看不到對方才對。正常perl一起來內定
+    的目前檔案甚麼都不寫就是main這個內定package。perl提供了
+    \begin{enumerate}
+    \item my 宣告在一個subfunction {}, loop block {}, 一個perl檔案(package), 
+	    及一個eval內的私有變數。這其實就是C裡面的auto變數，是用另一個stack
+	    的。所以會藏在block內。這像C的static變數 
+	    這很像C的static變數，只屬於某一個file的scope.
+	    例如counter之類的
+	    \begin{verbatim}
+            for my $i (1, 2, 3) {
+                some_function();
+            }
+	    \end{verbatim}
+    \item local 只是很多人被local這個名字搞混了，其實想要像c那樣的變數scope應
+	    該用的是my這個東西。local只是一個不屬於任何package的暫時global變數。
+	    好像在繞口令。這是歷史的產物，也就是當初寫perl時是很隨性的，不用
+	    宣告的，為了同一個檔案中的namespace，在perl4.0時出現了local這樣的
+	    block scope變數，等到後來需要更模組化的變數scope時，在5.0以後
+	    my取代了local.
+    \item our 這個宣告變數是跨檔案的也就是跨package libarary，這很像C中的
+	    extern,如果這個變數要在別的package改變了也有效。那就要用our.
+    \end{enumerate}
+    當要嚴格的規定變數的scope的時候，我們會加上
+    \begin{verbatim}
+    use strict;
+    \end{verbatim}
+    這樣的開頭，強制請perl幫我們檢查所有的變數要規定屬於那一個package。
+    也就是所有的變數都要明確掛上my來。底下為傳統local用法，這是沒有用
+    use strict;的時候。有用use strict;時，沒有local。
+    \begin{verbatim}
+    $my_var = "my_var\n";
+    sub func {
+            local($my_var) = "func_local_my_var";
+            print "$my_var\n";
+    }
+    &func;
+    print $my_var;
+    會印出
+    func_local_my_var
+    my_var
+    表示block裡外不受影響。
+    \end{verbatim}
+    新的use strict;要求一定要用my來作namespace的區隔。不能甚麼都不宣告的
+    使用一個變數，用local時一定要指明是那一個package的變數。
+    \begin{verbatim}
+    use strict;
+    package mainpkg;
+    my $my_var = "my_var";
+    local $other::my_var;
+    sub func {
+            my $my_var = "func_local_my_var";
+            print "$my_var\n";
+    }
+    &func;
+    print $my_var;
+    \end{verbatim}
+    加上別的檔案的使用，使得變數scope多了file(package)的使用scope. 這時要用
+    our宣告變數才能別的檔案可以更改。my反而只能算是static的file scope了。
+    \begin{verbatim}
+    main.pl
+    use strict;
+    package mainpkg;
+    my $my_var = "my_var";
+    our $our_var;
+    sub func {
+            our $our_var = "main_our_var";
+            print "$our_var\n";
+    }
+
+    $other::other_my_var = "assigned other my var in main package\n";
+    $other::other_our_var = "assigned other our var in main package\n";
+    &other::other_func
+    print $other::other_my_var;
+    print $other::other_our_var;
+
+    other.pm
+    package other;
+    my $other_my_var = "other_my_var";
+    our $other_our_var = "other_our_var";
+    sub other_func {
+        print "$other_my_var\n";
+        print "$other_our_var\n";
+    }
+
+    執行main.pl
+    結果是
+    other_my_var
+    assigned other our var in main package
+    assigned other my var in main package
+    assigned other our var in main package
+
+    \end{verbatim}
+    從這邊可以看出來
+    \begin{enumerate}
+    \item   用別的package的function，只要直接用package::func就可以了，可是別的
+	    package的變數卻不可以直接拿來用。
+    \item   但是如果別的package的變數是用our宣告的，就可以直接\$package::var用。
+    \item   如果是my宣告，則別的package無法\$package::var拿來用
+    \end{enumerate}
+    \subsubsection{Export}
+    不過每次都要這樣\$package::var, \$package::func用太麻煩了，我們想要跟C
+    一樣直接使用他的名稱就好。這時必須把這個package的變數名給export出去。
+    我們必須用標準的內部Exporter package, 加上EXPORT這個內定的array。
+    \begin{verbatim}
+    main.pl
+    package mainpkg;
+    use strict;
+    use other;
+
+    my $my_var = "my_var";
+    our $our_var;
+    sub func {
+        our $our_var = "main_our_var";
+        print "$our_var\n";
+    }
+
+    $other_my_var = "assigned other my var in main package\n";
+    &other_func
+    $other_our_var = "assigned other our var in main package\n";
+    &other_func
+
+
+    other.pm
+    package other;
+    use strict;
+
+    BEGIN {
+        use Exporter;
+        our (@ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+        @ISA = qw(Exporter);
+        @EXPORT = qw($other_my_var $other_my_var &other_func);
+    }
+    my $other_my_var = "other_my_var";
+    our $other_our_var = "other_our_var";
+    sub other_func {
+        print "$other_my_var\n";
+        print "$other_our_var\n";
+    }
+
+    執行main.pl
+    結果是
+    other_my_var
+    other_our_var
+    other_my_var
+    assigned other our var in main package
+    \end{verbatim}
+    可以看出來用my宣告的就是static的file scope。不能在其他的package更改值。
+    BEGIN {}這可加可不加。這是perl一開始就執行的code。before compile time.
+    因為我們用了use strict;所以還是要宣告一下our @ISA, @EXPORT這些東西。
+    ISA, EXPORT, EXPORT\_OK ...這些變數是perl package的內有變數。
+    @ISA表示is a "exporter"，就是說other是Exporter下的一個子package，
+    如果你要用到的某函數不在目前的package定義中，那麼他會自動去@ISA中的package名
+    中找看看有沒有。EXPORT這個陣列放的就是要export給一般user namespace用的
+    symbol名。ISA的性質可以是用來作物件繼承用的。
+
+    \subsection{物件導向}
+    要區別一個程式是不是OO，有很重要的封裝(encapsulation), 繼承(inheritance)，
+    多形(polymophism)三個條件。C也能做到簡單的結構化struct，但是就是因為沒有
+    這三個東西的語法，因此不能作為OO的語言。其實perl也不是適合做到真正OO，只是
+    後來用 package 類似結構的寫法還有一點點OO的語法子模組而已。\\\\
+    perl的複雜資料結構本來就要用reference來表現所以class後來就用類似的宣告了，
+    而其實OO的寫法中的implementaion就是不同的變數範圍來實作的。所以在perl中
+    就要用package來進一步實作。傳統的package內的函數呼叫可以是
+    package::func(@argv)，新的class的函數呼叫多了package\verb=->=func(@argv);
+    這等於 package::func(package, @argv);這是為了來作 constructor 用的。
+    \\\\
+    所以
+    \begin{itemize}
+    \item 一個物件一定是一個 perl reference，一個 perl reference 不一定是物件。
+    \item 一個物件的 member function 所傳來的第一個參數是 class 名字。
+      javascript 也是這樣。
+    \end{itemize}
+    因此為了要特別告訴 perl 說這是一個物件 package，則我們必須在 member function
+    告訴他。
+    主要要使用
+    \\\\
+    bless(Reference, ClassName);
+    \\\\
+    這個函數。這樣就是說某個變數reference是屬於某個ClassName下的。
+    那這樣就宣告了某個參數是一個物件了。
+    \\\\
+    底下我們用一般人與系統上的使用者來作示範。
+    \subsubsection{基本class宣告}
+    \begin{verbatim}
+檔案: Person.pm
+package Person;
+use strict;
+
+sub new {
+    my $self = {
+        name => '',
+        tel  => ''
+    };
+    bless($self, $_[0]);
+    return $self;
+}
+
+sub name {
+    my $self = shift;
+    print $self->{name}."\n";
+}
+1;
+
+
+檔案: Member.pm
+package Member;
+use strict;
+use Person;
+
+our @ISA = 'Person';
+
+sub new {
+    my $self = Person->new();
+    $self->{name} = 'userName';
+    $self->{tel} = 'telephone #';
+    $self->{id} = 'uid';
+    $self->{passwd} = 'passwd';
+
+    bless($self, $_[0]);
+    return $self;
+}
+
+檔案: main.pl
+package Main;
+use Member;
+my $member = Member->new();
+$member->name();
+
+結果:
+userName
+    \end{verbatim}
+    呼叫就是很簡單，\verb=c->f()=,在OO設計哲學裡面，
+    其實不願意別的工程師直接使用變數，
+    即使在簡單的得到某一個member的值，也都要用透過function call,也就是interface
+    例如get\_xxx()然後return這個值。這樣的好處是程式將來對於拿值有限制時，上層
+    程式不用改，直接改interface裡面的implementation就好。不過很多的function
+    call是有執行效率問題的。不過執行效率與code可讀性本來就是有trade off的。
+    \\\\
+    Constructor就是\verb=Class->new()=;不過如果想要用\verb=$obj->new();=則必須用
+    通用的class宣告。
+    \begin{verbatim}
+sub new {
+    my $this = shift;
+    my $class = ref($this) || $this;
+
+    my $self = {};
+    ...
+    bless ($self, $class);
+    return $self
+}
+    \end{verbatim}
+    上面的\$self所以是個hash reference，然後自己往裡面填member data.就這樣。
+    所以取用member就是跟hash一樣，\verb=$obj->{member1} $obj->method(@arg)=，
+    其中bless這個function是用來告訴perl, 前個reference是後面這個class的一個 
+    member.因為\verb=Class->method(@argv);=其實是
+    Class::method(ClassName, @argv); 所以第一個參數就是class名。
+    \\\\
+    ref這個函數作用在物件上是會傳回Class名字的，所以constructor不管是那種方式
+    呼叫都保證\$class是ClassName.
+    \\\\
+    基本上直接呼叫父class的函數名是不大好的，如果繼承很長，那想要一層層找上去
+    ，應該要用\verb=$class->SUPER::func() 或者 $self->SUPER::func()=這樣子。
+    \\\\
+    script不用考慮甚麼memory leak，所以destructor就省了。construtor其實只是個
+    function call而已愛叫new, spawn...隨便。
+    \\\\
+    constructor並沒有像C++所謂的default constructor，所以子class的constroctor
+    必須額外的呼叫父class的constructor，通常就是\verb=parnet::new($self, @_);=。
+    \\\\
+    assignment operator跟C的struct或者C++的一樣，是copy member，其實這也是一般
+    script的array, string..等等的作法。也就是reference的作法，把相對應參數的值
+    copy 一份給 = 的左邊。沒有pointer問題，但是implement script的人有garbage 
+    collection的問題。
+    \\\\
+    繼承我們看到是用原本package的@ISA來達到的，所以最後呼叫name()時，他會去
+    Person上叫。 不過perl畢竟不是用來作OO的，這樣的OO實在很鱉腳。而且說實話
+    也不用這麼複雜。
+    \\\\
+    所有的class其實都會自動繼承一個叫UNIVERSAL的爸爸，裡面有兩個member function
+    很有用，一個是isa('MyClass')，也就是如果這個object是MyClass這個package，
+    則會回傳True。一個是can('method')，如果這個object有method這個funcation call
+    則回傳True。
+    \\\\
+    class變數的實作當然就是用our啦，可以把他Export出去，也可以另作一個class 
+    method來存取class變數。class method的呼叫就是前面一般
+    package::method的呼叫方法了。
+    \\\\
+    所以基本上Perl的所有型別的Literal可以用下面來表示
+    \begin{verbatim}
+my $h = { a => 1 };
+my $a = [1,2,3];
+my $s = \3;
+my $f = \&somesub;
+my $g = \*STDOUT;
+my $o = bless {}, "MyClass";
+    \end{verbatim}
+
+    \subsection{CPAN的perl module安裝}
+    這邊就是去 CPAN http://www.cpan.org，
+    那抓下來用，這邊要注意的有一點是如果這個 perl module 是需要
+    c compiler 來編譯的。那會跟原本編譯 perl 的 c compiler 有很大關係。
+    當你用 perl Makefile.PL，其實他是會去抓原本 compile perl 的 cc 使用 options.
+    perl 會記得當時他是怎麼被建造的，在他以後的模組都要照樣被建造。
+    \\\\
+    通常是在 solaris 上的 perl 用solaris 的 cc compile 的，結果 solaris 系統上的
+    perl 記得一些 compiler 的選項，而不同 compiler 上的選項有的有，有的沒有，
+    通常最常死掉的是
+    \begin{verbatim}
+    -KPIC -xdepend
+    \end{verbatim}
+    不管你裝了 gcc 在 solaris 機器也沒有用。像 rrdtools, 或一些模組用到 c 的
+    compiler 的 driver 就會出現這樣錯誤。
+    \\\\
+    所以解決方法是
+    \begin{enumerate}
+    \item 買一個solaris cc
+    \item 重新用gcc compile一個新的perl,通常去www.sunfreeware.com拿比較快。
+    \item 改Makefile \verb=把cc -> gcc, -KPIC -> -fPIC,= 
+		     \verb=-xdepend -> -xc or -xc++ =or 不寫
+    \end{enumerate}
+
+    模組安裝很簡單只要去www.cpan.org找，找到了通常就是解開後
+
+    \begin{verbatim}
+    $ perl Makefile.pl
+    $ make
+    $ make test
+    $ make install
+    \end{verbatim}
+    就可以了，會裝到/usr/local/lib/perl ...下。
+    \\\\
+    另一種可以用cpan這隻程式來管理安裝cpan的模組，會自動找出dependancy
+    當然這也跟rpm一樣，當初寫這些模組的人有把相關資訊放在裡面，大家遵守
+    cpan的規定，所以cpan就可以根據這些資訊裝起所有的東西，他這跟bsd的port
+    比較像，是要download, compile, test, install的。先用系統上的package
+    裝起cpan。然後下cpan命令
+    {\scriptsize
+    \begin{verbatim}
+    cyril@i7:~$ cpan 
+    Terminal does not support AddHistory.
+
+    cpan shell -- CPAN exploration and modules installation (v1.960001)
+        Enter 'h' for help.
+
+        cpan[1]> i /XML::Twig/
+        Going to read '/home/cyril/.cpan/Metadata'
+          Database was generated on Wed, 26 Sep 2012 11:19:03 GMT
+          Module  < App::RSS2Leafnode::XML::Twig::Other (KRYDE/rss2leafnode-65.tar.gz)
+        Module  < Test::Valgrind::Parser::XML::Twig (VPIT/Test-Valgrind-1.13.tar.gz)
+        Module  < Test::Valgrind::Parser::XML::Twig::Elt (VPIT/Test-Valgrind-1.13.tar.gz)
+        Module  < Test::XML::Twig        (SEMANTICO/Test-XML-0.08.tar.gz)
+        Module  < XML::Twig              (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::Elt         (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::Entity      (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::Entity_list (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::XPath       (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::XPath::Attribute (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::XPath::Elt  (MIROD/XML-Twig-3.41.tar.gz)
+        Module  < XML::Twig::XPath::Namespace (MIROD/XML-Twig-3.41.tar.gz)
+        12 items found
+
+        cpan[2]> install XML::Twig
+    \end{verbatim}
+    }
+    使用cpan 所裝的 library 跟系統 deb/rpm 裝的會在不同地方，以我的 debian 為例子，
+    他是放到 /usr/local/lib/perlxxx 下面的，但是系統的是放到 /usr/lib/perlxxx
+    下面，所以如果有需要新版的某 library ，那要小心 cpan 跟系統管理是兩套的，
+    必須小心將來搜尋時是以想要的 path 為優先。
+
+    \subsection{Makefile.PL的寫作}
+    必須要使用\href{http://search.cpan.org/~mschwern/ExtUtils-MakeMaker-6.64/lib/ExtUtils/MakeMaker.pm}{ExtUtils::MakeMaker}
+    \begin{verbatim}
+    use strict;
+    use ExtUtils::MakeMaker;
+
+    WriteMakefile(
+        NAME              =>  'Quark',
+        EXTRA_MODULES     =>  [
+                              { NAME => 'Quark::Device'},
+                              { NAME => 'Quark::Device::Ipmi},
+                              { NAME => 'Quark::Device::Power}
+                              ]
+        VERSION           =>  '0.0.0',
+        PREREQ_PM         =>  { 'Expect' => '1.2',
+                              },
+        EXE_FILES         =>  [ 'src/bin/run.pl' ],
+        ABSTRACT_FROM     =>  'src/lib/Quark/Calc.pod',
+        AUTHOR            => 'Cyri Huang <cyril@costco.net>',
+    )
+    \end{verbatim}
+
+    \begin{itemize}
+    \item 模組 使用NAME跟EXTRA\_MODULES來指定
+    \item 可執行檔 使用EXE\_FILES來指定
+    \item 相依package 使用PREREQ\_PM來指定
+    \end{itemize}
+    \section{coding sytle與Plain Old Document}
+    傳統C有ansi C與k\&r C的coding style，後來Linux kernel也
+    有自己的coding style.在perl上也有大家follow的coding style。
+    一般說來要點有
+    \begin{itemize}
+      \item indentation 是4。
+      \item sub funtion的 \{在sub 名字後，不像C的另起一行。
+      \item class 名字第1字元大寫
+    \end{itemize}
+    POD是perl提供的文件系統，秉持著越簡單隨性就好的設計哲學，
+    另外由於在這文件內的文字都不會被解譯器執行，所以也是可以
+    用來comment整段文字的。不需要用很多個\#。
+    只要是開頭是等號=加上一個id，那後面的文字就被認為是pod文件，
+    這個id是任意的。然後可以透過perl提供的translator程式，
+    轉換成我們想要的文件。目前 style sheet轉換程式有
+    \begin{itemize}
+    \item pod2html xxx.pm \verb=>= xxx.html;
+    \item pod2latex xxx.pm \verb=>= xxx.tex
+    \item pod2man xxx.pm \verb=| nroff -man | less=
+    \item pod2text xxx.pm \verb=| less=
+    \item pod2usage xxx.pm
+    \end{itemize}
+
+    目前perl認得的特定的id能夠被轉換程式識別的有
+    \begin{itemize}
+    \item =head1 =head2 ...像html的\verb=<h1><h2>=
+    \item =over \# =item =back 用來作list的， over的\#是 indentation 數字, back表示結束。
+    \item =cut 表示結束一段pod。
+    \item =for TRANSLATOR =begin TRANSLATOR =end TRANSLATOR
+    \end{itemize}
+    目前perl建議的標準格式如下。indentation 也是perl的4，
+    \begin{verbatim}
+=head1 NAME
+
+name of this package
+
+=head1 SYNOPSIS
+
+	use package_name;
+	package_name->new();
+
+=head1 DESCRIPTION
+
+the description of package
+
+=head1 AUTHOR
+
+=head1 METHODS
+
+=over 4
+
+=item
+...
+
+=back
+
+=head1 BUGS
+
+=head1 SEE ALSO
+
+=head1 COPYRIGHT
+
+
+    \end{verbatim}
+
+    注意的是
+    \begin{itemize}
+    \item 每一個=識別id跟文字都要空一行來區別。
+    \item 只要前面是空格,tab就可以是verbatim文字。
+    \end{itemize}

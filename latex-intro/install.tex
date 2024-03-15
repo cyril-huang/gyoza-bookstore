@@ -285,7 +285,7 @@ $ pdftex '\empty Hello world!\bye'
 package 管理只有幾件重要事情
 \begin{itemize}
 \item 遠端 repository 是誰？內定是 CTAN。
-\item 本地端要裝在哪裡？ 這應該在 TEXMFHOME 下。
+\item 本地端要裝在哪裡？ 這應該在 TEXDIR 下。
 \item 現在裝了什麼？
 \item 如何安裝新的與移除不要的？
 \item package 資訊與 package 裡面有什麼檔案？
@@ -330,9 +330,9 @@ $ tlmgr uninstall
 除了 Linux package 上有的，也可自行去抓 ttf 或者 otf 檔。如果沒有權限裝在系統
 上，可以下載到 
 \begin{verbatim}
-\$HOME/.local/share/fonts 
+$HOME/.local/share/fonts 
 或者舊的
-\$HOME/.fonts 下
+$HOME/.fonts 下
 \end{verbatim}
 然後用
 \begin{verbatim}

@@ -1,0 +1,1205 @@
+\chapter{套件包裝}
+package tools是release的包裝工具，很多人都在抱怨Linux很難安裝，其實是不懂得
+Linux的安裝機制，只要你懂得運作原理的話，就可以順利的把想要的檔案自動裝到特
+定的地方去。在unix的世界裡面，Solaris, HP-UX, 等也都有一套套件管理的辦法，
+像Solaris有pkg tools，只要用pkgadd, pkgrm都可以劈哩啪啦就裝好或移除一個軟體，
+而且裝到哪裡去，其實也可以知道。當然也可以自己寫給INSTALL script，不過這樣比
+較不好，改版管理沒有中央集權會很混亂。套件製作原理只是寫一堆資訊檔，還有安裝
+/移除的script，顧名思義，當install/remove套件時，這些scripts會被自動叫起來。
+\\\\
+建立package的原則是， 
+\begin{itemize}
+  \item 寫一個資訊檔，
+  \item build source code原始程式碼到一個假的 root目錄，這個假的 root，在
+    一般 source 的 ./configure 命令中，用 prefix 來表示，因此變數通常用
+    prefix, DESTDIR 在 Makefile 中。
+  \item 用工具把這個假root directory建立 binary package檔。
+\end{itemize}
+通常在原始程式碼社群中不僅要 build binary package也要build source package，
+這個source package包含了包裝者對原始碼的更動或patch，主要因為open source 
+community的package包裝者與source coding的人往往不是同一人。而是因為
+每個distro都會從upstream拿到最原始放出的source code，然後自己根據自己
+distro的決定，加上自己的patch後，編出適合自己某個版本的binary。binary裏面都
+有特別的參照跟string寫進去。所以不是亂拿source編譯一通就可以安全無虞的在舊
+系統亂跑。
+\section{基本使用}
+目前Linux兩大種類package, debian/ubuntu/mint等使用deb型式套件，
+redhat/centos/fedora 等使用rpm套件。 套件資訊有幾個地方
+\begin{itemize}
+  \item 套件本身 - 套件本身的資訊像是版本，檔案列表，相依性。
+  \item 系統上 - 系統上的套件訊息，安裝與否，相依性。藏在/var/lib/dpkg
+    或/var/lib/rpm下
+  \item 套件集中地 - 一堆套件但不在目前的系統上，像是url, 套件列表，安全檢查。
+\end{itemize}
+  \subsection{基本命令}
+  debian/ubuntu, redhat/centos/fedora等基本cli，分別為dpkg與rpm，但後來有更多
+  工具例如apt-get(通改為 apt), yum(已經改為 dnf了)來處理更大的 repository
+  集散中心。
+  \\\\
+  對於一個套件檔案查詢
+  \begin{itemize}
+    \item 一般資訊\\
+      dpkg --info\\
+      rpm -pqi 
+    \item 有哪些檔案\\
+      dpkg --contents\\
+      rpm --pql 
+  \end{itemize}
+  對於系統上套件資訊查詢
+  \begin{itemize}
+    \item 一般資訊\\
+      dpkg --status \\
+      rpm -qi
+    \item 裝了沒\\
+      dpkg --status\\
+      rpm -qa | grep pkg-name  or yum list installed\\
+    \item 裝了什麼東西\\
+      dpkg --listfiles pkg-name\\
+      rpm -ql pkg-name
+    \item 什麼套件有這檔案\\
+      dpkg --search "/bin/ls"\\
+      rpm -qf `which ls` or yum whatprovides "/bin/ls"
+  \end{itemize}
+  對於套件集中地，必須有更上一層的工具apt與yum來處理，目前configuration檔在
+  /etc/apt/sources.list 與 /etc/yum.repo/。apt與yum都能處理dependency，也就是
+  例如我們想裝gnome，gnome有好多其他相關packages, libraries都要裝，他會根據
+  package裏面的層層訊息，全部裝起來。
+  \begin{itemize}
+    \item 更新資料 - 這是把local與遠端的資料同步一次\\
+      apt-get update\\
+      yum update
+    \item 安裝\\
+      apt-get install\\
+      yum install
+    \item 移除\\
+      apt-get remove\\
+      yum erase
+  \end{itemize}
+  以網路安裝的集散地，例如 http://mirrors.kernel.org 下面有
+  http://mirrors.kernel.org/debian 跟 http://mirrors.kernel.org/centos,
+  除了 CLI 的工具外，debian/ubuntu 上有好用的curses based 的 aptitude，GUI上，
+  debian/ubuntu/mint 的 synaptic, redhat/centos/fedora 的 packageKit。
+  \\\\
+  前面在 build 的時候，曾經講過大致上的版本號碼規則，傳統opensource, linux 
+  kernel , library有版本的基本規則, current.revision.age-patch 的編號原則，後來
+  deb rpm檔的規則也大致是如此xx.yy.zz-vv，只是可能名稱不一樣，有一個
+  https://semver.org/ 定義了major.minor.patch-preRelease+buildMetadata 這樣的版
+  本格式，也就是可能在沒有正式release 前，也能用這規則在每天的 nighly build。
+  例如 1.0.1-alpha+20171203.amd64 ，preRelease就是alpha, beta這種名字，
+  buildMetadata就是build的日期，或流水號。基本上版本高於1.0.0後就是正式對外API的
+  release，我們可以用這原則建立自己的版本號碼。
+
+\section{產生deb}
+基本準備工具要安裝 devscripts, dpkg-dev，這裏面有很多命令，所以裝起來還蠻多的。
+一個deb檔其實只是個 archive 格式的檔，可以用 ar 轉出來
+\begin{verbatim}
+$ ar vx xxx.deb 會產生 data.tar.gz (這名稱不一定，有可能gz, bz2, xz ...)
+$ tar zxvf data.tar.gz
+或者
+$ dpkg --contents xxx.deb
+$ dpkg -x xxx.deb .
+\end{verbatim}
+就會看到原本的假 root 目錄結構是怎麼樣的。有需要的話，
+大部分的文件可以在\href{https://www.debian.org/doc/}{debian doc} 找到，
+有些debian的基本規定與\href{https://www.debian.org/doc/debian-policy/}{policy}
+希望遵守， 這有點像寫code的convention，希望大家遵守，我們可以先略過，以後
+熟悉了，再回來仔細看。
+
+  \subsection{由distro提供檔案建造}
+  如果想要debian的source重新在自己機器上編一個新的package，則到 debian 或
+  ubuntu 的 pool 目錄裡面的套件分類下載三個檔案
+  \begin{itemize}
+    \item xxx.orig.tar.gz
+    \item xxx.debian.tar.gz (或者xxx.diff.gz)
+    \item xxx.dsc
+  \end{itemize}
+  把他們放在一起，然後用
+  \begin{verbatim}
+  dpkg-source -x xxx.dsc
+  \end{verbatim}
+  就會解開，並且apply那個 diff，或者解開xxx.debian.tar.gz到一個新目錄，
+  這個目錄下應該會有diff，通常是一個debian目錄，藏著package build所需，
+  或者用命令幫你下載
+  \begin{verbatim}
+# apt-get source xxx
+# apt-get build-dep xxx
+例如 openssl
+# apt-get source openssl
+  \end{verbatim}
+  則會下載3個檔, xxx.orig.tar.gz, xxx.debian.tar.gz(xxx.diff.gz), xxx.dsc
+  並自動用 dpkg-source 命令幫你解開，進到source上， 最簡單的跑
+  \begin{verbatim}
+# dpkg-buildpackage -us -uc
+  \end{verbatim}
+  或者devscripts 套件下的命令
+  \begin{verbatim}
+# debuild -us -uc
+  \end{verbatim}
+  這樣應該就會在上一層目錄產生由這個xxx.debian.tar.gz 所定義的packages 了。
+  通常我們用apt-get build-dep就會順便裝完應有的dependancy，
+  如果編譯這個package時，他那個Build-Depends沒有寫好，需要其他的package，
+  這時會出錯，錯誤訊息會有所需套件名稱，所以需要一一先裝好，就應該可以了。
+  不過這有的很可怕，因為有的package會建立文件，有的會連latex, docbook 都給你
+  抓下來， 所以可以先不用apt-get build-dep 只跑dpkg-buildpackage看看怎麼回事。
+  \begin{verbatim}
+# fakeroot debian/rules binary 在上面目錄產生
+# fakeroot debian/rules build
+  \end{verbatim}
+  但有很多情況是有的版本跳躍的太厲害了，則編譯的dependancy packages 已經不一樣
+  了， 也就是有的新版本patch 無法在舊系統上很容易的編譯出來的，這時只能自己去改
+  debian 目錄下的檔案。其中重要的檔案有debian/rules, debian/control，有些新版
+  本的 source code 無法在舊系統下重新編譯，通常要來改這兩個檔，rules 其實就是
+  Makefile, 裡面通常有 ./configure 的呼叫，control 是 package 的資訊，通常會有
+  其他相依libraries的定義，有時相依 package 名字變了，也要到此更改。
+
+  \subsection{自己產生debian binary 套件}
+  最簡單的就只是把已知位置的 binary，文件檔在將來的系統上，放到一個假的 root
+  目錄，，然後工程師要在假root tree上準備一個DEBIAN目錄，基本上裏面有以下
+  檔案，
+  \begin{itemize}
+    \item control   套件資訊檔
+    \item preinst   四個shell script檔會被dpkg自動呼叫做該做的事
+    \item postinst  可以看/var/lib/dpkg/info下的範例
+    \item prerm
+    \item postrm
+  \end{itemize}
+  最最最基本的就只有control這個檔， 可以man deb-control 了解細節，最基本的欄
+  位有5個欄位， 例如
+  \begin{verbatim}
+Package: helloworld
+Version: 0.9.9
+Maintainer: Alibuda Huang <alibuda_huang@gyoza.net>
+Architecture: amd64
+Description: hello world
+  \end{verbatim}
+  首先我們建造自己的假root, fakeroot，把想放的結果先放到fakeroot下。
+  \begin{verbatim}
+mkdir -p helloworld/usr/bin/
+mkdir -p hellowrold/etc/
+touch helloworld/usr/bin/helloworld
+touch helloworld/etc/helloworld.conf
+  \end{verbatim}
+  然後把剛剛的control檔放到一個大寫DEBIAN的目錄下，並且用dpkg-deb命令建造。
+  \begin{verbatim}
+mkdir -p helloworld/DEBIAN
+cp control helloworld/DEBIAN/control
+dpkg-deb --build helloworld .
+ar t helloworld_0.9.9_all.deb
+dpkg --info helloworld_0.9.9_amd64.deb
+dpkg --contents helloworld_0.9.9_amd64.deb
+  \end{verbatim}
+  這樣就有個deb了，用ar t去看他內容。基本上helloworld這個目錄就是假的 root 。
+  \\\\
+  後續要知道的是
+  \begin{itemize}
+    \item Architecture 可以用 all, 或者 dpkg-architecture 去產生的結果。
+    \item Description 的第一行是少於 60 字元的 summary，第二行起每行要空一格
+      才是完整敘述。
+  \end{itemize}
+  所以正常從source make install就要裝到這目錄來，make install 要有 prefix 或
+  者 DESTDIR 變數寫在 Makefile 裡面。
+  \begin{verbatim}
+make prefix=helloworld install
+make DESTDIR=helloworld install
+  \end{verbatim}
+
+  \subsection{由自己 source 產生 package 檔}
+  發現之前用 apt source xxx 下載的 debian source 的 control 目錄是在
+  xxx/debian，但怎麼我們自己做的變成大寫的DEBIAN，原來大寫的DEBIAN 是給binary
+  package 用的，如果要從一個 source 重新build起，要包括 source package 就要用小
+  寫的 debian，這是比較標準的作法。
+  \\\\
+  這種標準作法是要產生 source package 的，要產生 binary package 要用 DEBIAN
+  目錄，兩者都要產生就要兩個目錄都要做，而因此有 dpkg-gencontrol 命令會去讀
+  debian/ 下的檔案建造DEBIAN control。
+  \\\\
+  所以我們要建造從source 開始build起的，這就比較複雜，首先要在 source tree 的
+  最上面建造一個 debian 目錄，裡面放著所有建造 deb 套件的資訊，通常source 上
+  最少要有 Makefile 來建造binary 檔, 不過我們先看別人寫的，來做解說。
+  \\\\
+  當用ar 解開 binary deb檔時其中有個control.tar.gz，裏面就
+  藏著 control檔，或者我們用apt-get source xxx, 解開那個 xxx-debian.tar.gz，
+  或去網路 debian/ubuntu/mint 的pool下的xxx-debian.tar.gz 也可以。
+  以openssl為例的control檔，可以去解開
+  \begin{verbatim}
+  openssl_<version>-<release>.debian.tar.xz
+  \end{verbatim}
+  \begin{itemize}
+    \item control 這是 source control 檔，雖然都是 control 檔，要注意的是跟
+      前面 binary control 檔是不同的。兩者的完全解說可從 policy 下的文件找到。
+      https://www.debian.org/doc/debian-policy/ch-controlfields.html，或者
+      man deb-control, deb-src-control
+    \item rules     這是 Makefile ，是 debuild/fakeroot 會來呼叫的 target 定義
+    \item conffiles configuration檔，在upgrade時，不想被蓋掉的檔。
+    \item copyright debian系列蠻重視版權的，這個也有特別格式。
+    \item changelog debian系列蠻喜歡 changelog 的
+    \item patchs 加上自己的改良或內定所做的patch，現在多為目錄了。
+    \item source 這目錄裏面有個format表示你的source是哪一種型式。先使用
+      3.0 (native)，後面再解說。
+  \end{itemize}
+  相對應的package檔有相關的副檔名 .dirs, .install, .docs ...
+  \begin{itemize}
+    \item .dirs
+    \item .install 將來放到系統去的binary檔。
+    \item .docs 將來裝到/usr/share/doc下的檔案，可以比較自己的跟這檔案內容。
+    \item .preinst .postinst .prerm .postrm 現在改成副檔名的4個 scripts.
+    \item po 多國語言檔目錄
+    \item gpg key檔 debian package用gpg 非對稱鑰匙簽名。
+  \end{itemize}
+  這先暫時不管，因為大部份都大同小異只是照抄，最重要的就只需要
+  control, changelog 跟 rules, source/format， 這4個檔來從source建立我們的套件，
+  所以先看control
+  \begin{verbatim}
+Source: openssl
+Build-Depends: debhelper (>= 10), m4, bc, dpkg-dev (>= 1.15.7)
+Section: utils
+Priority: optional
+Maintainer: Debian OpenSSL Team <pkg-openssl-devel@lists.alioth.debian.org>
+Uploaders: Christoph Martin <christoph.martin@uni-mainz.de>
+Standards-Version: 3.9.8
+Vcs-Browser: https://anonscm.debian.org/viewvc/pkg-openssl/openssl
+Vcs-Svn: svn://anonscm.debian.org/pkg-openssl/openssl/
+Homepage: https://www.openssl.org/
+
+Package: openssl
+Architecture: any
+Multi-Arch: foreign
+Depends: ${shlibs:Depends}, ${perl:Depends}, ${misc:Depends}
+Suggests: ca-certificates
+Description: Secure Sockets Layer toolkit - cryptographic utility
+ This package is part of the OpenSSL project's implementation of the SSL
+ and TLS cryptographic protocols for secure communication over the
+ Internet.
+ .
+ It contains the general-purpose command line binary /usr/bin/openssl,
+ useful for cryptographic operations such as:
+  * creating RSA, DH, and DSA key parameters;
+  * creating X.509 certificates, CSRs, and CRLs;
+  * calculating message digests;
+  * encrypting and decrypting with ciphers;
+  * testing SSL/TLS clients and servers;
+  * handling S/MIME signed or encrypted mail.
+
+Package: libssl1.1
+Section: libs
+Priority: important
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Breaks: salt-common (<= 2016.3.3+ds-3)
+Description: Secure Sockets Layer toolkit - shared libraries
+ This package is part of the OpenSSL project's implementation of the SSL
+ and TLS cryptographic protocols for secure communication over the
+ Internet.
+ .
+ It provides the libssl and libcrypto shared libraries.
+
+...
+.....
+  \end{verbatim}
+  這裏面不一樣的是第一行要從 Source: 這個欄位開始，並且他這裏面定義了很多
+  package 定義，相比之前練習的 DEBIAN/control, 是他會一次產生不同binary package,
+  第1 package 叫 openssl 應該只放使用者工具，第2 package 叫 libssl1.1 裏面放
+  程式庫，以此類推libssl-dev，是寫程式人才需要用到的，裏面有.h header檔等等。
+  \\\\
+  然後 Version 不能用了，必須改用 Standards-Version ，Source 跟 Package
+  這一大段落必須用空白行隔開。
+  \\\\
+  Package 段落中的 Description
+  \\\\
+  其中 Section與Priority是比較不知道怎麼填的，他們是 debian 的分類定義，
+  debian 有個debian-policy這個package， 裏面定義了debian套件的規範，
+  但也不用真裝他， 網路文件 http://www.debian.org/doc/debian-policy/ ，可以
+  看到定義。 但目前 Section 在debian的網路集散地中 
+  http://packages.debian.org/stable/ 也可以看到，每次版本可能不同， 然後實
+  際分類名字是那個目錄名。例如Web Software的分類，你去看html link的目錄是
+  web而已，所以Section: 要填上 web，不是Web Software. 而除非你的package是一
+  定在標準安裝中一定要裝的，不然 Priority 目前都是 optional，
+  \begin{verbatim}
+Section:  base
+          admin
+          doc
+          libs
+          editors
+          devel
+          utils
+          x11
+          ...
+          web
+Priority: required  表示沒這個package, 系統就起不來了。
+          important 表示unix-like的系統上一定會有的。
+          standard  表示什麼都不選的情況下，在文字模式下一定要用到的。
+          optional  前三者以外的都用optional
+          extra     不再用了，改用optional
+  \end{verbatim}
+  Depends 就是套件需要別的套件名稱與版本，將來有的安裝工具會自動把有相依的套件
+  一起裝起來，所以這個Depends也要寫好，彼此用逗號分開。
+  \begin{itemize}
+    \item Recommands: 程式中用了比較好的套件，但aptitude, apt-get 會自動裝這個，
+      dpkg不會自動裝。通常 front end 會問你要不要裝。
+    \item Suggest: 不裝也行的套件，front end 不會問要不要裝。
+    \item Conflicts: 有衝突的其他套件。
+  \end{itemize}
+  另外還有 Build-Depends, Pre-Depends 比較重要，
+  \\\\
+  不過 openssl 的欄位是用變數 \verb=${shlibs:Depends}= 這種型式，這應該是
+  要有 autoconf 才行
+  \begin{itemize}
+    \item \verb=${shlibs:Depends}= 表示自動計算 share libiraries 的相依性。
+    \item \verb=${perl:Depends}= 表示自動計算 perl libraries 的相依性。
+    \item \verb=${misc:Depends}= 表示自動計算
+  \end{itemize}
+  一般很複雜的像 perl, python, LaTeX, Nodejs 等等工具的 library 相依也相當複雜
+  ，所以都會有自動計算 script 幫忙。
+  目前我們
+  可以先用自己知道有哪些套件是相依的，把他寫死的方法，先寫在裏面。變數的方法是
+  工具產生的，比較複雜，下面再討論。所有的欄位可以 man deb-src-control 文件了解，
+  \\\\
+  再來是changelog，最簡單的一個單位就是五行
+  \begin{verbatim}
+<pkgname> (<version>-<release>) unstable; urgency=medium
+
+  * change description
+
+ -- Alibuda Huang <alibuda@gyoza.net>  Sat, 8 Mar 2014 18:30:51 -0800
+  \end{verbatim}
+  那個unstable 是debian 版本code name的定義，先不管他用這個就好，也可以用
+  別的，那個urgency 就是緊不緊急，也先用這個。有一件事就是這種source如果是最
+  原始的source檔，那版本號碼只能是<version>不能有<release>版號。source code
+  是沒有 release 的，只有 binary package, distribution 才有 release. 然後每行
+  的前面空格要完全一樣，第一行沒空格，description 前要兩格，最後行空一格，
+  email 日期中間要兩格，日期要這種格式才接受，要一模一樣格式，不然會 warning。
+  \\\\ 
+  而真正啟動的其實是靠 rules 這個檔，因為他就是 Makefile 而已，但他必須是個可
+  執行檔chmod 755，第一行必須用 make -f 像script那樣，他會被 debuild 或
+  dpkg-buildpackage呼叫使用
+  \begin{verbatim}
+#!/usr/bin/make -f
+  \end{verbatim}
+  他的 target 有些policy規定
+  \begin{itemize}
+    \item clean: 相當於我們熟悉的make clean。(必須要有)
+    \item build: 相當於我們熟悉的make 或者make all. (必須要有)
+    \item build-arch: 建造arch有關如amd64 的 targe。(必須要有)
+    \item build-indep: 建造arch無關的如文件target. (必須要有)
+    \item install: 以前熟悉的make install, 安裝想要檔案到 debian 目錄. (Optional)
+    \item install-arch: 安裝arch有關檔案到 debian 目錄. (Optional)
+    \item install-indep: 安裝arch無關檔案到 debian 目錄. (Optional)
+    \item binary: 產生所有binary packages, 就是我們用DEBIAN做出的xxx.deb，
+      是build-arch, build-indep的合體 (必須要有)
+    \item binary-arch: 建立binary package xxx.deb在上層目錄. (必須要有)
+    \item binary-indep: 建立arch無關的binary package xxx.deb在上層目錄. (必須要有)
+    \item get-orig-source 如何拿到upstream 原始 source 檔 (Optional)
+  \end{itemize}
+  也就是rules檔必須有這些target, 只要用上 source 的 debain/control，
+  這些 target 都是由 dpkg-buildpackage 驅動， build 跟 binary 又語焉不詳很像，
+  因此要好好看 dpkg-buildpackage manual 步驟跟設定。
+  所以這些 target 到底要產出什麼呢？
+  \\\\
+  在1.16.2版本前，是只有build, binary, install，所以dpkg-buildpackage
+  命令是會試著 make 這3個target， 後來就把這3個又拆出 -arch 與-indep。
+  當 debian 支援不同的 arch, 或者與 arch 無關的 package 時呼叫，
+  其中我們以前熟悉的make , 變成make build, 然後make binary就是之前
+  dpkg-deb \verb=--=build 所產生的 binary deb 檔。
+  \\\\
+  所以文件上雖這樣寫但我後來測試結果是只要有 build, binary 就可以了。
+  而且其實 binary 會跑真的 make clean, ... make install 到產出 deb，
+  所以真正也不需要 build 去做事，只需要 binary 就可以。
+  \\\\
+  可以把最上面 source tree 的 Makefile 先 copy 成 rules 進來成 debian/rules
+  ，最上面加上
+  \begin{verbatim}
+#!/usr/bin/make -f
+  \end{verbatim}
+  然後假設我們原本 default: 這個 target 就是我們最原先上面的 default target，
+  這樣 dpkg-buildpackage 就會來叫用了。然後binary 要產出 fakeroot 的
+  DEBIAN/control 與xxxx.deb 檔
+  \begin{verbatim}
+binary: default
+build:
+  \end{verbatim}
+  這樣就有了必須要有的 target。 另外他有兩個環境變數可被設定傳給 rules 與
+  dpkg-buildpackage
+  \begin{itemize}
+    \item CURDIR /path/to/package-version 等於是 topdir of source
+    \item DESTDIR 如果只有單一binary package 那是 debian/binarypackage/ 如果
+      多個 binary package 那就是 debian/tmp/ ，所以最後假 root 在這變數內，
+      dpkg-buildpackage 接下來會來這邊找有沒有 binary，這個我通常設成
+      \$(CURDIR)/.DEBFAKEROOT，跟 rpm buildroot 一樣意思。
+  \end{itemize}
+  在debian目錄上一層就是source的最上層跑
+  \begin{verbatim}
+dpkg-buildpackage -rfakeroot
+  \end{verbatim}
+  就會在 debian 目錄上一層，也就是 source tree 最上面，建造出一個標準的 
+  package 了。這 dpkg-buildpackage -rfakeroot, 其實是去叫其他程式一步步的
+  執行fakeroot debian/rules clean, dpkg-source ..., 所以如果
+  碰到哪步驟壞掉了，就重跑他，看怎麼回事。
+  \\\\
+  我以一個簡單的pam-gyoza做例子， source tree 的目錄名稱要是 
+  <pkgname>-<version>, 也就是通常mypkg-1.0.0 這樣子的目錄。
+  \begin{verbatim}
+cyril@develop:~$ tar zcvf pam-gyoza-1.0.0.tar.gz pam-gyoza-1.0.0/
+pam-gyoza-1.0.0/
+pam-gyoza-1.0.0/Makefile
+pam-gyoza-1.0.0/pam_gyoza.c
+pam-gyoza-1.0.0/debian/control
+pam-gyoza-1.0.0/debian/rules
+pam-gyoza-1.0.0/debian/changelog
+pam-gyoza-1.0.0/debian/source/format
+  \end{verbatim}
+  關鍵 rules 檔範例，等於最外面的 Makefile 加上 build, binary 兩個關鍵的新
+  target，等於是為了建造 deb 所產生的新替代最上層 Makefile
+  \begin{verbatim}
+#!/usr/bin/make -f
+SUBDIRS = src
+DESTDIR = $(CURDIR)/.DEBFAKEROOT
+
+binary: default
+	$(MAKE) prefix=$(DESTDIR) install
+        mkdir -p $(DESTDIR)/DEBIAN
+        dpkg-gencontrol -P$(DESTDIR)
+        dpkg-deb --build $(DESTDIR) ..
+build:
+
+default:
+	for subdir in $(SUBDIRS); do
+		$(MAKE) -C $$subdir
+	done
+
+install:
+	install -m 755 -D src/alibuda $(prefix)/usr/bin/alibuda
+
+uninstall:
+	rm $(prefix)/usr/bin/alibuda
+
+clean:
+	for subdir in $(SUBDIRS); do
+		$(MAKE) -C $$subdir $@
+	done
+  \end{verbatim}
+  跳到 source 上，執行dpkg-buildpackage -rfakeroot，產出 deb 檔，其中
+  dpkg-deb 的產出目錄要小心，dpkg-buildpackage 內定會來找這個 deb 檔，會
+  要產生一個 buildinfo 檔，如果找不到 deb ，內定找的目錄就是上一層，
+  那就會出現 error。
+  \\\\
+  有幾個比較重要
+  \begin{itemize}
+    \item --rules-file 找到 debian/rules
+    \item --buildinfo-file=filename 指定 buildinfo 檔輸出在哪裡？
+    \item -T 只跑想要的 target ，除錯時，例如跑 -T binary-arch, build-indep
+    \item -nc 不要做 make clean，這樣下次 binary 跑時應該會略過 make install.
+    \item --no-sign 不要 gpg sign 任何的 .dsc, .buildinfo, .changes 檔案。
+  \end{itemize}
+
+  \subsection{一次搞定的 debhelper 工具}
+  在之前的debian/rules，感覺非常奇怪，他跟自己在source上的Makefile的關係實在
+  好像重覆寫一遍一樣的東西，這不對，而且其實真正的opensource Makefile 是用
+  autoconf 去產生的，所以這兩者間的關係與使用一定不是這樣。然後很笨的是要寫
+  兩個幾乎一樣的binary control, debian/control 跟 DEBIAN/control。去看別人的
+  debian/rules， 只需要簡單的 dh 命令就好，他會自動在source tree的 最上層做
+  make 的動作，也沒有 debian DEBIAN 兩個目錄， 並且單一source多binary 
+  package 的產生，也用副檔名的方式產生。所以應該我們弄錯了，不是這樣用的，
+  \\\\
+  而如果想要將套件提交debian community或者自己公司要造一個網路update的套件庫，
+  最好是有用gpg key簽名保護的套件，而control與rules的建造也能用工具幫我們做好
+  一個template，我們去改就好，不過這最好能寫autoconf產生configure的能力才是，
+  基本上走到這一步，裡面的build, 要非常的opensource才行了。
+  \\\\
+  主要工具是\verb=dh_xxxxx=命令群，通稱 debhelper suite，用 aptitude 或
+  apt-cache search 搜尋 dh-.* package， 會看到這些命令群套件，但只要裝
+  debhelper 這個套件就可以了。
+  \\\\
+  dh 命令群有一個 dh-make 套件，他可以建造 debian template 檔案，不裝也可以
+  ， \verb=dh_make=與 dpkg-depcheck兩個是最初始使用，他會
+  建造完整的template在debian 目錄下， 是非常嚴格的種種規定，玩起來有點痛苦，
+  以剛剛那個 pam-gyoza做例子。
+  \begin{verbatim}
+cyril@develop:~$ tar zcvf pam-gyoza-1.0.0.tar.gz pam-gyoza-1.0.0/
+pam-gyoza-1.0.0/
+pam-gyoza-1.0.0/Makefile
+pam-gyoza-1.0.0/pam_gyoza.c
+cyril@develop:~$ cd pam-gyoza-1.0.0
+cyril@develop:~/pam-gyoza-1.0.0$ dh_make -f ../pam-gyoza-1.0.0.tar.gz
+Type of package: (single, indep, library, python)
+[s/i/l/p]?
+Email-Address       : cyril@develop.gyoza.net
+License             : blank
+Package Name        : pam-gyoza
+Maintainer Name     : cyril
+Version             : 1.0.0
+Package Type        : single
+Date                : Sat, 10 Mar 2018 18:14:35 -0800
+Are the details correct? [Y/n/q]
+Done. Please edit the files in the debian/ subdirectory now.
+  \end{verbatim}
+  上面選項先選s (single), 這樣就會幫我們創造出 debian 目錄，與他下面的資訊
+  檔 template， 然後有以下步驟
+  \begin{itemize}
+    \item 先準備gpg 非對稱的鑰匙，跟 ssh-keygen很像，不過這好像也非必要。
+  \begin{verbatim}
+gpg --gen-key
+gpg -a --output ~/.gnupg/YOUR_NAME.gpg --export 'YOUR NAME'
+gpg --import ~/.gnupg/YOUR_NAME.gpg
+  \end{verbatim}
+    \item 準備好source, 用<pkgname>-<version>.tar.gz 把你的source做成tarball
+    \item 這其實主要是 source 目錄一定要用<pkgname>-<version>這樣格式，而且
+      pkgname 不能有底線 \verb=_=。
+    \item 跳到source 的最上層， 用
+  \begin{verbatim}
+dh_make -e alibudal@gyoza.net -f ../<pkgname>-<version>.tar.gz
+  \end{verbatim}
+      這叫 debianized
+    \item 用 dpkg-depcheck -d ./configure 產生好的control檔，這就是會根據
+      autoconf 找出Depends 相依package，填上變數的方法。所以要用這，必須你的
+      source 是有autoconf的，所以也不是每個人都適用。
+    \item 改control, rules, copyright ....
+    \item 因為我們是tarball source ，所以改source/format 為 3.0 (native) .
+    \item 改 changelog 裡面的版號, 如果是 3.0 (native) 只允許 x.y.z 這樣
+      version 號碼。
+    \item 最後用 dpkg-buildpackage -rfakeroot 產生package
+  \end{itemize}
+  其實這是大同小異，差別就是我想是rules這個檔, 這個檔變得我們看不懂的東西。他
+  內定就只是去叫dh \$@ 這個東西，所有的建造都由dh這個命令完成，最簡單的 rules
+  \begin{verbatim}
+#!/usr/bin/make -f
+%:
+	dh $@
+  \end{verbatim}
+  這裏面會跑很多
+  debhelper 的內定script, 例如 debian/rules clean 是去跑3個script
+  \begin{verbatim}
+dh_testdir
+dh_auto_clean
+dh_clean
+  \end{verbatim}
+  debain/rules build
+  \begin{verbatim}
+dh_testdir
+dh_auto_configure
+dh_auto_build
+dh_auto_test
+  \end{verbatim}
+  完整的步驟相當多script, 需要去看文件，但所以我們可以改變他，需要建造 
+  類似\verb=override_dh_auto_xxxx= 這樣的target ，override 表示用自己的
+  ，不要用 dh 的target ，例如
+  \begin{verbatim}
+override_dh_auto_configure:
+        ./configure --prefix=mybuildroot
+override_dh_auto_build:
+        $(MAKE) prefix=mybuildroot install
+  \end{verbatim}
+  這樣dh命令就不會跑原本Makefile的build, install。而會跑我們的
+  override target。這時再去
+  看openssl下的debian/rules 就大概看得懂他在幹嘛了。
+  \\\\
+  這邊要注意的是make install 時，DESTDIR與prefix這兩個我們傳進去的變數，
+  這兩個就是假的根目錄， 我們在make install時，如果不是login as root，
+  一般user就要設定這變數。 這在redhat rpm 裏面也是一樣的。
+  \\\\
+  要全部看懂還是要了解所有
+  \verb=dh_=xxx scripts在幹嘛，然後把他custom 自己要的。
+  \\\\
+  最後 .install 檔有如下的格式，可以把要的檔案裝到將來系統上
+  \begin{verbatim}
+path/to/file/relative/to/source/root path/to/install/relative/to/system/root
+例如
+*.so  lib/x86_64-linux-gnu/security/
+  \end{verbatim}
+  所以debian的package相當複雜，從最簡單的自己的 binary 到最後要 submit 給
+  debian community 有這三種做法，
+  \begin{itemize}
+    \item 第1種最簡單就自己放binary檔案到假的 / ， 然後造DEBIAN/control，用命
+      令是\verb=dpkg-deb --build=，只需要最基本dpkg套件。
+    \item 第2種就是自己建造debian/control debian/rules ....，然後用命令
+      debuild 或者 dpkg-buildpackage -rfakeroot，需要dpkg-dev套件，或者
+      基於dpkg-dev之上的wrapper命令群，devscripts套件。
+    \item 第3種用 debhelper 套件，用\verb=dh_make= 命令建造 debian 目錄，
+      與下面的 template 檔案群， 然後自己改下面檔案， 最後也是用
+      dpkg-buildpackage -rfakeroot 建造。
+      可以 man debhelper 得到更多資訊。需要debhelper套件。
+  \end{itemize}
+  最後一種方法還有兩個檔很重要
+  \begin{itemize}
+    \item debian/source/format 這有"1.0" "2.0" "3.0 (native)" "3.0 (quilt)"
+      表示source的格式為何？1.0表示source tarball 是orig.tar.gz + diff.gz 組成
+      或者單一tar.gz，也叫native format 也就是tarball 是最原始從人家那拿回來
+      的。 2.0表示會有一個debian/patches的目錄藏著patches，不過這目前已推薦改
+      用3.0 (quilt)，3.0 (native) 是1.0的延伸，但1.0允許x.y.z-r 這樣版本號，
+      但3.0 (native) 不允許這樣，只允許 x.y.z ，所以用 3.0 (native) ，
+      changelog 要小心裡面的版號。另外不只是.gz而是bz2, xz ...都可以，
+      3.0 (quilt) 表示有一定要有.orig.tar.xx
+      .debian.tar.xx，還有其他patches等檔案，3.0 (git) 表示是git source tree
+      要定義git remote， 通常用1.0, 3.0 (git) 處理我們一般公
+      司用途，3.0 (quilt) 就是非常嚴格的source處理方式了。man dpkg-source 有
+      完整說明怎麼抓 source 與處理。
+    \item debian/compat 這是debhelper的版本 compatibility, 可以man debhelper
+      。目前有 10, 9, 7 等等，不同版本，有的script動作會不一樣，例如版本7 的
+      \verb=dh_clean=會讀 debian/clean 所列的檔案然後砍掉他們，但以前的不會。
+  \end{itemize}
+  最基本的觀念跟說明
+  https://www.debian.org/doc/manuals/debmake-doc/ch05.en.html
+
+  \subsection{debconf}
+  以上是基本的 debian package 建造方法，而 debconf是一個用來處理deb package
+  的configuration database與UI系統的關聯工具，原本
+  deb套件本身已經有preinst, postinst, prerm, postrm這樣的script來供套件包裝者
+  使用，但這樣的套件script對於user interface是沒有統一的(通常只是簡單的 shell 
+  script read 或者乾脆只有安裝 /etc/ 下的 configuration sample 檔，然後自己要在
+  安裝完後去改)，debconf 對外提供一致的 front-end，來得到 user 的 input，以得到
+  user 想要的設定，也就是安裝過程中，configuration 檔也完成了，所以不見得
+  package 要支援 debconf，只有支援 debconf 的 package 安裝時才會彈出問答式 UI。
+  front-end binding有dialog, readline, gnome, python 等等。其中 dialog 就是我們
+  使用text安裝時，看到的那個安裝畫面 widget API。gnome就是有 GUI 的。不像
+  anaconda 是集中只有他們一家處理，這也是為什麼 debian 系列的 package 安裝軟體
+  這麼多樣，很容易發展新的。
+  \\\\
+  可以用
+  \begin{verbatim}
+$ debconf-get-selections
+  \end{verbatim}
+  來得到目前系統上有debconf的package當初安裝時的選擇。這得出來的格式也是無人
+  職守的自動安裝時，餵給apt系統的選擇格式，也就是debian/ubuntu的preseed.conf
+  相當於redhat/centos的ks.cfg。
+  \begin{verbatim}
+<owner> <question name> <question type> <value>
+  \end{verbatim}
+  他的
+  \begin{itemize}
+    \item owner, 一般就是package名字，一個代表id，debconf-show --listowners 
+      可以列出目前系統所有owner，d-i 表示debian-installer。自動安裝的
+      owner是d-i。這個owner表示是這個id用debconf的命令來跟debconf溝通，
+      debconf對內控制一個相對於owner的程式，對外使用某個一致的front-end
+      UI，使用某個question name來得到user input的value，然後這個owner 從
+      debconf拿回這個值後，由package的script來做configuration檔。一般
+      package不見得要有debconf的支援，除非他想要有一個漂亮的UI來得到user input。
+    \item question name, 一個 question 的代表 id, 這個是 owner 自己定義的，
+      在d-i下沒辦法一下知道全部，只能慢慢來。下面 example 是debain網站上所給
+      的。可以用 debconf-show d-i看目前 d-i 的 question name跟value。
+    \item question type, 這個question 的data type，string的話那value就是字串。
+    \item value, 這個question的答案。也是我們要填的值。例如 netcfg/hostname
+      要填入這台機器名字。所以程式會來操作 question name 跟 value。
+  \end{itemize}
+  由於debconf 不是每個 package 都支援的，debconf 的資料庫也獨立於 dpkg 的，所
+  以當每次要使用 debconf 的功能時，要先 preconfigure 這個 deb 檔
+  \begin{verbatim}
+# dpkg-preconfigure nis_3.17-32_amd64.deb
+  \end{verbatim}
+  平常 apt 安裝工具會自動執行這個 dpkg-preconfigure，所以一般人沒有感覺。如果之
+  前的question的value想要重新改變，可以重新執行
+  \begin{verbatim}
+  # dpkg-reconfigure nis
+  或
+  # dpkg-reconfigure debconf => 這會重新問所有支援debconf的套件問題
+  \end{verbatim}
+  也就是當你不想直接去改/etc/xxxx.conf時，可以叫dpkg-reconfigure 有個漂亮的
+  UI來幫你改。
+  \\\\
+  debconf會控制一個程式，這個程式的stdout會是debconf的命令(protocol)，並且
+  stdin會是front-end的result code。我們常見的debian/ubuntu安裝程式
+  debian-installer 最後就是去跑
+  \begin{verbatim}
+debconf -o d-i /usr/bin/main-menu
+  \end{verbatim}
+  main-menu也是C程式。他裏面定義了跟debconf互動的命令與steps。主要是printf時
+  要跑出需要的code。
+  支援debconf的package(owner)必須提供
+  \begin{itemize}
+    \item templates : 上面的question name只是id, 這才是真正user看到的文字定義檔。
+      使用templates可以用多國語言，debconf會自動去找到需要的文字。
+    \item config    : 這是跟debconf溝通的程式。可以是shell, perl, c .... 只要遵守
+      stdout跟stdin的規則，shell script有helper API，c就要自己照規則寫了，算是跟
+      CGI很像的東西。這也是debconf會去控制的程式。以debian安裝程式來說來說就是
+      /usr/bin/main-menu，apt工具的話，會解開deb檔，然後debconf -o mypkg config。
+  \end{itemize}
+  在debian的一般包裹裏面，解開control檔案
+  \begin{verbatim}
+dpkg --control xxx.deb
+  \end{verbatim}
+  如果在DEBIAN目錄下有templates與config兩個檔案，那這個package就是有debconf的支援的。
+  如果沒有就是沒有debconf的支援。可以下載tzdata的deb檔，並且看他怎麼定義多個
+  question name與data type是select的使用。
+  \\\\
+  templates檔例子
+  \begin{verbatim}
+Template: hostname
+Type: string
+Default: debian
+Description: unqualified hostname for this computer
+ This is the name by which this computer will be known on the network. It
+ has to be a unique name in your domain.
+  \end{verbatim}
+  hostname表示要設定的key, string表示資料格式，debian是內定值。如果是select type
+  我們就有選項可以選，例如以下的多國語言例子
+  \begin{verbatim}
+Template: tzdata/Areas
+Type: select
+Choices: Africa, America, Antarctica, Australia, Arctic, Asia, Atlantic, ...
+Choices-eu.UTF-8: Afrika, Amerika, Antartikoa, Australia, Artikoa, Asia, ...
+Choices-fr.UTF-8: Afrique, Amérique, Antarctique, Australie, Arctique, ...
+Description-eu.UTF-8: Eremu geografikoa
+ Hautatu bizi zaren area geografikoa. Konfigurazioko hurrengo galderek ...
+Description-fr.UTF-8: Lieu géographique :
+ Veuillez choisir le lieu géographique où vous êtes situé(e). Les questions ...
+  \end{verbatim}
+  config通常還是寫 shell script居多，debconf有個helper, 
+  /usr/share/debconf/confmodule ，所以一上來就先include 然後使用他裏面的api
+  \begin{verbatim}
+  #! /bin/sh
+  set -e
+
+  . /usr/share/debconf/confmodule
+  db_version 2.0
+  db_capb backup
+  \end{verbatim}
+  他的api說穿了就只是protocol命令前面加上個db\_而已。與UI 溝通的protocol在
+  \href{https://www.debian.org/doc/packaging-manuals/debconf\_specification.html#AEN106}{debconf的protocol}
+  可以看到。可以用
+  \begin{verbatim}
+$ debconf-communicate
+  \end{verbatim}
+  來玩，跟系統上的資訊來溝通看看。例如我先用debconf-get-selections得到
+  \begin{verbatim}
+ntfs-3g ntfs-3g/initramfs       boolean true
+# Boot loader configuration check needed
+linux-base      linux-base/disk-id-manual-boot-loader   error   
+# Use Control+Alt+Backspace to terminate the X server?
+d-i     keyboard-configuration/ctrl_alt_bksp    boolean false
+  \end{verbatim}
+  這時表示ntfs-3g這個套件裏面有設定一個 question 叫ntfs-3g/initramfs 他的值是true，
+  d-i表示安裝系統時，有個question是keyboard-configuration/ctrl\_alt\_bksp。
+  然後我們用
+  \begin{verbatim}
+chuang@cyril-lnx:~$ debconf-communicate 
+  \end{verbatim}
+  \parbox{\textwidth}{debconf: DbDriver "passwords" warning: could not open /var/cache/debconf/passwords.dat: Permission denied}
+  \begin{verbatim}
+get ntfs-3g
+10 ntfs-3g doesn't exist
+get ntfs-3g/initramfs
+0 true
+  \end{verbatim}
+  這個get就是跟UI的protocol命令，10或者0就是UI回給config時的error code, 在
+  confmodule裏面的db\_get就是相當於get命令。所以很簡單的不需要操心UI是什麼，
+  只是單純的定義 question, 處理user回給的值，在config中就可以把這些值寫入
+  /etc/xxx.conf了。除了get命令外當然有set等多種命令，可以用在config裏面，
+  所以如果不寫shell script，就要自己在stdin, stdout上實作這些命令與回傳值而已。
+  當把templates, config放到DEBIN目錄下，並且用dpkg-create後產生的套件就可以有
+  漂亮的UI來對話了。
+  \\\\
+  最後是一般以前Solaris的習慣會把公司檔案放在/opt下，但debian不建議這樣而是
+  在/usr/share/company下，這是不一樣的地方。
+
+\section{產生rpm}
+製作rpm檔， 準備工具需要安裝rpm-build這個工具，他的package資訊install/remove 
+scripts 不像debian的是額外檔案，而是通通要寫在一個spec檔案裏面。spec檔有其格式
+，最後用rpmbuild命令根據spec檔的資料跑一遍build, 做出binary檔捆成一個rpm檔。
+\href{http://www.rpm.org/max-rpm/index.html}{rpm檔格式的完整說明}可以在此
+找到。
+\\\\
+一個 rpm 檔可以用rpm2cpio把他內部檔案轉出來。
+\begin{verbatim}
+rpm2cpio mypackage.rpm | cpio -vid
+rpm2cpio mypackage.rpm | xz -d | cpio -vid (有的現在是用xz壓縮的)
+rpm -pq --scripts mypkg.rpm
+rpm -pqf --queryformat '%{name}\n%{summary}\n%{version}\n%{release}' mypkg.rpm
+\end{verbatim}
+建造rpm有很多的參數與內定變出，可以用
+\begin{verbatim}
+rpmbuild --showrc
+\end{verbatim}
+找出來，rpm內部的變數用 \verb=%{var}= 來存取，定義都在/etc/rpm, /usr/lib/rpm,
+兩個重要的目錄\verb=%{_topdir}= 與\verb=%{buildroot}=，由於以前內定值都是在
+/usr/src/redhat 要在 root 權限下，所以都要自己再設定才能跑，或者把他們設到
+ramdisk上會跑快一點，現在新的內定值設在\$HOME/rpmbuild
+\begin{verbatim}
+rpmbuild -E %{_topdir}
+rpmbuild -E %{buildroot} (又叫RPM_BUILD_ROOT)
+\end{verbatim}
+目前只要設\verb=%{_topdir}= 就好，\verb=%{_topdir}=是一個目錄，所有
+建造rpm的暫時目錄檔案都會在這裏面，而\verb=%{buildroot}=則是安裝時會呼叫make
+install 他會裝東西到根目錄去，buildroot就是假的root，相當於deb的fakeroot，如
+果沒有設定的話，目前 centos 7 buildroot自動是
+\begin{verbatim}
+%{_topdir}/BUILDROOT/%{name}-%{version}-%{release}.%{_arch}
+\end{verbatim}
+當使用rpmbuild的時候，要先指定一個spec檔名，內定會去\verb=%{_topdir}/SPECS=
+下面找，找不到再到目前目錄下面找，然後用spec檔裡面的source指定的檔名去
+\verb=%{_topdir}/SOURCES=下找，最後make, install, rpm, srpm 檔放到下面目錄
+\begin{verbatim}
+%{_topdir}/BUILD
+%{_topdir}/RPMS
+%{_topdir}/SRPMS
+\end{verbatim}
+當然直接跑rpmbuild的時候也可以直接指定
+\_topdir, \_sourcedir, \_specdir, 如果自己指定，那麼
+\begin{verbatim}
+rpmbuild -ba --define='_sourcedir /var/mysrc' --define='_specdir /var/myspec' myrpm.spec
+\end{verbatim}
+通常\verb=%{_topdir}=會讓他等於環境變數RPMBUILD，然後我們也可以設定自己常用的
+在~/.rpmmacro， 老一點的rpmbuild不會幫你建造那些有的沒的需要自己先建好。新的
+會自動創造RPMS, SRPMS, BUILD ...這些目錄。
+\begin{verbatim}
+mkdir -p ~/rpmbuild/{RPMS,SRPMS,BUILD,SOURCES,SPECS,tmp}
+
+cat <<EOF >~/.rpmmacros
+%_topdir   %(echo $HOME)/rpmbuild
+%_tmppath  %{_topdir}/tmp
+EOF
+\end{verbatim}
+
+  \subsection{由distro提供檔案建造}
+  如果已經有人提供src.rpm了，我們想重新在我們系統上build則用
+  \begin{verbatim}
+$ rpmbuild --rebuild mypkg.src.rpm
+或
+$ rpm -i mypkg.src.rpm
+$ cd $RPMBUILD/SPECS
+$ rpmbuild -ba mypke.spec
+會在
+$RPMBUILD/RPMS/x86_64
+得到一個binary rpm
+  \end{verbatim}
+
+  \subsection{自己建造rpm套件 }
+  最簡單主要必須提供一個xxx.spec檔，跟一個 source 檔，這可以只是假 root 所捆起
+  來的 tarball ，source 目錄用<pkgname>-<version> 這樣，這跟 spec 檔裡的Source
+  欄位要一樣。 在CentOS 7 新的 \_topdir 內定是設在 ~/rpmbuild
+\begin{verbatim}
+cd ~/rpmbuild
+mkdir -p helloworld-0.9.9/usr/bin/
+mkdir -p helloworld-0.9.9/etc
+touch helloworld-0.9.9/usr/bin/helloworld
+touch helloworld-0.9.9/etc/helloworld.conf
+tar zcvf helloworld-0.9.9.tar.gz helloworld-0.9.9
+mv helloworld-0.9.9.tar.gz SOURCES 
+\end{verbatim}
+  去~/rpmbuild/SPECS下面編個 hello.spec
+\begin{verbatim}
+Summary: mini rpm
+Name: minirpm
+Version: 1.0.0
+Release: 1
+License: GPL+
+SOURCE : %{name}-%{version}.tar.gz
+
+%description
+%{summary}
+
+%prep
+%setup -q
+
+%install
+rm -rf %{buildroot}
+mkdir -p %{buildroot}
+cp -a * %{buildroot}
+
+%clean
+rm -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{_bindir}/*
+%{_sysconfdir}/*
+\end{verbatim}
+  最基本的6個欄位與一些macro如\%description 一定要有，然後Name, Version的值可以
+  用\%{name} \%{version}取回。用
+\begin{verbatim}
+$ rpmbuild -ba hello.spec
+\end{verbatim}
+  以前的rpm可能default \_topdir 在/usr/local/redhat, 或者xxx.spec一定要放在
+  \_topdir/SPECS下面，這時可以儘量滿足這些條件再下命令。或者不用copy tar.gz
+  到SOURCES下，直接在目前目錄有tar.gz 與 spec檔
+\begin{verbatim}
+$ rpmbuild -ba --define "_sourcedir `pwd`" hello.spec
+$ rpm -pql ~/rpmbuild/RPMS/x86_64/helloworld-0.9.9-1.el7.centos.x86_64.rpm
+\end{verbatim}
+  這只是最簡單的假root 加上想放進的binaries所編出的binary rpm檔，同樣正統作法
+  要從 source 開始編譯到產生binary source兩種package檔，他跟deb不一樣的是不分
+  大小寫的debian目錄，而是完全由一個spec檔做完。
+  \\\\
+  我們一樣拿人家複雜的來看， 以openssl為例
+\begin{verbatim}
+%define _unpackaged_files_terminate_build 0
+
+Release: 1
+
+%define openssldir /var/ssl
+
+Summary: Secure Sockets Layer and cryptography libraries and tools
+Name: openssl
+Version: 1.0.1o
+Source0: ftp://ftp.openssl.org/source/%{name}-%{version}.tar.gz
+License: OpenSSL
+Group: System Environment/Libraries
+Provides: SSL
+URL: http://www.openssl.org/
+Packager: Damien Miller <djm@mindrot.org>
+BuildRoot:   /var/tmp/%{name}-%{version}-root
+
+%description
+The OpenSSL Project is a collaborative effort to develop a robust,
+commercial-grade, fully featured, and Open Source toolkit implementing the
+Secure Sockets Layer (SSL v2/v3) and Transport Layer Security (TLS v1)
+protocols as well as a full-strength general purpose cryptography library.
+The project is managed by a worldwide community of volunteers that use the
+Internet to communicate, plan, and develop the OpenSSL tookit and its related
+documentation.
+
+OpenSSL is based on the excellent SSLeay library developed from Eric A.
+Young and Tim J. Hudson.  The OpenSSL toolkit is licensed under an
+Apache-style licence, which basically means that you are free to get and
+use it for commercial and non-commercial purposes.
+
+This package contains the base OpenSSL cryptography and SSL/TLS
+libraries and tools.
+%prep
+
+%setup -q
+
+%build
+%install
+rm -rf $RPM_BUILD_ROOT
+make MANDIR=/usr/man MANSUFFIX=ssl INSTALL_PREFIX="$RPM_BUILD_ROOT" install
+
+# Make backwards-compatibility symlink to ssleay
+ln -sf /usr/bin/openssl $RPM_BUILD_ROOT/usr/bin/ssleay
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(0644,root,root,0755)
+%doc CHANGES CHANGES.SSLeay LICENSE NEWS README
+
+%attr(0755,root,root) /usr/bin/*
+%attr(0755,root,root) /usr/lib/*.so*
+%attr(0755,root,root) %{openssldir}/misc/*
+%attr(0644,root,root) /usr/man/man[157]/*
+
+%config %attr(0644,root,root) %{openssldir}/openssl.cnf
+%dir %attr(0755,root,root) %{openssldir}/certs
+%dir %attr(0755,root,root) %{openssldir}/misc
+%dir %attr(0750,root,root) %{openssldir}/private
+
+%post
+ldconfig
+
+%postun
+ldconfig
+\end{verbatim}
+先注意的是 Summary到Packager這一段的東西，就望文生義，把該填的資料填上。
+GROUP很像debain的Section分類用的，在/usr/doc/rpm/GROUP找的到。
+BuildRoot:這個就是假的root，等下在\%build與\%install時，有個
+\$RPM\_BUILD\_ROOT，這個內定環境變數就是這個設定值。 Requires:是手動設定
+dependency。rpm可以自動幫你找 dependency，不過也可以用Requires強制手動指定。
+BuildRequires是要build這個package的dependancy.
+\\\\
+另外常用到的sections有
+\begin{itemize}
+  \item \%description
+  \item \%prep
+  \item \%build
+  \item \%install
+  \item \%clean
+  \item \%files
+  \item \%pre
+  \item \%post
+  \item \%preun
+  \item \%postun
+\end{itemize}
+    
+\%prep這邊是prepare準備build的動作，通常是你download的source code需要做一
+些你自己做的patch， 要作untar等動作。例如
+\begin{verbatim}
+%prep
+rm -rf $RPM_BUILD_DIR/cdplayer-1.0
+zcat $RPM_SOURCE_DIR/cdplayer-1.0.tgz | tar -xvf -
+\end{verbatim}
+其中\$RPM\_SOURCE\_DIR \$RPM\_BUILD\_DIR是rpm跑起來時設定的環境變數。
+不過由於這樣的動作幾乎已經是公式化的動作，所以有人把他寫好成一個
+macro \%setup， prep下有兩個常用的macro，\%setup與\%patch，可以只給下面的
+\%prep就好。
+\begin{verbatim}
+%prep
+%setup -q
+\end{verbatim}
+\%setup -q會根據Source:的位置來得到source與解開，patch是用來做source patch
+用的。 \%build就是當你要從source來build binary時要打的命令。
+通常就是
+\begin{verbatim}
+configure --prefix=$RPM_BUILD_ROOT
+make
+\end{verbatim}
+不過由於rpm是跨平台的，在/usr/lib/rpm/rpmrc有一些定義了的變數，
+make可以這樣比較有彈性，
+\begin{verbatim}
+make CFLAGS="$RPM_OPT_FLAGS" LDFLAGS=-s。
+\end{verbatim}
+通常RPM\_OPT\_FLAGS是目前distribution系統上認為怎樣的gcc flags設定比較
+符合他的distribution的設定。
+\\\\
+\%install就是我們常在source上用的
+\begin{verbatim}	
+make install
+\end{verbatim}	
+因為之前已經./configure \verb=--prefix=，\%clean通常是把我們剛剛創造的假的root,
+\$RPM\_BOOR\_ROOT給清掉。其實在\%build與\%install可以光打我們熟悉的
+configure; make; make install這樣就好，
+\%prep \%build \%install \%clean會真的run一次我們熟悉的從source code編譯成
+binary的步驟，而且如果我們沒有用個假的root的話，
+會真的裝東西到目前系統上，通常這是不好的作法，最好還是設定假root,這通常是
+用\verb=--prefix=。
+\\\\
+\%file這個設定就是將來檔案要放到哪去的，
+也就是Buildroot內的相對應將來真正系統上的檔案。也就是說前面的
+./configure --prefix=xxx ; make; make install;就是從
+\verb=%{_topdir}=/SOURCES/pkgname-ver.tar.gz解開後，跑進去做事，然後因為
+prefix設到\verb=%{_tmppath}=/xxx那邊去，所以就裝到那個假的root,也就是
+\verb=%{_tmppath}=/xxx下，其中\verb=%{_tmppath}=通常是/var/tmp，
+有些內定的變數可以使用，跟autoconf 的 Makefile 其實是很像或一樣的，例如
+\begin{itemize}
+  \item \verb=%{_prefix}= 表示將來的/usr
+  \item \verb=%{_exec_prefix}= 表示將來的/usr
+  \item \verb=%{_bindir}= 表示將來的/usr/bin
+  \item \verb=%{_libdir}= 表示將來的/usr/lib
+  \item \verb=%{_includedir}= 表示將來的/usr/include
+  \item \verb=%{_sbindir}= 表示將來的/usr/sbin
+  \item \verb=%{_sysconfdir}= 表示將來的/etc
+  \item \verb=%{_datadir}= 表示將來的/usr/share
+  \item \verb=%{_mandir}= 表示將來的/usr/share/man
+  \item \verb=%{_sharedstatedir}= 表示將來的/var/lib
+\end{itemize}
+這些是rpm package裝時，就設定在裏面的，可以用rpmbuild -E \%{macro} 例如
+rpmbuild -E \%{dist} 可以看出dist這 macro 的值, 可能是.el6, .el7等等或者
+rpmbuild \verb=--showrc=來看出來目前系統
+內定變數有什麼。內定變數有的跟外面環境變數是一樣的，例如\verb=%{buildroot}=與
+RPM\_BUILD\_ROOT，另外也能自己定義\verb=%define pkg_name %(echo $PKGNAME)=
+，這樣就能把環境變數變成rpm.spec下的變數macro。而原本的Name,也有相對應的
+\verb=%{name}=，也就是Summary到Packager這段的變數設定後，有相對應的小寫變數名
+可在後來使用。
+\\\\
+最後把假的root當成將來要裝到系統上真的root的檔案在\%files下告訴rpm系統。
+則他會幫你把這樣的資訊寫到binary package.
+\%doc裡的檔將來會被裝到/usr/share/doc/\$NAME-\$VERSION-\$RELEASE，
+\%attr是設定安裝時檔案的權限，
+\begin{verbatim}
+%attr(mode, user, group)
+\end{verbatim}
+mode如果不指定0755而只指定-的話表示， 不寫\%attr話用\%defattr，或者用root的權限。
+如果有用BuildRoot的話，rpm自動知道要到相對應的假 root，下去把~fakeroot/usr/bin/
+根據\%files指定的檔放到package的正確/usr/bin/。 
+\\\\
+rpm的pre- post- install與remove 不像solaris或debian的另寫真正的額外shell script檔，
+而是把shell script含進spec檔內的\verb=%pre %post %preun %postun=下。
+\\\\
+寫完後到存到\verb=%{_topdir}=/SPECS下並且給命令
+\begin{verbatim}
+# rpm -ba libgyoza-2.0.2-1.spec
+或
+# rpmbuild -ba --rmsource $RPM_SPEC_DIR/libgyoza-2.0.2-1.spec
+\end{verbatim}
+就會把該做的事與檔案放進去package，-ba是binary跟source都會build.
+rmsource rmspec是會清掉 SPECS 跟 SOURCES 下的相關檔案。
+
+  \subsection{Upgrade需注意的情況}
+  在rpm中有一個rpm -U的命令是用來upgrade新版本的，可是在rpm的
+  pre/post/preun/postun的執行順序跟rpm -i的不一樣，所以要非常小心
+  rpm -U其實是執行rpm -i 跟 rpm -e，但有如下規則
+  \begin{enumerate}
+    \item 先執行新版的pre
+    \item 裝檔，就是\%files裡面的檔案
+    \item 執行新版的post
+    \item 執行舊版的preun
+    \item 砍掉那些沒有被新版蓋掉的檔案
+    \item 執行舊版的postun
+  \end{enumerate}
+  而這邊卻發現一個問題，如果我pre/post作的一些事情，例如symbolic link，
+  本來在-e時，應該要刪掉的，但upgrade時卻執行-i -e就把原本-i作的事情
+  給毀了，所以rpm又提供判斷的方法，傳給pre/post/preun/postun的第一個
+  參數分別有0,1,2的值，以shell來看就是
+  \begin{itemize}
+    \item pre/post     \$1 = 1 表示-i \$1 = 2表示-U
+    \item preun/postun \$1 = 0 表示-e \$1 = 1表示-U
+  \end{itemize}
+  但其實不光只是這樣，rpm -U 她可以用--force來安裝版本號碼比她小的rpm，
+  結果又有如下的反應，如果新版的號碼
+  \begin{itemize}
+    \item 大於舊版 照原本的六規則走
+    \item 等於舊版 只安裝新的pre/post，不執行舊preun/postun與砍檔案
+    \item 小於舊版 照原本的六規則走
+  \end{itemize}
+  很神奇，但真實世界應該是不會這樣，這是因為我們在develop/test cycle
+  時才會碰到這種莫名其妙的版本號碼關係。
+
+\section{產生pkg}
+如果你的系統是opensolaris的話，可以產生pkg檔。Solaris的scripts
+\begin{itemize}
+  \item preinstall   主要是做軟體安裝前環境的檢查例如需要什麼OS幾版以上等等
+  \item postinstall  主要是做軟體安裝後的設定例如sendmail DNS的設定
+  \item preremove    主要是移除軟體前的環境例如有別的套件需要這個軟體(dependency)
+  \item postremove   主要是清除一些這個套件產生的東西例如log檔等等
+\end{itemize}
+不過這我很久沒做了，也不知道是否有更新的方法。
+Solaris的package因為不是open source世界的，比較簡單，不用去注意一堆規則。
+他主要的工具是
+\begin{itemize}    
+  \item \verb=#= pkgmk
+  \item \verb=#= pkgtrans
+\end{itemize}
+要寫的資訊檔為
+\begin{itemize}
+  \item prototype  最重要的資訊檔,包括檔案的對應關係像\%file在rpm中的關係都在
+    這裡。
+  \item copyright  版權聲明
+  \item pkginfo    這是很像你用rpm -qi得到的package資訊。例如pkg名，製造商等等。
+\end{itemize}
+
+\section{結語}
+基本上不同 distribution 的 package 看來有共同的資料結構
+\begin{itemize}
+  \item name
+  \item major
+  \item minor
+  \item patch
+  \item release
+  \item summary
+  \item description
+\end{itemize}
+而且要在 <name>-<major>.<minor>.<patch> 目錄裡面放這次要 release 的 source
+code，要產生一個<name>-<major>.<minor>.<patch>.tar.gz 的 tarball ，與最後
+<name>-<major>.<minor>.<patch>-<release>.xxx 的 package 名，只是有的名字
+有些限制，可能底線跟 hypen 的差別，當然可能還有更多，但我想這些是最基本的。
+\\\\
+而產生 package 有幾個層次
+\begin{itemize}
+  \item 下載 ditribution 提供的 upstream 與他的 diff 檔案等利用工具產生。
+  \item 由已知的 binary 等檔案，包到一個假 root，由基本工具產生。
+  \item 由 source 真的 make, make install 等步驟，由工具產生
+  \item 需要真的 submit 到 distribution 去維護，這還要了解 distribution 的需求
+        例如像 license, 文件，簽章等等龜毛的規定。
+\end{itemize}
+除了系統package外，很多library的安裝也非常複雜，因此perl CPAN Makefile.PL 方法
+, python egg蛋蛋pip, nodejs npm 這些語言也另外提供他們的library套件管理，也
+有他們自己的方法或格式。但這裡不處理這些格式， 只處理系統package。另外像LaTeX
+也是一樣，也因為太複雜，有自己包裝的方法格式，任何有 library 形式的軟體都需
+要有套件管理。
+\\\\
+而我們以上所介紹的也只是基本的而已，因為一個 source 可能根據不同使用情況，而
+編成很多package, 例如有的library 的header檔只有開發軟體才需要，run time是
+不需要的，所以常看到libxxx libxxx-dev 這兩種套件但都是從同一source編出來的，
+所以單一source多重packages的做法，還有多國語言的package做法等等都有規則要遵守。
+\\\\
+新型態的套件管理還包含了收費，評價，社群，像Apple, Android 的 store，現在
+ubuntu 也做這種事，Linux 新的套件管理 store 像 snap store, flatpak 兩者競爭
+很厲害，因為是很大商機，主要是現在 Linux 成主流並且 library 的標準化也很完備
+，都能盡量做到二進位檔能隨裝隨跑。
+\\\\
+在unix世界中其實原始碼的變化是非常的快的，也就是Windows的系統其實是個黑箱子，
+windows的程式為什麼漏洞那麼多就是他很多程式庫不敢隨便upgrade，很多程式一直
+編譯的是舊API的library，所以好像很多程式一直在更新版本，但都是based在舊api
+上。 很多windows的管理者來到unix中的壞習慣就是什麼都要最新版的二元碼，
+這是根本錯誤的，unix的版本號碼是有意義的，不是隨便就upgrade上去，有漏洞一定
+要跟著 distro 出的改正版本，不是自己亂編譯後放上去，尤其是ssl或很多相對應的
+library。

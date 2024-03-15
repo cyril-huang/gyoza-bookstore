@@ -21,13 +21,13 @@ MOE_SUNG        := $(shell fc-list | sed -n 's/.*ttf: *\([^,]\+\),教育部.*宋
 NOTO_SANS_TC    := $(shell fc-list :lang=zh-tw | sed -n 's/.*ttf: *\(Noto Sans[^,]\+\).*/\1/p' | sort -u | head -n1)
 NOTO_SERIF_TC   := $(shell fc-list :lang=zh-tw | sed -n 's/.*ttf: *\(Noto Serif[^,]\+\).*/\1/p' | sort -u | head -n1)
 
-ifneq ($(TW_SUNG),"")
+ifneq ($(TW_SUNG),)
 font	:= $(TW_SUNG)
-else ifneq ($(MOE_SUNG),"")
+else ifneq ($(MOE_SUNG),)
 font	:= $(MOE_SUNG)
-else ifneq ($(NOTO_SERIF_TC),"")
+else ifneq ($(NOTO_SERIF_TC),)
 font	:= $(NOTO_SERIF_TC)
-else ifneq ($(NOTO_SANS_TC),"")
+else ifneq ($(NOTO_SANS_TC),)
 font	:= $(NOTO_SANS_TC)
 else
 $(error No font found)

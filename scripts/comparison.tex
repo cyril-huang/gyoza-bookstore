@@ -1,0 +1,487 @@
+\chapter{各語言語法大比較}
+這個其實是我年紀大了有時記不住用的。
+C, shell Makefile, 與perl, python 是我常用到的工具
+  \section{變數}
+  定義變數
+  \begin{verbatim}
+shell
+var=
+
+perl
+$var =
+
+C
+int var =
+char var =
+
+python
+var = 
+
+javascript
+const var =
+let var = 
+
+Makefile
+var =
+var :=
+\end{verbatim}
+使用變數
+\begin{verbatim}
+shell
+$var
+${var}
+
+awk
+var
+
+perl
+$var
+
+C
+var
+
+python
+var
+
+javascript
+var
+
+Makefile
+${var} or $(var)
+  \end{verbatim}
+  要注意的是
+  \begin{itemize}
+  \item shell的定義不加\$ 但要知道變數值時一定要加\$
+  perl就比較一致 不管如何就是加\$符號
+  C就是都不加
+  \item shell的等號前後不可有空白\\
+    var= var =
+    是不一樣的。 perl,python與C就沒有限制，Makefile是定義與使用跟shell
+    一樣，但是等號前後可以有空白，所以有四種情形請默記一下。
+    \end{itemize}
+
+  \section{陣列(array, list)與Hash literal}
+    shell
+\begin{verbatim}
+array="e1 e2 e3"
+\end{verbatim}
+    perl
+\begin{verbatim}
+@array = (e1, e2 ,e2);
+%hash = (key1 => val1,
+         key2 => val2,
+         key3 => val3);
+$arrayref = [e1, e2];
+$hashref = {key1 => val1, key2 => val2};
+\end{verbatim}
+C
+\begin{verbatim}
+int array[] = {1, 2, 3};
+\end{verbatim}
+python
+\begin{verbatim}
+list = [1, 2, 3]
+dict = { key1 : val1, key2 : val2}
+\end{verbatim}
+要注意的是perl，很奇怪的用\verb=( )=不用\verb={ }=，python, c都想成reference，
+shell 的串列型資料叫list裡面元素用space分開，最常用的場合
+\begin{verbatim}
+for var in $array; do
+    cmd1
+done
+\end{verbatim}
+array中的元素就是用space分開的資料。
+perl有個很像的foreach
+\begin{verbatim}
+foreach $var (@array) {
+  xxx
+}
+\end{verbatim}
+javascript
+\begin{verbatim}
+a = [ 1, 2, 3 ]
+b = { 'key1': val1, 'key2': val2 }
+\end{verbatim}
+
+\section{條件敘述}
+shell
+\begin{verbatim}
+if test shell; then
+    dosomething
+elif test shell; then
+    doother
+else
+    allright
+fi
+\end{verbatim}
+perl
+\begin{verbatim}
+if (perl) {
+  do_something;
+
+} elsif (perl) {
+  do_other;
+} else {
+  allright;
+}
+\end{verbatim}
+C
+\begin{verbatim}
+if (c) {
+  do_something;
+} else if (c) {
+  do_other;
+} else {
+  allright;
+}
+\end{verbatim}
+python
+\begin{verbatim}
+if python:
+  do_something
+elif python:
+  do_other
+else:
+  allright
+\end{verbatim}
+javascript
+\begin{verbatim}
+if (javascript) {
+  do_something;
+} else if (else) {
+  do_other;
+} else {
+  allright;
+}
+
+\end{verbatim}
+這邊要注意的是shell不需要括號，else if的寫法三個不一樣。條件式寫法，
+shell沒有一定要用()包住條件式，只要test是某個可執行的敘述就好
+\subsection{條件比較}
+shell
+\begin{verbatim}
+  字串
+[ "str1" = "str2" ]
+  數值
+[ num1 -ne num2 ]
+\end{verbatim}
+perl
+\begin{verbatim}
+  字串
+if ($str1 ne $str2)
+  數值
+if ($num1 == $num2)
+  \end{verbatim}
+C
+  \begin{verbatim}
+  字串
+if (!strcmp(str1, str2))
+  數值
+if (num1 == num2)
+  \end{verbatim}
+python
+  \begin{verbatim}
+  字串
+if str1 == str2:
+  數值
+if num1 == num2:
+  \end{verbatim}
+javascript
+\begin{verbatim}
+  字串
+if (a = 'str1')
+  數值
+if (a = 5)
+\end{verbatim}
+  要注意數值比較，字串比較，字串處理與邏輯比較。其實比較中，更進一步的像
+  空array, 空hash, 空字串，0, 1等等是否能比較都是很重要的。
+
+  \section{迴圈控制}
+  \subsection{while迴圈}
+  shell
+  \begin{verbatim}
+while test: do
+  cmd
+done
+  \end{verbatim}
+
+  perl跟c是一樣的，除了變數用法不一樣
+  \begin{verbatim}
+while (condition) {
+  statment1;
+}
+
+unless (condition) {
+    statment1;
+}
+\end{verbatim}
+
+C
+\begin{verbatim}
+while (condition) {
+    statment1;
+}
+
+do {
+    statment1;
+} while (condition)
+\end{verbatim}
+python
+\begin{verbatim}
+while condition:
+    statement
+\end{verbatim}
+javascript
+\begin{verbatim}
+while {
+    statement
+}
+\end{verbatim}
+
+\subsection{for loop}
+Bourne shell的for不是像C裡的for loop, bash有.
+\begin{verbatim}
+for var in element1 element2 element3...; do
+    echo $var
+done
+
+bash 特有的
+
+for (( i = 0 ; i < 10; i++)); do
+    cmd1
+    cmd2
+done
+
+\end{verbatim}
+perl 有兩種for的用法
+\begin{verbatim}
+for ($i = 0; $i < 10; $i++) {
+    statement;
+}
+這是像c shell的foreach，也就是B shell的for
+foreach $var (@array) {
+    statement;
+}
+\end{verbatim}
+C的用法
+\begin{verbatim}
+for (i = 0, init = 1; i < 10; i++) {
+    statement;
+}
+\end{verbatim}
+python
+\begin{verbatim}
+for i in range(10):
+    dosomething
+
+for str in list:
+    dosomething
+\end{verbatim}
+javascript
+\begin{verbatim}
+for (i=0; i< 10; i++) {
+  dosomething
+}
+
+for key in array {
+  dosomething
+}
+
+for element of array {
+  dosomething
+}
+\end{verbatim}
+
+\section{副程式}
+shell
+\begin{verbatim}
+func1() {
+    arg1=$1
+    arg2=$2
+}
+\end{verbatim}
+awk
+\begin{verbatim}
+function func1(arg1, arg2)
+{
+  xxx
+}
+\end{verbatim}
+perl
+\begin{verbatim}
+sub func1(arg1, arg2)
+{
+  xxx
+}
+\end{verbatim}
+C
+\begin{verbatim}
+int func1(int arg1, char *arg2)
+{
+          xxx
+}
+\end{verbatim}
+python
+\begin{verbatim}
+def func1(arg1, arg2):
+    xxx
+\end{verbatim}
+javascript
+\begin{verbatim}
+function fname(arg) {
+  ...
+}
+
+(arg) => {
+  ...
+}
+\end{verbatim}
+
+\section{註解}
+shell
+\begin{verbatim}
+# comment
+
+: << BLOCK_COMMENT
+alibuda
+anyting is comment between BLOCK_COMMENT
+BLOCK_COMMENT
+
+\end{verbatim}
+perl
+\begin{verbatim}
+# comment
+
+=comment
+multiline block comment
+=
+\end{verbatim}
+C
+\begin{verbatim}
+/* comment */
+
+/*
+ * block
+ * comment
+ */
+
+\end{verbatim}
+python
+\begin{verbatim}
+# comment
+
+"""
+multiline block comment
+"""
+\end{verbatim}
+javascript，不過 block comment 建議是用多個 \verb=//=
+\begin{verbatim}
+//
+
+/*
+ * ...
+ */
+\end{verbatim}
+
+\section{提醒}
+最後要提醒的是很多基本bit/byte處理，使用基本bash, od, printf, echo -ne, sed,
+awk, perl, python, bc等工具就能做出以前c程式做了老半天才做到的效果。所以script
+真是非常強大的日常處理工具。
+\begin{description}
+  \item [bitwise] \hfill \\
+    \$((192 \& 255) 要不就是用perl, python的operator，例如
+    python -c "print 0x\$\_ip1\_hex \& 0x\$\_subnet\_hex"
+  \item [string to binary value] \hfill \\
+    用echo -ne，例如
+    echo -ne "\verb=\x55\xaa=" \verb=|= dd if=/dev/stdin of=\$bdev seek=510 bs=1 count=2
+  \item [binary value to string] \hfill \\
+    用 od 來得到 binary 值並且印出字串
+    a=`echo -ne \verb="\x10"=`; echo \$a \verb=|= od -A n -t x1 -N 1
+  \item [string format] \hfill \\
+  \begin{itemize}
+    \item decimal hex : 一般 printf 就能互轉\verb=printf "0x%x" 100; printf "%d" 0xab= 
+      或者bash, \verb=echo $((0xa))=
+    \item decimal octect : 一般printf , \verb=printf=
+    \item binary string: 轉到binary比較難，只能靠 bc, perl, python這種，例如
+      perl -e "printf\verb=(\"%b\",$decimal)"=, python -c "print bin(10)"
+      轉回來bash有\verb=echo $((2#0101)=
+    \item leading 0 : 這可以用awk, printf，反之要清掉leading 0 也可直接awk, printf。\\
+      printf "0\%x" 12345, \\
+      echo \$ip | awk -F . '\verb={printf("%d.%d.%d.%d",$1,$2,$3,$4)}='
+    \item length : bash有簡單的表示法，strvar=alibuda; echo \verb=${#strvar}=，可以從屁股
+      取回兩個字元，例如sector=0xabcd; char=\verb=${=sector\_hex: -6:2\verb=}=; echo \$char
+  \end{itemize}
+\end{description}
+另外perl/python 中的array/list與hash/dictionary的處理，也是很常見的
+\begin{description}
+  \item [大小] \hfill \\
+    perl 用\verb=$#=array，或者scalar(@array)\\
+    python 用mylist.length()\\
+    javascript 用array.length
+  \item [搜尋] \hfill \\
+    perl 可以 grep(/string/, @array);\\
+    python 'string' in mylist\\
+    javascript array.includes('string')
+  \item [反轉] \hfill \\
+    perl reverse(@array) \\
+    python mylist.reverse()或者list(reversed(mylist))\\
+    javascript 用array.reverse()
+  \item [陣列切割] slice \hfill \\
+    perl \verb=@array[2..3]= 只要index 2到index 3\\
+    python \verb=[start:end:step] 第1 index與第2 index-1 以 step取slice=,-1表示從屁股開始\\
+    javascript array.slice(1,3)
+  \item [陣列連結] \hfill \\
+    perl (@a, @b) \\
+    python list1 + list2\\
+    javascript array1.concat(array2)
+  \item [字元切割 split] \hfill \\
+    perl split(/,/, 'mystr1,mystr2');\\
+    python str.split(",")\\
+    javascript str.split(" ")
+  \item [連結字元 join] \hfill \\
+    perl @a = join(',', @array)\\
+    python ",".join(mylist)\\
+    javascript array.join('and') javascript 能連結字串
+  \item [排序] \hfill \\
+    perl sort(@array);\\
+    python mylist.sort(); \\
+    javascript array.sort()
+  \item [iterate] \hfill \\
+    perl map(func, @array) , 拿出key keys(\%hash), (\$key, \$value) = each(\%hash), while ((key,value) = each(\%hash))\\
+    python x = iter\verb={[1,2,3]}= x.next(), 拿出 key dict.keys(), (key, value) = dict.items(), for key,value in dict.items(): \\
+    javascript array.map(func), 拿出 key Object.keys(obj)
+\end{description}
+
+最後要說的是，不管哪種語言，說穿了就是
+\begin{itemize}
+  \item 所有東西都只是轉換轉換再轉換，並沒有什麼神奇的，跨平台等等都是。
+  \item bit, byte, string, array, hash 表示法的轉換與使用。
+  \item 一般性的 if else, while for loop 使用還有 condition 的情況為何？
+  \item regex string 的搜尋，擷取，代換，與多行 string 的使用。
+  \item 語法是否支援物件，如果是就有 function overloading, try catch等。
+  \item module 的引用與被引用，與 library 管理。
+  \item 有沒有 system call 相對應支援，對於多工，I/O, IPC 如何處理。
+  \item 最後就是每個 script 語言都有相對應的 C/C++ binding ， 但如果要寫
+    有點用的大型程式，最後都要有跟系統溝通能力，都要會寫這種 c/c++ binding
+    ，甚至要改進script 的 performance 都要去看原始 c/c++ code
+\end{itemize}
+是的，就這樣，要真的全部都會，就能寫點電玩軟體了。
+
+\begin{thebibliography}{99}
+  \bibitem{linux}Linux In a Nutshell, Ellen Siever, O'Reilly 
+  \& Associates, ISBN 0596000251
+  \bibitem{sed}Sek \& Awk, Dale Dougherty, et al, O'Reilly 
+  \& Associates, ISBN 1565922255
+  \bibitem{perl}Programming Perl, Wall, Christiansen \& Orwant,
+  O'Reilly \& Associate, ISBN 0596000278
+  \bibitem{perl}Perl Cookbook, Tom Christiansen, Nathan Torkington ,
+  O'Reilly \& Associate, ISBN 1565922433
+  \bibitem{kr}The C Programming Language, Brian W. Kernighan, 
+  Dennis M. Ritchie, Prentice Hall, ISBN 0131103628
+  \bibitem{manperl}man page of sed, awk and perl
+  \bibitem{perl}{\href{https://perldoc.perl.org/}{perl docs}}
+  \bibitem{python}{\href{https://docs.python.org/}{python docs}}
+  \bibitem{python3}{\href{https://pymotw.com/3/}{python 3 modules}}
+  \bibitem{javascript}{\href{https://developer.mozilla.org/en-US/docs/Web/JavaScript}{mozilla Javascript}}
+  \bibitem{node.js}{\href{https://nodejs.org/docs/latest/api/}{Node.js API}}
+\end{thebibliography}

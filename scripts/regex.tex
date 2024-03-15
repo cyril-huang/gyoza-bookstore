@@ -1,0 +1,202 @@
+\chapter{Regular Express}
+    \section{簡介-RE與glob}
+    regular express是一種表示方法，用一些特殊的字元來表示一些電腦裡的特殊意
+    義，並且做為尋找的一種樣式比對 \verb=(pattern match)=。
+    在MS dos/windows 中也有相當的字元，例如 * 代表所有字所以你用del *.* 就可以砍
+    掉所有檔案，* 就叫 wildcard 字元。不過這在 shell 中的處理只是叫做 globbing
+    並不是regular express。其實這當然是從Unix學去的，UNIX上的regular 
+    express 更強大，而且適用於很多Unix 軟體裡面，像grep, sed, awk, vi, emacs
+    perl...等等，可以說 regular express 就是使用 UNIX 的靈魂。
+    不過要來學unix請先把DOS那套不general東西給忘了。
+    \\\\
+    C程式裡面處理regular express如果是POSIX的系統則用 regcomp() regexec()， 
+    System V的有regcomp(), regex()，BSD系統有re\_comp(), re\_exec()。
+    \\\\
+    在shell中的路徑pattern match叫globbing，shell 路徑是不認得 RE 的
+    通常用於路徑名的 ? * \verb=[]= 的比對，對應用\verb=fnmatch()=來處理。
+    不過這不是要談的重點，只是以後進階用C寫程式時可以想到用甚麼 function call。
+    \\\\
+    通常很多使用regular express的時後會用一對//夾住。
+    \begin{verbatim}
+      /reg express/
+    \end{verbatim}
+    來表示找到合乎reg express條件的字串。perl裡面說其實是
+    \begin{verbatim}
+      m//
+      s///
+    \end{verbatim}
+    m表示match，s表是substitude，不過m可以省略不寫就變成//了
+    通常用法是m//命令，s///命令。命令常看到的有
+    \begin{itemize}
+    \item p       -\verb=>= print   通常也不用寫
+    \item d       -\verb=>= delete  這通常是跟在m命令後  符合的就砍掉
+    \item c       -\verb=>= confirm 通常用在s命令， 詢問是不是真要取代
+    \item g       -\verb=>= global  通通換，因為match到時內定只有第一個符合的有效
+    \item i       -\verb=>= ignore  不管大小寫
+    \item 1,2,3...-\verb=>= 表示搜尋取代的第一個，第二個，第三個....等等
+    \end{itemize}
+    不過也不一定，像grep命令就沒有，用雙引號就可以了。
+    anyway,只是很多都是這樣表示。
+    \section{字元處理}
+    由單一的字元特殊符號表示一行中的特殊位置與連續性就可以組合成千變萬化的字串。
+    \subsection{基本字元表示}
+    字元，就是單一一個英文字母的處理。先來個基本的字元
+    \begin{itemize}
+    \item .   代表任意"一個"字元除了換行newline字元。不過記住awk可以match換行。
+    \item ?   代表"前面"字元出現0次或1次
+    \item +   代表"前面"字元出現1次以上 1 2 3 4 ... 不出現return false 
+    \item *   代表"前面"字元出現0次以上 0 1 2 3 ...
+    \end{itemize}
+    這邊初學者比較常犯的錯誤是在shell下的wildcard * 的習慣，以為只要給個*
+    就代表所有字元，其實是 ? + * 都要前面搭配 . 來使用才能代表任意字元。
+    \begin{itemize}
+    \item \verb=^=   代表行首
+    \item \$   代表行尾
+    \item \verb=\=   脫逃字元(escape)取消特定字元的涵義用的
+    \end{itemize}
+    這邊比較要注意的是字在行首起頭的\verb=^=，行尾的\$，與在行中的case分屬不同
+    的regular express，小心有的程式會把這四種當成不同的regular express，
+    這會不一樣喔。
+    例如
+    \begin{verbatim}
+    beg                    ->  /^beg$/   才吻合
+    beg your pardon        ->  /^beg/   才吻合
+    I beg your pardon      ->  /beg/   才吻合
+    I beg                  ->  /beg$/   才吻合
+    \end{verbatim}
+    不過有的不會。這種狀況也很討厭，在新的軟體如perl等就有很好的處理方式了。
+    \\\\
+    有的程式是以行做運算單位，有的如javascript卻還能以單一字串做運算單位。
+    所以有的字元的含意會有多出來的意義。這要仔細的看各個軟體工具的說明。
+    另外就是換行字元與空字元的使用再一些軟體使用情況不同，這也要小心。
+    \begin{itemize}
+        \item /\verb=^#=/      有\verb=#=在一行的第一字元時  就還回TRUE
+	\item /\verb=^=bag/    bag在行首的行
+	\item /bag\$/    bag結尾的行
+	\item /bag/     bag在中間的行  不過有的程式處理沒有這麼嚴格像sed
+	\item /b.g/     表示bag beg bug都行 
+	\item /b\verb=\=.g/    表示b.g
+	\item /\verb=^=..g/    表示行首bag beg bug xxg都符合 但一定要三個字母
+	\item /\verb=^=.*g/    表示行首有任何字元的然後有個g的都可以還回true
+	\item /beg*/    be, beg, begg, beggg, .......    
+	\item /beg+/    beg, begg, beggg, begggg, ......
+	\item / */      空白字元也行
+	\item /\verb=^$=/    代表空白行 
+    \end{itemize}
+	\subsection{字元處理 - 括號與範圍表示}
+	\begin{itemize}
+	\item \verb=[ ]=       \verb=[]=內的任一"單一字元"符合就還回TRUE
+	\item \verb=[^ ]=     \verb=[]=的反效果 不含\verb=[]=內的任一單一字元
+			還回true，所以這邊\verb=^=在\verb=[]=內有不同的意義，
+                        這個常用在收集完全沒有某些字元的長字串上。
+	\item \verb=[0-9a-zA-Z]=    -號在\verb=[]=內可以表示一段範圍不用打到手酸死，
+			所以如果要表示-號必須放在第一或最後字元
+	\item \verb=w{n,m}=   連續字元出現表示法\\
+		       比用 /.../好用，
+                       跟{\LaTeX}中的table的用法很像，表示有"連續"符合
+		       w字元出現''連續'' n次到m次 \\都會還回TRUE
+	\item \verb=0{3,}=    0至少出現3次 \verb=->= /xxxx000xxxxxx/
+	\end{itemize}
+	在字串下\verb={} ()=是表示真的這些字元的，不像\verb=[ ]=會被regular
+	express當成一種運算，所以不要忘了用脫逃字元 變成\verb=\{ \} \( \)=。
+    \section{字串處理 - 不同括號表示}
+	一些字串的處理上
+	\begin{itemize}
+	\item \verb=( )=	Group operator
+	\item \verb=(str1|str2|str3)=  str1或者str2或者str3\\
+			\verb=()= 與 \verb=|=是extend的regular expression
+			只有一些軟體如egrep才有支援。所以在用軟體的regex
+			時必須知道他能處理的regex能力。
+	\item \verb=&=  表示s///中前面找到的字串
+	\item \verb=\1 \2 \3= ... 代表s///中前面用括號\verb=\(\)=括起來的字串，
+			這通常也是找到的字串，不過\verb=&=只有一個，
+			用 \verb=\1 \2 \3 =可以有很多個。\\
+			\verb=\1= 表第一個括號內字串 \\
+			\verb=\2= 表第二個括號內字串
+
+	\end{itemize}
+	通常\verb=\1 \2 \3=是用來對match到的字串還要再處理時用的
+	\begin{description}
+          \item \verb=/[Yy]es/= \\
+            Yes 和 yes
+          \item \verb=/80[23]?86/=\\
+            8086 80286 或者80386
+          \item \verb=/[A-Za-z0-9]/=\\
+            字元可以有這樣的連續表示法
+          \item \verb=/compan(y|ies)/=\\
+            company companies
+          \item \verb=/0\{3,\}/=\\
+            表示0要出現三次以上
+          \item \verb=s/.*/(&)/=\\
+            將原本的行加上括號( )
+          \item \verb=/[^ ]+$/ =\\
+            表示最後一個不包含空白字元的所有東西。
+          \item \verb=s/\(str1\) \(str2\)/\2 \1/=\\
+            把兩個字串對調  注意\verb=\1 \2=的用法，其中\verb=& \1 \2 \3=
+            ...， 這些常用在代換( substitue ) 中 。注意括號在前面有不同意義，
+            所以必須用\verb=\=來escape。
+	\end{description}
+	所以這邊大括號有兩種完全不同的用法，要小心，一種是grouping通常是用來
+	抓想要的字串的，另一種是不同的字串表示，這種功能不是所有的RE都有的。
+	Grouping除了拿來抓想要的字串外，把?+*這些放在()後面也表示整個 group 的
+	重複出現次數。例如echo "1.2.3.4.5" | sed -e \verb='s/\([0-9]\.\)\+//'=
+	由於shell的+是有意義的所以要多個\verb=\=,這會只剩下5。
+    \section{Matching, Substitution, Extracting}
+	比對，代換，擷取是RE最拿手的好戲，尤其說穿了，台灣做的現在資料庫應用程
+	式很多就都是在做這些事而已。因此學會RE才是正途。
+	我們先用一些來做示範，但是在學其他工具的RE時，要時時刻刻記住這些工具
+	對這三個用途的使用方法。
+    \section{範圍定址(address)}
+	在sed, vi等editor裡我們可以指定要處理的行範圍，
+	這種指定要處理的條件行或某段range也叫address(定址)。
+	尤其是替換命令很常用。\\\\
+	range(addressing)s/// \\\\
+	\begin{verbatim}
+	sed
+	$ sed '1,3d' file   在第一行到第三行間幹掉整行
+
+	vi
+	:%s/xx/yy/g         把整篇文章的xx換成yy
+	\end{verbatim}
+	常用的行範圍符號
+	\begin{itemize}
+	\item ,   行數限制  1,5  表示從第一行到第五行
+	\item 0   最上一行
+	\item .   目前行
+	\item \$  最後一行  5,\$ 表示從第五行到最後一行  .,\$目前行到最後一行
+	\item \%  整篇文章也等於1,\$
+	\item x-n x往上數n行 .,.+10  表示目前行到目前行加十行
+	\item x+n x往下數n行
+	\end{itemize}
+    \section{greedy的regular express}
+	所謂 greedy 是說如果一行裡面符合 regular expression 的情況有很多，也
+        就是同時有很多pattern都符合時，在使用* + ?通常會很貪心的符合最長的那
+        個 pattern，不過並不是我們要的，尤其在 HTML 的 tag 處理上例如用 /t.*t/
+        去找，
+	\verb=<tt>=this is a tag\verb=</tt>= 在同一行裡
+	有\verb=<tt>=也有\verb=<txxxxxxxxxxt>=， greedy 的處理通常用
+        \begin{verbatim}
+        [^x]+
+        \end{verbatim}
+        這種方法，表示連續沒有x的字串是我們要的，舉例如
+        \begin{verbatim}
+        <a href="mydownload.file">mydownload.file</a>
+        \end{verbatim}
+        則
+        \begin{verbatim}
+        href="[^"]\+
+        \end{verbatim}
+        中的 regex 表示了mydownload.file。 perl 或 perl 延伸出的例如 php
+        等有比較簡單的方法。這將在 perl 裡面談到。
+	\\
+	另一種是可能兩種連續字元的同時使用例如?與*造成的 greedy。
+	會先使用前面的連續字元的 greedy。
+	例如
+	\begin{verbatim}
+	想要在下面兩種狀況下找出所在目錄與filename
+	/dir1/dir2/dir3/filename
+	filename
+	/[\/\\]?(.*)/
+	\end{verbatim}
+	通常這種連續型的重複 pattern 時候，有的軟體例如awk, perl, javascript 
+	等等會提供 split 這種東西讓你去把字串切開，然後再做處理。

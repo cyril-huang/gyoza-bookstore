@@ -1,0 +1,1075 @@
+\chapter{版本控制系統}
+SRM(software revision management) 版本控制是對 source 的歷史紀錄及開發實驗的重
+要工具。早期有光純local的RCS, 後來延伸的client/server CVS，有的公司內部是很
+厲害的，像我們以前的版本控制是自家工程師自己寫的，後來最有名的商用是rational
+clearcase 等等，隨著時代進步，很多限制與缺點都慢慢改進，目前業界用很大的是
+subversion 與 git。曾經在網路看到台灣人在問這東西可以用在2,3000人的公司嗎?
+基本上現在全世界的軟體業已經全部轉到 opensource 上來，
+現在 embedded 系統不是 BSD 就是 Linux。幾萬人的公司在用的工具全是 opensource
+工具。
+\\\\
+版本控制中說穿了就是graph/node理論以及多人同時處理一個檔案的data sync問題，
+各家有各家的想法跟實作。基本操作都差不多，但最重要的一個觀念是版本控制不是
+備份，也不是雜七雜八亂七八糟 binary的東西都丟上去，只有最原始人用editor產生
+的東西，還有很多人一天到晚亂check in。那種版本紀錄就跟沒有沒兩樣，一點也沒
+有意義。
+\\\\
+branch與merge是版本控制中最重要的部份，沒了branch/merge，那就沒有 SRM 的意義。
+有人說這樣不怕檔案丟失，如果同一顆硬碟，那是一樣的，如果不是同硬碟，沒有遠端
+專業大手筆的RAID, SAN, backup 等手段，也是無
+意義的備份而已。以我們公司來說整個NFS系統是24小時都在運轉備份的，我們的svn
+git server 都是24小時無數的 SAN/RAID/cluster的storage的。當有這些東西時，那
+code 正確小心的進入 SRM 才是正確的作法(每次 code 要進去，一定是大家 review 
+過的才行，如果 review 過後出問題，那 senior 的工程師就不該領那份薪水，以前
+是連一個 space 空錯了，都是打回去重寫的)。
+\\\\
+合併重要的觀念就是以兩點的delta中產生的變化與某支中的source進行合併。
+其中有兩個重要名詞
+\begin{itemize}
+  \item rebase/promote 傳統上爸爸到小孩稱rebase, 小孩回爸爸稱promote，
+    這應該是從clearcase來的， 算是正統srm/scm業界的標準辭彙。
+  \item sync/reintegrate 這相當於rebase/promote，svn提出這樣的辭彙。但有點
+    不太一樣的解釋。主要在 svn 的版本編號與model有點不太一樣，沒有 rebase 
+    / reparent的東西，但一樣有爸爸到小孩這件事，而且他用svn merge這樣的命令。
+  \item rebase/merge 這是git提出類似rebase/promote的辭彙。
+\end{itemize}
+也就是說 merge 這個名詞在標準 SRM 中是很籠統的，他的定義，語法，作用其實是跟著
+不同工具而有所不同，這也是一般初學者搞不清楚的地方，以為merge merge就那麼一回
+事。然後看了一堆文件還是一頭霧水，svn merge 跟 git merge 跟 clearcase 講的 merge
+根本就不一樣。所以如果在以下文章中我說merge，有可能我說的
+就是籠統的merge (合併)，請不要搞混。在真實的 implementation中，每個SRM提出的
+方法或許不同，或有他實作的特殊方法，但但但...最重要的最終目的，都只是要做到
+rebase/promote這兩件事。不要被其他拉哩拉雜的語彙給騙了。
+\\\\
+merge back的觀念在於
+只要public出去server的source，就無法undo歷史，就必須merge back，並且產生一個
+新歷史紀錄。所以local怎麼亂搞都無妨，但只要svn commit/git push有對外歷史紀錄，
+想反悔，那就只能merge back。這都是對外歷史紀錄，必須保留。
+\section{subversion}
+  他有一些特點
+  \begin{itemize}
+    \item client / server subversion是一般的client/server，所以要有svn server
+      才行。
+    \item 版本號碼是所有branch同一個version space，也就是不管在哪個branch上，
+      只有一個獨一無二的版號。cvs的版本號是per file的，但 svn 的版本號是
+      per project
+    \item 能處理binary，雖然binary檔不該進srm，但現在很多網頁的圖檔屬於binary
+      檔，很多人偷懶，當然也有很多白爛的工程師亂搞，正常 binary 檔應該在 file 
+      system 裏面。
+  \end{itemize}
+  \subsection{server建置}
+  以apache ＋SSL 當作溝通的server，apache 需要裝dav svn模組。
+  裝三個packages, libapache2-svn apache2 subversion。3個設定: httpd, dav\_svn
+  mod\_ssl
+  \\\\
+  httpd.conf要load的模組
+  \begin{verbatim}
+  LoadModule dav_module         modules/mod_dav.so
+  LoadModule dav_svn_module     modules/mod_dav_svn.so
+  \end{verbatim}
+  dav\_svn.conf檔案的設定
+  \begin{verbatim}
+  <Location /svn>
+      DAV svn
+      SVNParentPath /var/lib/svn
+
+      AuthType Basic
+      AuthName "Subversion repository"
+      AuthUserFile "/etc/apache2/dav_svn.passwd"
+
+      <LimitExcept Get Propfind Options Report>
+         Require valid-user
+      </LimitExcept>
+      SSLRequireSSL
+  </Location>
+  \end{verbatim}
+  authentication/authorization 用的是 apache 內部的，所以 dav\_svn.passwd 必須以
+  htpasswd 去建立。最好是把 ssl enable 起來，所以在 debian 上面是把 default-ssl
+  與 mod\_ssl 給 enable 起來。
+  \begin{verbatim}
+cd /etc/apache2/sites-enabled
+ln -s ../site-available/default-ssl .
+cd /etc/apache2/mods-enabled
+ln -s ../mods-available/ssl.* .
+  \end{verbatim}
+  這裡面其實是有很多東西在裡面了，ssl 的 key, csr, crt 已經 openssl 建立在/etc/ssl
+  主要就是mod\_ssl 必須要 load，然後 dav\_svn.conf 的 SSLRequireSSl 是強制性一定要
+  用ssl來連線。
+  \\\\
+  repository 建立必須找到相對位置，由於我們在 dav\_svn.conf 裡面使用了 SVNParentPath
+  ，所以我們所有的 repository 都要在/var/lib/svn/ 下面另建目錄。
+  \begin{verbatim}
+# su www-data
+$ svnadmin create /var/lib/svn/project0
+  \end{verbatim}
+  這個目錄下的所有人必須是 apache server 有權可以讀寫的。這個會 mkdir 也會在
+  /var/lib/svn/project0 下面建立一些檔案。
+  \\\\
+  假設我們站在一個 source tree 叫 myproj目錄裡面。
+  \begin{verbatim}
+svn import https://server/svn/project0
+  \end{verbatim}
+  這樣就把project丟進遠端的repository
+  \begin{verbatim}
+svn list https://server/svn/project0
+svn co http://server/svn/project0 xxxx
+  \end{verbatim}
+  會在自己這邊的xxx目錄下建立project0的repositroy
+  % hook script
+  \subsection{基本使用}
+  基本命令都很簡單，多玩幾次就差不多了。
+  \subsubsection{初始}
+  \begin{itemize}
+    \item svn import
+    \item svn co
+  \end{itemize}
+  \subsubsection{更動}
+  \begin{itemize}
+    \item svn ci
+    \item svn add
+    \item svn del
+    \item svn update 這會抓下server上最新的並跟working做自動merge。
+  \end{itemize}
+  \subsubsection{訊息}
+  \begin{itemize}
+    \item svn info
+    \item svn status
+    \item svn status -q 表示不要顯示沒有在 svn 控制下的檔案。
+    \item svn log -g 用-g表示所有branch上有關這檔案的紀錄通通出來。
+    \item svn log -v -r 1234 這個commit的log與所有檔案list。
+    \item svn log -r {2013-8-10}:{2014-1-10}
+    \item svn log \verb=--=stop-on-copy 表示在branch的頭就停下來。
+  \end{itemize}
+  status裏面的訊息面，前面7個字元是有意義的，常用就第1字元
+  \begin{itemize}
+    \item ? 表示這檔案不在 svn 控制
+    \item A 表示這是新加檔案
+    \item C 在第1字元表示檔案conflicts，在後面第4字元表示是tree conflicts。
+    \item D 表示被刪除
+    \item M 在第1字元表示這檔案內容被更動了，第2字元表示property被更動了。
+  \end{itemize}
+  \subsubsection{比較}
+  \begin{itemize}
+    \item svn diff 比較working與server上版本差異。
+    \item svn diff -r 1234:5678 比較兩版本。
+    \item svn blame 抓出每一行的check in者是誰。或者叫作annotate
+  \end{itemize}
+  \subsubsection{反悔}
+  \begin{itemize}
+    \item svn revert 本地端還沒check in時，都可以用revert反悔。
+    \item svn merge -r 1234:1233 但只要有過版本歷史，就一定要再merge back，
+      創造一個新的歷史紀錄與check in。通常merge回減一個號碼。
+  \end{itemize}
+  \subsubsection{遠端}
+  \begin{itemize}
+    \item svn list https://mysvn.com/branches 列出遠端所有branches
+    \item svn copy https://mysvn.com/branches/b1 https://mysvn.com/branches/b2
+      開branch
+    \item svn move 改名
+    \item svn del 刪除
+  \end{itemize}
+  \subsubsection{其他}
+  在working下面其實有個.svn這個目錄，裏面放了很多資訊，有些操作是針對這目錄的
+  \begin{itemize}
+    \item svn export 跟co很像，但沒有那個.svn跑出來。
+    \item svn cleanup 清除目前.svn內的暫時狀態，例如某檔的lock。這通常是跑一
+      跑某命令，然後忽然按ctrl-C的結果，就需要cleanup。
+    \item svn switch branch2 轉換到另一branch 去，如果有沒commit 的，會出error
+  \end{itemize}
+  另外每個檔案有所謂的 property，賦與一些屬性的key/value後，svn可以因為這
+  property的設定而做一些功能。主要 property 的長相為 "svn:xxxxxx"
+  \begin{description}
+    \item [\$Id] \hfill \\
+      使用 RCS/CVS的老玩家
+      \begin{verbatim}
+svn propset svn:keywords "Id” myfile.c
+svn propget svn:keywords myfiles
+svn proplist myfiles
+      \end{verbatim}
+    \item [submodule] \hfill \\
+      使一個目錄下能連到別的repository
+      \begin{verbatim}
+mkdir submodule
+svn add submodule
+cd submodule
+svn propedit svn:externals 'subdir https://otherproj.com/xxx' .
+svn ci
+      \end{verbatim}
+      則svn update時會把otherproj.com/xxx下面的東西放到submodule/subdir進來
+  \end{description}
+  \subsection{branch/merge}
+  開 branch 非常簡單。就像在 copy 一樣，這是 svn 開始讓很多人喜歡的。隨便你開。
+  \begin{verbatim}
+svn copy https://myproject/branches/b1 https://myproject/branches/b2
+svn co https://myproject/branches/b2
+cd b2
+svn info
+  \end{verbatim}
+  svn 的 branch 只是一個紀錄，所以可以亂開。
+  \\\\
+  根據svn 的文件上來說，他認為的 merge 有四種:
+  標準sync, cherrypick, reintegrate, 2url。但無時無刻不要忘了，所謂merge就是
+  任兩點的差異跟某base做graph/node的運算。上面所說的四種，都是一樣。
+  \\\\
+  在文件中有新feature要開feature branch，然後 feature branch 的sync，就是爸爸
+  對小孩的sync，就是從開始小孩branch到目前爸爸最前面這兩點對目前的 working 
+  directory做merge。reintegrate 是sync...sync...幾次後，最後完成 feature 了，要回去
+  爸爸那邊了，由於之前已經 sync 過了，所以爸爸小孩已經有重複相同的 code
+  ，小孩已經不能merge回去，而要做reintegrate。這就是 rebase/promote。
+  svn 的標準文件中說到b1 b2 兩個 branch，要先把爸爸b1 sync 到小孩 b2，然後再
+  reintegrate回爸爸
+  \begin{verbatim}
+cd b2
+svn merge --accept postpone https://myproject/branches/b1 . > ../merge.log
+resolve the conflicts
+(compile and test ...)
+svn resolve --accept working
+svn ci
+
+cd b1
+svn merge --accept postpone --reintegrate https://myproject/branches/b2
+(compile and test ...)
+svn ci
+  \end{verbatim}
+  除了傳統上的 sync/reintegrate，
+  那爸爸小孩可不可以亂merge來merge去呢?基本上如果按照文件上所說，是沒有這樣
+  說法的，但不要忘了"merge只是兩點間的delta 往某支source做運算"，只要避免掉
+  重複的可能性，就可以merge。所以只要爸爸從來沒有往下sync過，小孩是可以直接取
+  兩點 merge 回爸爸的。同理爸爸到小孩也可以取兩點做，所以
+  \begin{verbatim}
+svn merge -r 1234:5678 https://myproject/branches/b2 . > ../merge.log
+  \end{verbatim}
+  是永遠存在的，但千萬要記住每次的兩點是哪兩點，還有版本號碼下一次不要忘了要
+  多加一號。不要遺漏也不要又重複了，當然不加兩點，內定就是目前到最開始切出
+  branch那一點。即使是爸爸已經往下sync過了，那也可以取爸爸的最後sync那點與小孩
+  最後的那點的兩點差距往爸爸做2 URL merge。另外svn 的sync很聰明，不寫兩點時，
+  他在mergeinfo裏面會自動記住目前的sync點是哪一個，說穿了也是 rebase。
+  \\\\
+  那有一種情況是兩隻branch是兄弟關係，sibling branch merge也是可以，甚至可以
+  指定兩個URL點來對working directory做merge，所以任兩支branch的merge就是使用
+  2 URL merge。只要你確定沒有重複code，沒有少掉code。不要忘了只是兩個點的delta
+  來對某source做運算。
+  \begin{verbatim}
+svn merge https://myproject/b1@1234 https://myproject/b2@5678 . > ../merge.log
+  \end{verbatim}
+  以一個例子來說
+  \begin{verbatim}
+
+   123  a  456  b 789  c 901  d  1000
+   -------------------------------              m
+    \       \        \     \      \
+     \       \        \   e \950 f \ 1010 g
+      \       \        \-----v------v---------- n
+       \       \         x
+        \-------v------------------------------ o
+
+  \end{verbatim}
+  這例子裏面的 m n都已經 release 了，n比m晚release，然後希望n 往o branch倒東西
+  ，但 n = a + b + c + d + e + f + g, 而o = a + x 。當 svn merge n o 的時候，
+  相當於我們要得到 a + b + c + d + e + f + g + x 所以相當於我們要得到
+  delta = b + c + d + e + f + g 進到 o 去，所以這有很多種可能，必須先checkout
+  o，並且cd 到o去
+  \\\\
+  2 URL merge
+  \begin{verbatim}
+  svn co https://proj/o
+  cd o
+  svn merge https://proj/m@456 https://proj/n . > ../merge.mn
+  \end{verbatim}
+  他也能分兩段來做
+  \begin{verbatim}
+  svn merge -r 456:789 https://proj/m . > ../merge.m
+  svn merge https://proj/n . > ../merge.n
+  \end{verbatim}
+  或者2 URL
+  \begin{verbatim}
+  svn merge -r 456:901 https://proj/m . > ../merge.m
+  svn merge -r https://proj/m@901 https://proj/n@HEAD . > ../merge.mn
+  \end{verbatim}
+  或者
+  \begin{verbatim}
+  svn merge -r 456:1000 https://proj/m . > ../merge.m
+  svn merge -r 1010:HEAD https://proj/n . > ../merge.n
+  \end{verbatim}
+  分段做的用意還是在減少code的變化太大所造成的conflicts太大，如果 code 都還蠻
+  straight forward，那一次2 URL merge也可以。
+  \\\\
+  使用2URL的merge還能在原本reintegrate時，這是Corey認為很棒的mergeinfo產生方法
+  ，從爸爸再拉一條出來，然後用小孩跟新拉出的branch，用2 URL merge到爸爸的
+  working去，而不要用reintegrate。
+  \begin{verbatim}
+                                     -o
+                                    /
+                                   /
+   -----------------------------------  m
+                  \     \      \
+                   \     \      \       
+                    \-----v------v n
+  \end{verbatim}
+  本來n sync完後做reitegrate回m，並且放棄n了，但不做reintegrate，改從m拉出一條
+  o來，此時做2 URL merge
+  \begin{verbatim}
+  svn co m
+  svn merge n@xx o@yy .
+  \end{verbatim}
+  其他的選項應用
+  \begin{verbatim}
+  svn merge -r HEAD:1234 從HEAD到版本1234做反悔merge
+  svn merge --dry-run 試試看就好了，不會真寫進working directory
+  svn merge --accept postpone 所有的conflicts先使用postpone。
+  svn resolve --accept working 解決改變檔案conflict狀態，才可以check in。
+  \end{verbatim}
+  當使用postpone時，所有conflicts檔裡會有
+  \begin{verbatim}
+  <<<<<< .working
+  xxx
+  =====
+  yyy
+  >>>>>>>
+  \end{verbatim}
+  working部份就是working directory下面原本的，conflicts有兩種
+  \begin{itemize}
+    \item text conflicts 這是真的發生conflicts了
+    \item tree conflicts 這是在某branch被砍了，但在另一branch卻還存在，所以這
+      通常要檢視一下到底怎麼回事，通常就是接受 merge 結果 \verb=--=accept working
+  \end{itemize}
+  svn log -g跟mergeinfo有很大關係，可以用svn mergeinfo
+  .來看出目前總共的merge編號。
+
+\section{git}
+git是很神奇的，他直接紀錄檔案內容的變化，不對檔名檔案系統的東西作紀錄。
+版本編號完全不是流水號，版本編號只是個sha識別號，編號跟編號之前沒有相對關係，
+顛覆以前的想法。另外傳統上svn的server只要掛掉了，
+就大家不用做事了，所以git使用local與server混用的distribution srm，local
+間可以互相亂merge，不須透過server，但又可以有server來做統一的發佈與管理。
+(雖說如此，但我好像沒看過我同事間在互相 merge，呵呵，主要我們都用 github
+bitbucket，這些東西用法又不像原始git)
+\\\\
+他有一些相關定義與名詞:
+\begin{itemize}
+  \item objects 一個repository內的所有組成元素都叫object,都zip在.git目錄下
+  \item blob 一個檔案內容物件
+  \item tree 一個包含blob或tree的物件
+  \item commit 每次commit產生的物件，git的branch只是一個指向commit物件的alias
+  \item tag 貼上tag產生的物件
+  \item refs (reference) 一直會改變的指向commit object的指標。HEAD, branch, 
+    commit。以前svn的HEAD, PREV等都是。
+  \item index (staging area)
+\end{itemize}
+這些東西放在.git內在git操作時，是內部使用的抽象定義。
+\\\\
+他等於有三層的地方在放source。working, local repository, remote
+repository，但其實不只這樣，他還有一些暫存區可以亂放暫時的source。所以他的反悔
+的使用，有很多不同層次，抓到這個重點，剩下的命令就簡單了。一些名詞定義
+\begin{itemize}
+  \item track/untrack 檔案在git的控管之下叫tracked
+  \item modified/unmodified 檔案在track下有沒有被改動
+  \item staged 檔案指被git add/modify後的狀態，commit，會進local的database。
+  \item working directory 目前的工作目錄。
+  \item origin/master master分別是遠端與local端的內定主branch名。遠端的branch
+    使用(remote)/(branch) 這樣的名字樣式。所以 origin 是一個 remote 名字。
+    remote 的使用在於他可以亂指到任一 url 去，從那個 remote 下再去分 branch。
+\end{itemize}
+所以檔案狀態層次為
+\begin{verbatim}
+tracked->staged->local->remote
+\end{verbatim}
+另外很重要的一點就是版本編號的方法，cvs 的版號是per file的，svn的版號是per
+project，log 散在每個branch上 ，git的版號是per project，但會每個branch都有一個
+指標說有沒有包含這個版號。
+  \subsection{server建置}
+  git有很多種遠端protocol使用
+  \begin{itemize}
+    \item git 缺點是他沒有authentication功能，必須搭配ssh，使用內定port 9418
+    \item ssh 缺點是一定要有帳號才能存取，對read only不方便，但通常公司內用這種。
+    \item https 缺點是速度比git protocol慢。不過read only都用這種。
+  \end{itemize}
+  建立server(可以三種都用，或只用一種也可)
+  \begin{enumerate}
+    \item 加一個新帳號, git:git (使用在git或ssh連線上):\\
+      除了加git帳號外，也要把login shell換成git-shell這隻，然後要特別給一個目錄
+      git-shell-commands 755的讀寫權，最後 ssh 可以把所有 developers 放到同 
+      group 去， 通常是把 ssh-keygen 產生的 public key 放到
+      /home/git/.ssh/authorized\_keys
+      \begin{itemize}
+        \item \# useradd -m -d /home/git git
+        \item \# usermod -s /usr/bin/git-shell git
+        \item \# mkdir /home/git/git-shell-commands
+        \item \# chmod 755 /home/git/git-shell-commands
+      \end{itemize}
+    \item 建立repository目錄:\\
+      應該安裝git就會有的,要注意的是要先變身git, 使用bash\\
+      \begin{itemize}
+        \item \# su -s /bin/bash - git \\
+        \item \# mkdir /var/lib/git
+      \end{itemize}
+    \item 建立project目錄與初始化:\\
+      \begin{itemize}
+        \item \# su - git
+        \item \# mkdir -p /var/lib/git/myproj.git;
+        \item \# cd /var/lib/git/myproj.git;
+        \item \# git \verb=--=bare init
+      \end{itemize}
+    \item git daemon (git protocol, 可以在兩個人間使用吧):\\
+      如果只想用ssh方式， 這沒有一定要跑。\\
+      \begin{itemize}
+        \item \# git daemon \verb=--=user=git \verb=--=group=git \verb=--=reuseaddr \verb=--=base-path=/var/lib/git/ /var/lib/git/
+      \end{itemize}
+    \item ssh server 這有兩種作法來讓遠端寫入。 就是developers都在git group
+      或者大家放 public key 到 /home/git/.ssh/authorized\_keys，所以如果是放
+      public key 方法時，遠端的 repository 名字通常都是
+      ssh://git@xxx/var/lib/git/myproj.git。如果不用git@則會每次git命令都要輸入
+      遠端密碼很煩。
+    \item https server:\\
+      這必須修改httpd.conf檔案，與建立httpasswd。這跟svn 建立ssl方法一樣。
+  \end{enumerate}
+  git檔案相對位置是base-path設定，ssh是整個filesystem，http就是DocumentRoot了。
+  uid/password的管理用ssh是可以快速方便用NIS系統上的，如果用https，最好還是用
+  上ldap統一管理，不然就要用httpasswd很麻煩的維護。ssh有兩種方法，一種是只使用
+  git這個帳號然後每個人public key 都放到.ssh/authorized\_keys，一種是把
+  developers都放到同一個group,git,然後打開 group權限。初始也可以從一個已經有
+  .git的repository來。
+  \begin{verbatim}
+  git clone --bare myproj myproj.git
+  \end{verbatim}
+  然後copy到/var/lib/git， 接著把source放上去，類似svn import 自己sources,
+  假設有個目錄myproj裏面有 source code了。
+  \begin{verbatim}
+  $ cd myproj
+  $ git init
+  $ git remote add origin ssh://git@10.0.2.2/var/lib/git/myproj.git
+  $ touch README
+  $ git add README
+  $ git commit README
+  $ git push origin master
+  $ git remote -v
+  $ git branch -a
+  \end{verbatim}
+  在還沒有add, commit, push前，使用git branch, git remote 是看不到任何東西的，
+  必須做了commit, push 才會有local的master與remote的origin名字跑出來。
+  同伴client可以clone或者init做一個 git clone /var/lib/git/myproj.git，或者
+  \begin{verbatim}
+  $ git init
+  $ git remote add origin /var/lib/git/myproj.git
+  $ git pull origin master 遠端的origin拉下來成為local的master branch
+  \end{verbatim}
+  總之git \verb=--=bare init是用來建立一個respository，然後local用init建立working
+  後把remote 指向這個repostory進行pull/push, 這個指向可以是
+  \begin{itemize}
+    \item 看得到的檔案系統。例如\\
+      git remote add origin /var/lib/git/myrpoj.git
+    \item 遠端 protocol url 新增與更改，例如\\
+      git remote add origin ssh://git@srm.com/var/lib/git/myproj.git\\
+      git remote add otherRemote https://srm.com/git/myproj.git\\
+      git remote set-url origin git@github.com:cyril-huang/init-scripts.git \\
+      git remote show origin
+  \end{itemize}
+  別人就可以clone與pull了。總之remote add, 加一個遠端branch 名字到自己這端
+  master 來就是。
+  可以同時 push 到多個 url 去，只要 set-url 加上 push 選項
+  \begin{verbatim}
+git remote set-url --add --push origin https://mygithub.com/myproj.git
+git remote show origin
+  \end{verbatim}
+  這樣當 push 時，會同時 push 出去。
+  \\\\
+  在myproj.git目錄下會看到
+  \begin{verbatim}
+  branches  config  description  HEAD  hooks  info  objects  refs
+  \end{verbatim}
+  比較想去改的應該是hooks裏面可以放hooking script, 去掉裏面檔名的.sample
+  就會被呼叫，呼叫的時間點定義在
+  \href{https://git-scm.com/docs/githooks}{githooks}。這些時間點就是後
+  來 gerrit, github, bitbucket 他們拿來做code review, merge 等動作的時間點所
+  hooking 的 script。
+  \subsection{基本使用}
+  git的使用跟svn有很大的差異，主要在架構定義上就不一樣，所以連改動,checkin
+  等步驟也都不同，由於他很多不同state，不像 cvs 轉 svn簡單，必須從頭改變想法。
+  主要差異是多了staged state，使用add與reset來使檔案進入與脫離staged state。
+  reset命令其實是在把指向HEAD的指標換來換去，不同的選項在於檔案跟HEAD的狀態
+  是否完全變化而已。
+  \\\\
+  一開始先定義自己在 \$HOME/.gitconfig
+  \begin{verbatim}
+[user]
+	email = develop@gyoza.com
+	name = Developer
+[core]
+	editor = vim
+[merge]
+	tool = vimdiff
+[http]
+	sslverify = false
+[pull]
+	rebase = true
+[color]
+	ui = true
+[alias]
+	co = checkout
+	ci = commit
+	lg = log --oneline --decorate --all --graph
+	d = difftool
+[diff]
+	tool = vimdiff
+[difftool]
+	prompt = false
+  \end{verbatim}
+  主要是 email, name 這樣才知道是誰 commit 了。
+  \subsubsection{初始}
+  server的初始在上面說明過了，本地的初始, git init, git clone, git remote add
+  三種方法
+  \begin{itemize}
+    \item git \verb=--=bare init 上面講的初始一個server repository
+    \item git init 初始一個本地目錄
+    \item git clone https://mygit.com/myproj.git 拉下一個遠端project的default branch
+    \item git remote add origin ssh://git@srm.com/var/lib/git/myproj.git\\
+          git fetch origin otherBranch\\
+          git pull\\
+  \end{itemize}
+  \subsubsection{更動}
+  \begin{itemize}
+    \item git checkout 這是local端的轉換某支branch，如果原本local下檔案有改變
+      ，這些改變的檔案在新branch也是保留的，可以在新branch裏面commit。如果要
+      回復原本的改變也用git checkout myfile, 等於svn revert myfile.
+    \item git add file 把檔案加到index，準備下次commit時進去，每次更動檔案，
+      都要做這步。這跟svn add想法是非常不同。
+    \item git rm file 移除檔案
+    \item git commit 這是local端的check in
+    \item git commit -a 不需要多git add的動作，等於svn ci
+    \item git push 到遠端去，這才是真正 publish 東西給全世界知道。之前的
+      commit local 端，愛怎麼亂搞都沒問題，但一旦 push 出去就要被公審了
+      變成以前 svn commit 其實是 git push。
+    \item git clean -xdff 清掉所有不在 tracked 的檔案，這通常是清掉 build
+      後一堆亂七八糟東西產生，還我漂亮拳。
+  \end{itemize}
+  \subsubsection{訊息}
+  \begin{itemize}
+    \item git status
+    \item git log \verb=--=name\verb=-=only
+    \item git log \verb=--=stat \verb=--=summary
+    \item git log \verb=--=pretty=oneline
+    \item git log \verb=--=since="2 weeks ago" \verb=--= myfile
+    \item git log master \verb=--=not \verb=--=remotes=*/master
+    \item git log --graph --oneline origin/branch1..branch2 找出兩個branch 間差異的 commit
+    \item git reflog 這是看所有HEAD的refs的log，可以與git reset合起來亂搞。
+    \item git show object 一個general的object資訊命令。
+  \end{itemize}
+  \subsubsection{比較}
+  \begin{itemize}
+    \item git diff 是staged 檔案跟目前 working space 的不同
+    \item git diff master..experiment myfile
+    \item git diff 61786..e79f06 myfile
+    \item git diff HEAD..HEAD\verb=^= 等於 svn diff -r HEAD:PREV，HEAD\verb=^^=
+      表示目前頭的前兩個commit。
+    \item git diff \verb=--=cached
+    \item git diff \verb=--=staged
+    \item git apply ../my.diff 可以把一個 diff 檔，apply 到整個 source tree
+  \end{itemize}
+  有個比較複雜的找到遠端 branch 的 分歧點或者 parent branch 是誰，
+  \begin{verbatim}
+  git fetch origin '+refs/notes/*:refs/notes/*'
+  git merge-base origin/master origin/a_branch
+  git notes --ref=master_ref show b092f9c219cb60ccb8c3e264252718506f05d367
+  git notes --ref=a_branch_ref show b092f9c219cb60ccb8c3e264252718506f05d367
+  \end{verbatim}
+  \subsubsection{反悔}
+  這是最重要的，所有的歷史紀錄是版本控制的最重要功能，所以 commit log 的反悔，
+  合併，新增，刪除就是操作的重中之重。 反悔有個很重要的觀念是local端自己可以
+  亂搞反悔，遠端除非只有你自己玩的branch ，不然就不能隨意反悔造成別人的log
+  歷史大亂。 最基本的是
+  \begin{verbatim}
+  git commit --amend
+  \end{verbatim}
+  把這次的 commit 修補成上次的 commit，這樣commit log 不會增加。
+  \begin{itemize}
+    \item git checkout \verb=--= myfile 這等於svn revert myfile。
+    \item git checkout master \verb=--= myfile 這等於checkout master上的myfile
+    \item git reset 使檔案脫離staged狀態，反悔git add的動作。但reset動作是所
+      有檔案，單一檔案請用git checkout。
+    \item git reset HEAD\verb=^= 把HEAD推回到目前HEAD的上一個，等於反悔git commit。
+    \item git reset \verb=--=soft e1f34 推回到某一點。
+    \item git reset \verb=--=hard 使所有檔案回到完全沒改狀態，等於svn revert -R *。
+    \item git reset \verb=--=hard HEAD@\verb={1}= reset是來設HEAD的，亂設HEAD來undo之前reset。
+    \item git commit \verb=--=amend 雖然commit了但使用上一個 commit log做修改。
+    \item git revert 這等於svn merge back, 跟svn revert不同，這也會自動commit
+    \item git restore \verb=--=staged
+  \end{itemize}
+  其中要非常小心 git reset 尤其是 hard，不要輕易使用，會把所有沒 commit 的
+  東西清掉，如果是新檔案，則全部會被 delete 掉，如果發生這種慘事，這可以
+  \begin{verbatim}
+git fsck --lost-found
+  \end{verbatim}
+  在 .git/lost-found 找回來，例如
+  \begin{verbatim}
+git show .git/lost-found/other/048b54843c14fa344ecb11a70860a53acb3bff24
+  \end{verbatim}
+  可以看到被殺掉的檔案。
+  \\\\
+  也可以使用rebase來回到想要的原本那點，例如回去兩個commit點
+  \begin{verbatim}
+  $ git rebase -i HEAD^^  past 2 commits
+  \end{verbatim}
+  多個commit的回復解決，例如回復到4個commit前
+  \begin{verbatim}
+  $ git rebase -i HEAD~4  past 4 commits
+
+  則會叫出你的editor
+
+  pick 01d1124 Adding license
+  pick 6340aaa Moving license into its own file
+  pick ebfd367 Jekyll has become self-aware.
+  pick 30e0ccb Changed the tagline in the binary, too.
+
+  # Rebase 60709da..30e0ccb onto 60709da
+  #
+  # Commands:
+  #  p, pick = use commit
+  #  e, edit = use commit, but stop for amending
+  #  s, squash = use commit, but meld into previous commit
+  #
+  # If you remove a line here THAT COMMIT WILL BE LOST.
+  # However, if you remove everything, the rebase will be aborted.
+
+  pick 就是保留原本commit與commit log
+  把 pick 改成以下字串
+  edit 會amend這個commit log
+  squash 這個commit log不會出現了
+  或者只是單純移掉那行就可以把那個commit 與commit log拿掉
+  \end{verbatim}
+  遠端要反悔要先確定沒人pull, merge你的remote branch, 然後local先反悔，遠端
+  再用push \verb=--=force
+  \subsubsection{遠端}
+  \begin{itemize}
+    \item git remote add b1 https://my.com/origin
+    \item git remote -v
+    \item git branch -r 看遠端有什麼branch, git branch -a所有branch
+    \item git clone 只抓下master，複製一個遠端repositroy過來。
+    \item git pull 抓下遠端並做merge，類似 svn update, git pull \verb=--=rebase
+      會順便做 rebase，把頭頭 HEAD 指向最新地方，這也是通常預設使用。
+    \item git push 類似 svn ci, 算是省略的git push (remote) (branch)，
+      或更精確的 git push (remote) (refs/heads/branch:refs/heads/branch)
+      真正的意思是把local branch放到遠端 remote 的 branch。git 的版本只是一
+      堆指標(refs) 指來指去而已，然後有個特殊指標 (head)。
+    \item git push origin :b1 這反而是刪除遠端origin下的一個b1 branch, 或者用
+      git push origin \verb=--=delete b1
+    \item git fetch 抓下遠端所有branches資訊，但不做merge。 git fetch -p 會順便
+      砍掉已經遠端被delete 掉的 branch，應該說這很像 package 管理，遠端跟 local
+      端都有一份資料， fetch 就像 apt, yum update 一樣。
+    \item git checkout -b local\_dev origin/remote\_dev，把遠端remote\_dev這
+      branch抓下並且在local產生local\_dev branch，然後跳到local\_dev。
+    \item git push --set-upstream origin feature/alibuda 表示目前local已有一個
+      feature/alibuda的branch，然後在遠端從origin開一個feature/alibuda，並且
+      讓local去track遠端同名的branch, 則當 git pull 時就會抓下兩邊同名並rebase
+    \item git pull --rebase origin somelabel 這是 rebase 到遠端某個已設定 label
+      的 branch
+    \item git remote purge origin; git fetch -p 會sync遠端跟local的資訊，刪掉
+      local端那些已經不在遠端的branch
+  \end{itemize}
+  基本使用命令都在操作一個內定refs的指標上，如果想要變化其他的branch, remote
+  , stage, working的地方，只要變化這個refs後，就可以用類似的操作。單純working
+  , local跟remote的操作。像 svn 有HEAD PREV一樣，HEAD指向某個branch的最新版。
+  \begin{verbatim}
+  HEAD^     前一版本，等於svn的PREV
+  HEAD^^    前兩版本
+  HEAD~5    HEAD前5個
+  tag^      上一個tag
+  \end{verbatim}
+  有個很重要的 git stash 是
+  如果作到一半，有人要你修某個 bug ,但你原本作的一半可能已經無法 build，或者寫到一
+  半不完整，但又不想放棄，這時用 stash 可以先把亂七八糟的working directory先丟到
+  一個地方，他就會回到原本 clean 的 HEAD上，改完bug後，我們可以 commit，這時用
+  stash pop或apply就會再拿回來並且自動merge fix，但這不是開一個 branch ，
+  這只是暫時跳到一個 clean 狀態。
+  \begin{verbatim}
+  git stash save
+  git stash list
+  git stash pop
+  git stash apply stash@{0}
+  git stash clear
+  \end{verbatim}
+  另外之前的 .gitconfig 可用 git config 命令加減
+  \begin{verbatim}
+  git config --global user.name "John Doe"
+  git config --global user.email johndoe@example.com
+  git config --global core.editor vim
+  git config --global merge.tool vimdiff
+  設定alias命令
+  $ git config --global alias.co checkout
+  $ git config --global alias.br branch
+  $ git config --global alias.ci commit
+  $ git config --global alias.st status -s
+  設定顏色
+  git config --global color.diff auto
+  git config --global color.status auto
+  git config --global color.branch auto
+  \end{verbatim}
+  但我想大家都是直接改 .gitconfig 吧，他裡面跟其他像 .vimrc 一樣是能定義變數
+  ，例如
+  {\scriptsize
+  \begin{verbatim}
+  [alias]
+    lg = log --graph --pretty=format:'%Cred%h%Creset 
+      -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+  \end{verbatim}}
+  當用 git lg 時，
+  {\scriptsize
+  \begin{verbatim}
+* 8deb85dec4f - TunnelMismatch :Auto-committed by the workflow: PAW (8 days ago) <Alibuda Huang>
+* 63d8dc33c06 - Syslog does not appear on console (8 days ago) <Aburamisi Honda>
+* 443078ed1e1 - Sort and Display Wlan based on IDs and not name. (8 days ago) <Albert Einstein>
+* 841e05a7feb - Adding the remaining parameters for the security features (8 days ago) <Indra Gunawan>
+  \end{verbatim}}
+  這個 git log 還是相當複雜，可以好好研究一下。
+  \begin{verbatim}
+  git log git log -n1 --pretty=format:'%h %ad %s (%an)' --date=short 看日期
+  git log --author ${USER} --oneline 只看自己的 commit
+  git log --follow [file] 印出檔案的所有 commit history
+  \end{verbatim}
+  除了 .gitconfig 有個 .gitignore 相當重要是列出不想被 git 處理的檔案名稱
+  ，有個\href{https://github.com/github/gitignore}{github/gitignore}
+  彙整了大家的 template，可以去查直接套用。
+  \\\\
+  其他有用的
+  \begin{verbatim}
+  git blame   跟svn blame一樣，一行一行知道是誰什麼時候改的，責任歸屬。
+  git 
+  git archive 跟svn export很像，拿掉.git這個隱藏目錄幫忙打包。
+  git archive --format=tar.gz --prefix=git-1.4.0/ v1.4.0 > git-1.4.0.tar.gz
+  git archive --format=zip --prefix=git-docs/ HEAD:Documentation/ > git-1.4.0-docs.zip
+  git archive -o latest.zip HEAD
+  \end{verbatim}
+  \$Id 基本上在 git 上是沒有用的，因為一長串的sha1 id，不是流水號, 沒有意義。
+  submodule 使用一樣能串香蕉的掛上外部另一個 repository 變成子 module。
+  \begin{verbatim}
+  git submodule add https://myproj.com/submodule
+  git commit 
+  git push
+  git pull
+  \end{verbatim}
+
+  \subsection{worktree}
+  在 clearcase 中有個 work space 之類的東西，也就是整個 source 會 copy 到一個
+  目錄下作維護，本來實在想不透為什麼要有這畫蛇添足的東西，後來 git 也支援了，
+  這東西是到大公司後才了解的，提出 request 也應該是用這習慣的人，這主要是因為
+  開發軟體不光是基本 source 而已，例如 ctags 一旦創造，他只針對目前下面 source
+  ，你一旦變化 branch ，則 ctags 就沒用了，另外很多人用了複雜的 IDE 軟體，這些
+  IDE 軟體有他們本來的 framework ，還有 configuration 檔，這些檔也是一旦換
+  branch 等等的，也都變不能用。build make 會根據日期來，所以也是一樣，擁有一個
+  完全乾淨 source 開發是減少頭痛的小問題釐清快速方法之一。
+  \begin{verbatim}
+git clone --no-checkout ssh://github.com/cyril-huang/gyoza.git
+不要真的 checkout source 而是光 clone 資訊就好。
+git clone -b v171.throttle ssh://github.com/cyril-huang/gyoza.git local.v171.throttle
+checkout 一個遠端 branch 到 local 端的目錄來
+git log -n${NUMBER} --oneline
+看一下 log
+
+cd gyoza
+git fetch -p
+git worktree add -b ${BUG_ID}.${PARENT_BRANCH} ../${BUG_ID}.${PARENT_BRANCH}
+從 publish 的 branch 再開一條要工作的私有 worktree 到外面的bug_id.parent_branch 目錄
+公司的branch merge 規定中的branch與檔名規則有${BUG_ID}.${PARENT_BRANCH}
+git worktree list
+git branch
+從此到外面那個 worktree 下工作
+git worktree remove -f ../bug_id.parent_branch
+git branch -D ${BUG_ID}.${PARENT_BRANCH}
+  \end{verbatim}
+
+
+  \subsection{branch/merge}
+  local branch，開很大，不用錢。但兩個branch要有從屬關係時，他的觀點跟svn是完
+  全不同，git的branch只是一個指標指到一個commit點，branch只是一個commit point
+  的alias而已。在某branch commit時的紀錄上，你能說一個branch 包含某個commit，
+  不像svn 是一個commit是在某branch 裏面完成。checkout時，HEAD轉到那隻branch的
+  最後那個點上而已。基本上可以是沒有從屬關係的，就是很單純很多sanpshot 的點轉
+  來轉去與紀錄，就叫branch。所以當開出一條branch時，如果你改動了local某檔，
+  然後又開branch，則還是會在任一branch上看到改動，這是從svn等srm過來的人很不
+  適應的，一定要commit了，才會在不同的branch有不同的結果。git不允許working 
+  directory存在沒有commit 的東西，然後做switch,要這樣只能
+  \begin{itemize}
+    \item git commit
+    \item git stash save
+  \end{itemize}
+  一般的branch命令
+  \begin{description}
+    \item [git branch -v] \hfill \\
+      看local所有branch
+    \item [git branch -r] \hfill \\
+      看遠端所有branch
+    \item [git branch -a] \hfill \\
+      看所有branch
+    \item [git branch branch1 master] \hfill \\
+      從master開出一條branch1
+    \item [git branch b1 \texttt{--track} origin/startpoint] \hfill \\
+      開出一條 b1 然後是跟遠端 origin 下的 startpoint branch 做連結。
+    \item [git branch -d branch1] \hfill \\
+      刪除一個完成工作的branch。
+    \item [git branch -D branch1] \hfill \\
+      強制刪除沒有回到爸爸的branch。
+    \item [git checkout branch1] \hfill \\
+      轉換到branch1
+    \item [git remote update origin \texttt{--prune}] \hfill \\
+      表示update目前 local 下的遠端branch資訊
+    \item [git show-branch] \hfill \\
+      看目前的 branch 的情況，如果前面有*，表示目前所在 branch，在\verb=---=
+      之後是每個  branch 的 commit 紀錄，如果是 + 表示一般 commit - 表示 merge
+      commit
+    \item [git branch \texttt{--merged}] \hfill \\
+      看所有已經merged過的branch，出現在list上的, 就可殺掉了。
+  \end{description}
+  在 git 中，我們還是要問任意兩個 branch 可以隨便亂合併嗎？如果有從屬關係
+  ，可以隨便爸爸來小孩，小孩回爸爸嗎? 如果是 sibling branch，要怎麼合併，
+  才不會因為同時 rebase 了爸爸，而重複的 code 造成 git 的迷惑? 另外很重要的
+  就是這些 commit, merge 等等都有commit log，這些commit log的整理與管理才是
+  做source control最重要的部份
+  \\\\
+  第1，爸爸來小孩，稱為 rebase，小孩去找爸爸為 promote 是標準定義，在 git 中，
+  跑到小孩那去 rebase 爸爸
+  \begin{verbatim}
+  git checkout child
+  git rebase papa 一般小孩rebase
+  git rebase --onto papa child grandchild 這是非常powerful的rebase
+  \end{verbatim}
+  跑到爸爸那去 merge (promote) 小孩
+  \begin{verbatim}
+  git checkout papa
+  git merge child
+  git merge --no-commit child 先不要自動commit，等會我自己做
+  git merge --squash child  不要產生commit log的promote。
+  \end{verbatim}
+  第2，git 的 merge(promote)，有以下選擇，也包含了commit log的整併
+  \begin{itemize}
+    \item straight merge 一般標準 git merge，會有傳統 merge log。
+    \item fast-forward 如果開出的 branch 改動，但原本的爸爸沒有改動，則
+      promote 時，會把爸爸的 HEAD 也指向新的 commit 點。因為只是
+      forward HEAD點，所以稱 fast-forward。沒有傳統merge log。
+    \item squashed commit 使用git merge \verb=--=squash，不會有原有
+      branch commit log。 但會把所有 branch commit log 擠成傳統一個 merge log。
+    \item cherry-pick 這跟 svn 一樣能夠蜻蜓點水式的合併。
+  \end{itemize}
+  第3，git 的rebase 跟 merge 命令就像 svn 的 merge 一樣是可以亂跑的，也就是
+  git rebase merge 命令是籠統合併的意思。但你在看文件例子時，你可以看到建議的
+  方法是照標準做的，這跟 svn 的標準文件說法是一樣的。但合併是 delta 變化與 local
+  working產生新結果的行為，只要是有兩點的 delta 就能做合併。所以在小孩那不一定
+  要用 rebase, 也能用 merge papa，就是跟 svn 同樣道理。
+  \begin{verbatim}
+  git checkout child
+  git merge papa
+  git checkout papa
+  git rebase child
+  \end{verbatim}
+  那這兩者有什麼不同嗎? svn 的 sync 後，他會自動記住現在是哪一點 sync 過來的，
+  rebase 也是一樣的道理，只是 svn 的 sync 過後，分歧點不會變，git 的 rebase 分歧點
+  會改變。也就是 svn merge 如果不用 -r p1:p2 的話，他自動又是整支 branch 的 delta
+  ，但 git 因為分歧點會變，也沒有-r p1:p2 這種選項，所以永遠都是目前整支的 delta
+  。在實作上面，他們定義是
+  \begin{itemize}
+    \item rebase : 選擇某一分支的改變，將所有改變重新在另一分支試著重複一遍。
+      分歧點改變。commit log變成自己的一部份。這點很麻煩，等於改動原有 commit
+      log。所以做 rebase 要非常小心，出錯反悔很麻煩，因此已經 publish 外面 central
+      server的紀錄，是不准做rebase的。
+    \item merge  : 選擇兩點 delta，一點是 HEAD 一點是共同祖先點，跟 working 運算，
+      分歧點不變。commit log 仍然在別支上。所以reset時的前一個會跟用單純 git log
+      看到的前一個不一樣。當用 git reset \verb=--=hard HEAD\verb=^=時，是會跳回沒有
+      merge 前的狀況，而不是那個所有commit log的前一個而已。
+  \end{itemize}
+  git的統一rebase/merge 流程，不分爸爸小孩的任兩支branch b1, b2與解決conflict的流
+  程為
+  \begin{verbatim}
+  git checkout b2
+  git rebase b1
+
+  vi myconflicts
+  git add myconflicts
+  git rebase --continue (可以用git rebase --abort回到最原始狀態)
+
+  git checkout b1
+  git merge b2
+  \end{verbatim}
+  每次rebase 後等於把某一支 branch 的更動往另一支送，並在另一支的歷史上加入
+  log，rebase 跟 merge 都有可能 conflicts，所以那個 vi 到 git rebase \verb=--=continue
+  的循環有時可能會很多loop。最後那個 merge 的作用只是在於 b1 HEAD 的擺正，及要不
+  要 merge log 的選擇而已
+  \begin{itemize}
+    \item git merge b2 : 內定fast-forward，沒有多merge log，只是把b1的HEAD
+      擺到最前面
+    \item git merge \verb=--=no-ff b2 : 不做ff, 多一個merge log，b1看到所有b2的
+      commit log。
+    \item git merge \verb=--=squash b2 : squash，多一個merge log, b1看不到所有b2
+      commit log，只看到最後merge log。
+  \end{itemize}
+  那最後那個 merge 可不可以不做呢？可以，就是 b1 HEAD不擺正，繼續 commit 新變化時，
+  再一次造成分歧而已。但如果是不做 rebase 單純做 merge (promote)回去呢？也是一樣
+  的道理，就只是如上面定義的差別而已。這兩個結果應該要一樣
+  \\\\
+  既然最後結果一樣，那 rebase 跟 merge 對使用者有啥意義？基本上的差異是
+  \begin{itemize}
+    \item 不同的選項只是對於 merge log 的多寡，還有因應那麼多的 state，跳到某特定
+      state 的情況而已。
+    \item rebase 的 upstream branch是否含有目前本身這支的 commit log 的選擇而已。
+  \end{itemize}
+  也就是類似 svn mergeinfo的整理。說實話，這沒有哪個好哪個不好，純文字的話，
+  主要 branch 基本上看起來是一樣的 log。當然我實在不曉得一堆人開的那些自己所謂幾
+  十支branch 到底有沒有用，還有每次 commit 是否是自己精心的 commit，還是又只是亂
+  commit 一通。備份??沒有review??
+  \\\\
+  再來看之前兄弟 merge 的 svn 例子，n o都是從m拉出來的，之間各有 sync 到那
+  branch，在n release 後，想要n 到 o。
+  \begin{verbatim}
+
+   123  a  456  b 789  c 901  d  1000
+   -------------------------------              m
+    \       \        \     \      \
+     \       \        \   e \950 f \ 1010 g
+      \       \        \-----v------v---------- n
+       \       \         x
+        \-------v------------------------------ o
+
+  git checkout n
+  git rebae m
+  git checkout o
+  git rebase m
+
+                          ----------n
+                         /
+                        /
+  ----------------------            m
+                        \
+                         \
+                          -----------o
+  \end{verbatim}
+  其中 git rebase \verb=--=onto newbase upstream branch這東西
+  \begin{itemize}
+    \item newbase 新base
+    \item upstream remote的一個branch
+    \item branch 目前工作的branch
+  \end{itemize}
+  意思是說找出 branch 跟 upstream 的共同點，然後 apply 到 newbase 去。
+  這也可以用在兄弟branch的合併，跟svn 2 URL merge 一樣是常用到的技巧。
+  \begin{verbatim}
+  git rebase --onto o m n
+  \end{verbatim}
+  rebase並不是什麼神奇的東西，一樣是一堆的 commit 差異到另一支 branch上 的
+  手段而已。碰上很複雜的 conflicts 一樣是沒輒。
+  \\\\
+  解決了上面兩個最重要的 local branch/merge 問題後，那遠端呢?
+  \\\\
+  遠端 branch/merge 可分兩種，一種是 distribution developer 之間 merge，一種
+  就是像svn server那樣的 branch/merge。基本上如果使用git，沒有developers
+  之間的merge，那是沒有意義的，local自己亂玩，怎麼玩的log都跟真正在外面
+  server的無關，不過話說回來，我們公司用github, bitbucket的感覺也只是多了
+  code review 與自動 trigger build 的 SVN 加強版而已，我很少看到同事間的互相
+  merge。
+  \\\\
+  可以直接開一條新branch newb1與remote有直接關係，而不是跟 local 開出。
+  \begin{verbatim}
+  git checkout -b newb1 --track origin/b1
+  \end{verbatim}
+  其實tracking是 default 等於
+  \begin{verbatim}
+  git checkout -b newb1 origin/b1
+  \end{verbatim}
+  這newb1 稱為 tacking 或upstream，git push \verb=--=set-upstream 時用的是一樣。
+  只是後面跟的參數有點不一樣，origin/b1 跟 origin b1
+  \begin{verbatim}
+  git push --set-upstream origin b1
+  \end{verbatim}
+  遠端branch使用跟local一樣，唯一要注意的是
+  rebase 會更動歷史紀錄，rebase 就像 svn 的reintegrate一樣，準備要放棄原
+  有的小孩，另外創建新的爸爸紀錄。所以如果這 branch 是 public 的遠端 central
+  server上的 branch，那rebase就不能亂做，因為會打亂遠端歷史紀錄，而同伴還要
+  pull一遍，然後造成一堆困擾。但local就可以亂搞，
+  所以常看到人家說git pull \verb=--=rebase，就是 rebase 自己目前 local branch，但紀錄
+  卻只有一個。
+  \\\\
+  commit log 與 history 的維護，跟svn mergeinfo 的維護一樣，都在保持資料的正確性
+  ，其中又是以 branch/merge 的資訊維護最重要與麻煩。合併並不是單純自己 branch
+  的合併，最重要的是共同 team branch 的合併，這通常是由branch owner，也通常是
+  某組的 lead 負責把大家所有的 effort 往回倒。
+
+  \section{branch/merge policy}
+  除了工具的幫忙外，管理最重要的還是人的思維，如何先用腦袋plan好，再利用工具
+  的優勢來處理是為組裏面的管理policy。
+  \\\\
+  基本上很多使用例子會跟你使用情境有關，例如有沒有再繼續commit，有沒有
+  double commit，有沒有從屬關係，有沒有已經sync，有沒有需要維護合併，
+  不是單一爸爸小孩就結束了，那種太簡單了。
+  \\\\
+  當然rebase的時候，如果整條branch拉太長了，整個conflicts的解決還是很痛苦的
+  ，這跟有沒有rebase沒有關係。即使是rebase, merge一樣跟svn有很複雜的conflicts
+  需要解。但主要是組裡的人寫作的能力，寫作能力太差基本上就是幾十號人在那邊瞎
+  做，真正有戰鬥力的小組是不會超過5個人的，幾十號上百人的產品都是維護的多，但
+  其實 code 做久了就是很多不同使用情境造成後面邏輯混亂的維護。
+  \\\\
+  不同的branch有不同的merge/branch policy，branch的使用與分類
+  \begin{itemize}
+    \item master/trunk/mainline 穩定的code line, 必須永遠保持可build,可run。
+    \item release 這通常是已經準備要出去的，但這很麻煩的是在我們公司內部還有一
+      層，也就是team與team之間，正式對外都有release/QA drop 的release。非常
+      討厭。
+    \item maintainence release後的維護branch
+    \item hotfix 快速修補bug用的，所以在git通常很快並會fast-forward。但通常也根
+      本不開這樣branch。
+    \item feature 開發feature用的branch
+    \item double commit code freeze後的處理，但我想現在這很難，大公司的 code
+      freeze 維護，一般小 team 還是亂搞，只有真正世界級軟體，歐美日維護的軟體
+      才相當嚴格， 現在寫code不像以前那麼嚴格，尤其很多印度人中國人做的管理，
+      相當 ... 。
+  \end{itemize}
+  branch owner應該是組裏面的資深leader，他必須負責這個branch的policy推動，解決
+  conflicts，保證code的乾淨正確，merge回mainline的事務。而標準動作的policy
+  \begin{itemize}
+    \item rebase的policy
+    \item promote的policy
+  \end{itemize}
+  \subsection{Release 與 branch}
+  release 的管理其實跟很多有關，除了 code 品質，也跟 marketing, 對內對外等有關
+  ，通常我們是 branch 中有
+  \begin{verbatim}
+  v1.1.1
+  v1.1.1-throttle
+  feature/feature-id.branch
+  bug/bug-id.branch
+  \end{verbatim}
+  throttle 是節流閥的意思，一個 release 或者任何管理就像水流一樣，一直在變動的
+  ，要有控制調整流動的速度，一旦進入 throttle 狀態 branch ，就表示不能再隨意
+  大量的 commit，這會進入 preRelease 狀態，alpha, beta ...，與真正 release
+  freeze 狀態， 從此除非有重大修改，會跟主 branch 脫節，獨立成為自己維護 branch
+  除非有重大 security, show stopper crash 等 commit ，不同獨立維護 branch 都要
+  double commit，到處 commit。
+  \\\\
+  我們公司組織中有 developer team (dev, DE) ，跟很接近DE 的 development test
+  (devTest) QA team，外圍的 testing 還有很多層，regression, system test,
+  automation test 等等組織，每一層測試時，也都要有統一界面，不然誰曉得你測試
+  的發出 bug 的根據是哪一個，因此連 release 都有分對內對外，對內，nightly
+  build ，devTest, regression test 等等的都會不同，因此才會有公司針對這種管理
+  特別做管理工具軟體，大公司很多其實內部是自己做的，因此大軟體公司經營的 cost
+  很多都是這種品質要求的管理 cost，人的 cost 。這跟亞洲還沒吃飽飯只要有飯吃
+  的管理思維是很大差距的。不過後來因為 cost down ，很多都外包印度，中國等地方
+  ，造成品質其實都是往下降的。
+  \\\\
+  最後每次 release 的版本號，<version>-<release> 都要加上 git tag。version
+  與 release 是不一樣的事情，source code 有 source code 的 version，binary
+  release 相對 source version 的 release，然後還有紀錄
+  的 tag。
+  \section{結語}
+  基本上沒有所謂哪一種SRM工具好過哪一種的說法，因為所有的SRM其實道理都是一樣的
+  ，你用svn碰到的問題，在git一樣會碰到，網路上的教學都是最初淺的，真正6, 7支
+  branch 由幾十人以上同時玩，並且是publish出去時，如果release plan的branch很亂
+  ，不管你是哪一種SRM，通通都是沒有用。原因在於真正有用的log message是只有
+  對外publish釐清問題與追究責任歸屬時，而一旦是上到central server的log，那機制
+  都是一樣的。而對外release branch同時有很多支，問題無法單純用SRM工具解決。不管
+  svn, git 我都碰過那種最後亂到 conflict 無法解決，只能重新來一遍的 branch。
+  \\\\
+  還有不要再亂commit了，因為那只是好像變成backup，而不是SRM，一堆無意義的log，跟
+  沒有history log是一樣的。 我碰到的例子是開了4支sub sub sub branch, 因為要
+  release給QA team, 要 developement，結果到處fix bugs,到處double commit, 
+  最後還要求某支孫子回到爺爺 merge, 而且常有 branch 開了好幾個月要求merge的，
+  這種情形就只能cherrypick，如果還亂commit，根本就無法做下去
+  。總之工具不是萬能的，不要再有用上什麼工具就天下無敵的迷思。
+  \\\\
+  除了自己架設外，網路上也有很多免費的服務，像 github, bitbucket, gitlab,
+  sourceforge, google code
+  等，其實像github，每個月幾美金，就能有自己私人的repository管理，一般小公司其
+  實可以把source丟上去，省下自己維護server, backup, 24x7這種煩人的事。

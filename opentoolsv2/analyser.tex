@@ -1,0 +1,184 @@
+\chapter{程式碼分析}
+程式寫完不是就馬上要上火線了，
+通常 code 要進 respository 也要層層負責的 team leader 來做眼睛 review
+的動作，主要是菜鳥寫code的盲點，在資深工程師的經驗下能很快被 review 一遍。以前
+我們review 時是印出來，上台後大家品頭論足一番，例如你這為什麼用 int 不用char, 你這
+為什麼用unsigned 等等。現在很多使用線上review 的維護軟體。
+\\\\
+做完人為的review後，通常要做自動化程式碼分析，分為 static 與 dynamic 分析
+，static 指的是不執行電腦程式的條件下，進行程式分析的方法，dynamic 就是在程式
+執行時的程式分析。static 分析主要是工具要對語法能做分析，在C 中，unix 系統在
+很久以前就有lint 這個小工具，這小工具也是各家公司都可以不一樣的實作。
+這些程式分析最後也越做越大，很多公司就靠這種分析工具能成為公司，例如 coverity。
+\\\\
+以上通常現在會利用這些工具寫出一些自動化script 檢查，放在整個軟體產出流程的
+線上，例如 git push 前要先做 static/dynamic analsys，沒過就不允許進到 repository
+，那這些需要在git server 那邊有hooking script。後來我們小組用 gerrit 做 code 的
+review 與commit 的管理，再後來我們公司後來用github 與 atlassian 公司做的 stash
+( 也叫 bitbucket ) 來做code 的這些管理， 這後面管理會越包越大包含 bug 跟 build
+還有測試的連結。
+\\\\
+他主要是遠端要開一個相對於local 端的遠端branch, 好處是每次 push 後有個 
+\emph{pull request} 的動作，然後 email, diff, review, reject, commit...
+都在上面完成。 像 github 也有類似的功能， 整個流程有人稱為 git-flow。
+
+  \section{lint}
+  lint是最基本的 static analyser，很多公司有自己的 lint，有些 lint 甚至會把公
+  司的 coding style 規則給放進去，我們以前跟HP合作，我們的 code 要進去，都要先
+  通過HP自家的 lint 才行。不過後來愈來愈鬆散，我覺得後來的人寫code不像早期的人
+  那麼嚴謹與要求。 opensource 我們使用簡單的 splint 做 C static 分析。
+  其他語言也有相對應的 lint 程式。例如 java 的jlint等等，
+  我們來寫一段 code, 用到 malloc, strdup, open, socket 等會用到記憶體，file
+  descriptor的而沒有 free 掉時會怎樣。
+  \begin{verbatim}
+#include <stdio.h>
+int main()
+{
+        myprint();
+}
+
+$ splint -I /path/to/my/header myprint.c
+  \end{verbatim}
+  出來的結果像這樣
+  {\scriptsize
+  \begin{verbatim}
+root@dsuen-lnx:/home/chuang# splint myprint.c 
+Splint 3.1.2 --- 20 Feb 2009
+
+myprint.c: (in function main)
+myprint.c:4:2: Unrecognized identifier: myprint
+  Identifier used in code has not been declared. (Use -unrecog to inhibit
+  warning)
+myprint.c:5:2: Path with no return in function declared to return int
+  There is a path through a function declared to return a value on which there
+  is no return statement. This means the execution may fall through without
+  returning a meaningful result to the caller. (Use -noret to inhibit warning)
+
+Finished checking --- 2 code warnings
+  \end{verbatim}}
+  基本上是c code的嚴謹寫法的分析師，剛開始寫c code的菜鳥可以用這來訓練自己。
+
+  \section{Valgrind}
+  dynamic分析裡面，有個 IBM (以前rational software)的 purify 很有名，不過那個要
+  錢啊，我們公司還有用coverity，這也是要錢的。 opensource 裏面有個valgrind，
+  還不錯用。valgrind 是必須要有執行檔才能做分析檢查，而且也必須gcc 有-g才行。
+  \\\\
+  他有很多的子工具來做特別的檢查，
+  \begin{itemize}
+    \item memcheck 最基本的 memory leak 檢查
+    \item cachegrind 
+    \item callgrind 函式呼叫歷史的紀錄，檢查呼叫
+    \item helgrind, drd, massif, lackey, none, exp-sgcheck, exp-bbv, exp-dhat
+      其他的分系檢查
+  \end{itemize}
+  使用如下
+  \begin{verbatim}
+valgrind --tool=memcheck ls -l
+  \end{verbatim}
+  就可以檢查ls -l命令的memory leak問題
+    \subsection{memcheck}
+    動態分析中最重要就是memory leak 的檢查，在寫 daemon 程式是非常重要的，
+    memory leak在很多地方
+    \begin{itemize}
+      \item malloc / free 這是最基本的記憶體管理
+      \item opendir / closedir 有很多人忘了還有其他的open/close 也是
+      \item shmget 當然，更不要說跟kernel有關的IPC，share memory 的allocate。
+        這種沒有弄好是會把系統給玩壞掉的，不光是kill process 就了結。
+    \end{itemize}
+    基本 default 的檢查就是 memcheck，其中 error message 是顯而易見的，例如
+    Invalid read of size 4, Syscall param write(buf) points to uninitialised
+    byte(s)，Invalid free 等等。除了valgrind 自己的定義會有下面結果，
+    \begin{verbatim}
+==23752==    definitely lost: 0 bytes in 0 blocks
+==23752==    indirectly lost: 0 bytes in 0 blocks
+==23752==      possibly lost: 0 bytes in 0 blocks
+==23752==    still reachable: 1,836 bytes in 1 blocks
+==23752==         suppressed: 0 bytes in 0 blocks
+    \end{verbatim}
+    這會跟--leak-check這個選項有很大的關係。根據valgrind文件，他認為有
+    下列9種pointer 可能產生問題。
+    \begin{verbatim}
+     Pointer chain            AAA Leak Case   BBB Leak Case
+     -------------            -------------   -------------
+(1)  RRR ------------> BBB                    DR
+(2)  RRR ---> AAA ---> BBB    DR              IR
+(3)  RRR               BBB                    DL
+(4)  RRR      AAA ---> BBB    DL              IL
+(5)  RRR ------?-----> BBB                    (y)DR, (n)DL
+(6)  RRR ---> AAA -?-> BBB    DR              (y)IR, (n)DL
+(7)  RRR -?-> AAA ---> BBB    (y)DR, (n)DL    (y)IR, (n)IL
+(8)  RRR -?-> AAA -?-> BBB    (y)DR, (n)DL    (y,y)IR, (n,y)IL, (_,n)DL
+(9)  RRR      AAA -?-> BBB    DL              (y)IL, (n)DL
+
+Pointer chain legend:
+- RRR: a root set node or DR block
+- AAA, BBB: heap blocks
+- --->: a start-pointer
+- -?->: an interior-pointer
+
+Leak Case legend:
+- DR: Directly reachable
+- IR: Indirectly reachable
+- DL: Directly lost
+- IL: Indirectly lost
+- (y)XY: it's XY if the interior-pointer is a real pointer
+- (n)XY: it's XY if the interior-pointer is not a real pointer
+- (_)XY: it's XY in either case
+    \end{verbatim}
+    分別
+    \begin{itemize}
+      \item definitely lost: 這是顯而易見的memory leak
+      \item indirectly lost: 
+      \item possibly lost:
+      \item still reachable:
+      \item suppressed:
+    \end{itemize}
+
+    \subsection{callgrind}
+    之前的gprof 是 performance 的profile，callgrind也是類似的會紀錄整個呼叫歷史
+    的profiler cache 跟branch prediction 的 profiler，
+  \\\\
+  valgrind算起來已經很不錯用，也相當的複雜了，對於基本的單一c/c++ program的
+  初期檢查是還不錯的工具。但現在有的執行環境是很複雜的，例如網路程式，或者
+  更複雜的多daemon多平台交互工作的環境測試就比較麻煩。
+  \\\\
+  使用lint或valgrind基本上還是要automate這個檢查，然後用
+  script 掃出有問題的程式碼，所以最後還是要 script 寫作檢查。
+  另外，這是對user space的code，kernel寫作的偵測就不行，kernel的技巧將另闢專
+  欄介紹。
+
+  \section{code review}
+    code review是人的眼睛去做邏輯的分析，主要是借助有經驗的工程師，根據過去的
+    經驗傳承錯誤的早期避免，以前都是印出來的，現在把這套管理程序也上線，
+    code review的工具通常會伴隨SRM配套一起使用，就自己裝自己的。以前大公司內
+    部都有專門寫這些工具的部門，但現在opensource也都有這些實作了。而且愈做越大
+    越好。
+    \subsection{reviewboard}
+    reviewboard是個蠻有趣的線上code review管理。通常code完成分析，並且能編譯做完
+    unit test後，是要給組裡的大老們聞香一下，大老們說可以了，有蓋印章了，出事有
+    人扛了，那才可以check in。現在這種流程也能在網路上完成。所以要先裝apache或
+    lighttpd，也要先裝資料庫mysql或postgreSQL.
+    \\\\
+    reviewboard是python寫的，所以他的package形式是python的蛋蛋，fedora的epel
+    repository也有人包裝好rpm。如果是debian/ubuntu/mint
+    \begin{verbatim}
+# apt-get install pytohn-setuptools
+# easy_install -U setuptools (升級setuptools)
+# apt-get-install python-dev
+# apt-get install memcached
+# easy_install python-memcached (不在debian package)
+# apt-get install patch
+# easy_install ReviewBoard (不在debian package)
+使用mysql的人要裝python跟mysql的binding API
+# apt-get install python-mysqldb (或 easy_install mysql-python)
+使用postgre的人要裝python跟postgresql的binding API - psycopg2
+# apt-get install python-psycopg2 (或 easy_install psycopg2)
+    \end{verbatim}
+
+    基本上 code review現 在都跟 source control 工具組合在一起了，他只是part of
+    整個流程中的一部份，所以單一reviewboard這東西只有光code review而已，必須整合
+    source control在GUI管理流程中才行，這後來有像github, bitbucket, gitlab...等
+    更強大的web GUI整合管理介面，reviewboard 現在已經沒人用了，除了reviewboard，
+    還有一個gerrit的前身叫 Rietveld的，就不介紹了，正常公司整個使用會用 
+    github/bitbucket + jenkins 統合整個開發流程，現在通常屬於 devop pipeline 
+    的工作範圍，這留待後面 DevOps 說明。

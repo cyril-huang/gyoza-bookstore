@@ -14,9 +14,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-doc             := latex beamer
+doc             := scripts
 TARGET          := $(addsuffix .pdf,$(doc))
-CHAPTER	        := latex.tex tex.tex install.tex packages.tex advance.tex math.tex graphics.tex beamer.tex
+CHAPTER	        := scripts.tex awk.tex bash.tex comparison.tex javascript.tex \
+                   perl.tex python.tex regex.tex sed.tex
 DEBUG           := $(TARGET:pdf=xdv)
 
 TW_SUNG         := $(shell fc-list :lang=zh-tw | sed -n 's/.*ttf: *\(TW.*\+Sung\),.*/\1/p' | sed 's|\\||g')

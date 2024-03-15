@@ -1,0 +1,112 @@
+%      Copyright (c) 2014, Gyoza Book Store
+%      Permission is granted to copy, distribute and/or modify this document
+%      under the terms of the GNU Free Documentation License, Version 1.1
+%      or any later version published by the Free Software Foundation;
+%      with the Invariant Sections being LIST THEIR TITLES, with the
+%      Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+%      A copy of the license is included in the section entitled "GNU
+%      Free Documentation License".
+
+\documentclass[a4paper,10pt,twoside]{book}
+
+\usepackage{xeCJK}
+\usepackage{fontspec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{array}
+\usepackage{makeidx}
+
+\usepackage{layout}
+\usepackage{pifont}
+\usepackage{amsmath}
+\usepackage[margin=2cm]{geometry}
+
+\parindent=0pt
+\setCJKmainfont{Noto Sans TC}
+\setmainfont{Noto Sans Mono}
+\makeindex
+
+\hypersetup{
+  backref,
+  unicode=true,
+  bookmarks=true,
+  pdfauthor=Cyril Huang,
+  colorlinks=true,
+  breaklinks=true,
+  hyperfigures=true,
+  pdfstartview=FitH,
+  linkcolor=blue
+}
+
+\lstloadlanguages{bash,[ANSI]C,[gnu]make}
+\lstset{basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries
+}
+
+\pagestyle{fancy}
+\fancyhead[RO]{\small\bfseries\rightmark\ \ \thepage}
+\lfoot{餃子出品必屬佳作}
+\cfoot{}
+\rfoot{}
+
+\title{Scripts大集合}
+\author{
+  Cyril Huang \\
+  cyril\_huang@gmx.com \\
+  餃子出版社
+}
+
+\begin{document}
+  \maketitle
+  \thispagestyle{empty}
+  \tableofcontents
+  \newpage
+
+    scripts其實是很有用基本的工具，很多事情其實靠scripts就解決了，
+    主要在做"環境"上的configuration。而且可以訓練程式寫作，
+    大型程式的寫作裡面Makefile，package製作，網頁製作，
+    System Admin等等，都要用到scripts，甚至也可以用perl scripts寫個小server呢。
+    所以scripts是最基本功夫。其實扣除要寫系統和應用程式的話，像巨集型態的script
+    算是使用電腦的最高境界了。
+    \\\\
+    所以script是甚麼呢？我們都知道一個程式在電腦裡面跑，執行檔其實是一堆
+    組合語言，但是script是文字檔，是一堆文字語法，需要一個intepreter去翻譯
+    這些文字敘述，然後根據文字敘述來執行。所以解譯器是可執行檔，script是按照
+    解譯器能了解的文字語法所寫出來的。shell, awk, perl, php,...是可執行檔，
+    是用c寫的，然後他們又定義了他們認可的語法。按照規定語法寫的文字檔就是
+    script了。
+    \\\\
+    script其實一般人不見得會用到，如果工作上沒有routine的工作。
+    為甚麼大部分的人的電腦裡不會用到，例如修改一篇文章或者畫圖，
+    主要是這些工作不是常常在做，懶得去想一個general的規則。
+    例如我用script將測量得到的資料利用gnuplot作x-y曲線圖，
+    一般人會認為幹麼這麼麻煩，用Excel畫不是簡單，問題是一般人可能一年裡面
+    只做他個幾次這種事，用老鼠搖啊搖也沒浪費多少時間，但是如果常常作測量，
+    處理很多次時，一般人也會去用巨集(macro)，不管word, excel macro，
+    這其實就是一種script。傳統的script, shell (sh, ksh, bash, csh, tcsh),
+    perl, tcl/tk (expect), python, ruby, javascript...等在各領域都用的很多，
+    甚至連android的app都要棄Java改用swift來寫了。
+    \\\\
+    scripts不需要編譯，所以可以很快的寫出來再修改，不像C/C++需要理會記憶體的問題
+    。（scripts就像BASIC語言，專注在人類思考的變數就好，C/C++就在那邊把資料在
+    記憶體移來移去， 組語就是專注在CPU內的小運算單位 - registers。這個世界就
+    是各個分層架構出來的，例如建築師不一定要會挑磚頭拿鐵鎚，但沒有這些基本工
+    具也不行，就算會拿鐵鎚，那鐵鎚怎樣做出來的??）
+    所以scripts在做修改和一些routine job有很快速的彈性。
+    每一層都依賴下面一層的提供interface來使用，然後再提供上一層的使用者
+    interface。每一層每一層都有專家，所以Einstein說專家就是訓練有素的狗啊，不過
+    全世界能叫人的大概100年才有一個人吧。
+
+\include{bash}
+\include{regex}
+\include{sed}
+\include{awk}
+\include{perl}
+\include{python}
+\include{javascript}
+\include{comparison}
+
+\end{document}

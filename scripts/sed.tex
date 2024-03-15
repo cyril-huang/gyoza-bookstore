@@ -1,0 +1,586 @@
+\chapter{sed}
+    \section{簡介}
+    sed是一種Stream EDitor，也就是餵給它一串資料流跟命令完成編輯的動作，
+    這很適合自動化的scripts作業
+    \begin{verbatim}
+file -> stream -> sed -> stream -> file
+    \end{verbatim}
+    傳統的sed由於它必須有個in， 處理完後有個out所以不能同時改個檔案，
+    必須先處理舊檔案後送出成新檔名，把舊檔殺掉，再把新檔改名成舊檔，
+    又因為他內定輸出是standard out所以常看到的方法是
+    \begin{verbatim}
+$ sed 'sed_syntax' old_file > new_file
+$ mv new_file old_file
+    \end{verbatim}
+
+    GNU sed常用的選項:
+    \begin{itemize}
+    \item -i 可以直接對檔案作處理。所以不需要上面的mv了。
+    \item -e 多個sed命令的串接。
+    \item -n 原本每處理一行，就會echo這行到螢幕上，加上-n不echo.
+    \item -f 後面跟個sed命令檔。
+    \end{itemize}
+    sed通常是用來對字串的處理顯示，不是像一般editor來modify檔案的，
+    而且記住是一行一行處理的所以空白, tab, 換行這些字元很重要。
+    \\\\
+    sed的一般式是
+    \begin{verbatim}
+$ sed [address],[address][!]command[args] file
+    \end{verbatim}
+    其中address,command，用單引號'xxx '包住。
+    address就是上面regular express的東西，常用的命令有d(delete), s///(代換)
+    一些簡單例子
+    \begin{verbatim}
+$ sed 's/yes/no/g' file               把檔案中yes換成no
+$ sed '/save/!d' file                 把沒有save字眼的行幹掉
+$ sed -e 's/\(.*\)\(#.*\)/\1/' xxx.sh 把#後面的註解幹掉
+    \end{verbatim}
+    其中-e是常用的一個option，通常是用在兩個以上的選項時。
+    其中，由於\verb=( )=有特別意義所以需要反斜線escape一下。
+
+    \section{符合條件的addressing}
+    address是sed裡的特殊用語，用來設定符合條件的行，以便對它執行編輯命令，
+    符合條件的條件指定方法有1. range(範圍) 2.regular express。
+    \\\\
+    sed的address除了之前regular expression介紹的
+    1,3 . \$ \%這種表示法外  還可以直接用 /regex/找到要的行
+    \begin{verbatim}
+$ sed '2d'        file   找到第二行幹掉
+$ sed '/delete/d' file   找到delete這個字幹掉整行
+$ sed '/RE/,$d'   file   從有RE字眼的行到檔案尾通通幹掉 
+$ sed '/^$/d'     file   幹掉空白行
+$ sed '/START/,/END/!s/xx/yy/g' file > file1  把xx換成yy
+    \end{verbatim}
+
+    \section{pattern/hold space, 多regex條件與script檔}
+    如果有兩個條件以上那可以加-e \\
+    \verb=$ sed -e xxxx -e xxxx file= \\\\
+    例如先將註解行變成空白行然後砍掉所有空白行 \\
+    \verb=$ sed -e 's/\(.*\)\(#.*\)/\1/' -e /^$/d file xxx.sh = \\\\
+    sed其實每次都把一行放到pattern space，然後對他操作
+    執行結果再先放到pattern space這個地方，如果有 -e，
+    就接著對pattern space的行再做script的執行，所以好幾個條件是有順序的。
+    做完一行後，再來一遍，所以最通用的一般式應該是\\
+    \begin{verbatim}
+    [address],[address]{
+            command[args]
+            command[args]
+            ...
+    }
+
+    或者
+    [address],[address]{command[args];command[args];...;command[args];}
+
+    \end{verbatim}
+    每一行command相當於有個-e的作用會先把結果放到一個pattern space，
+    可以寫成一個sed script file然後用-f 執行 \\\\
+    \verb= $ sed -f script_file file =  \\\\
+    或者每個command的最後面要放個分號;。
+    另外sed有個hold space是個暫存東西的buffer，sed有些命令可以利用
+    hold space與pattern space，很像vi裡面的yy dd 先放到一個看不見的
+    buffer，再用p命令把它叫出來。
+
+    \section{sed command命令}
+    command有25個比較常用的
+    \subsection{基本指令}
+    就是先把這幾個編輯命令學好啦，字串的搜尋，擷取，代換是玩電腦所有的重點
+    ，尤其是下面的 s 命令是所有最重要的命令。
+    \begin{itemize}
+    \item Append       a\verb=\=    找到address後append所有a\verb=\=
+                                    後面所有字串
+    \item Change       c\verb=\=    改變一段文字
+    \item Delete       d     砍掉regex找到的字串那一行，記住是整行砍掉喔
+    \item Insert       i\verb=\=    找到address後在前面insert字串
+    \item Substitution s///  代換是最常用的，砍掉某字串也很常用s/string//g。
+    \item Translate    y///  可以一個字元一個字元作不同的代換
+    \end{itemize}
+    \verb=a\= 命令與\verb=i\=命令，注意\verb=a\ i\= 
+    都要換行才開始要加入的文字。如果要加的文字
+    有換行要用\verb=\= 這個符號表示換行，如果要加入的文字有\verb=\=，
+    可以用\verb=\\=來escape掉\verb=\=。不過這邊有很大的問題，
+    也就是如果文字裡面同時有\verb=\= '怎麼辦。
+    由於shell中的單引號 ' 沒辦法逃掉，這個可以另寫script檔解決。請看例子
+    \begin{verbatim}
+    cyril@gyoza:~$ cat last
+    第一行
+    最後一行
+
+    cyril@gyoza:~$ sed 'a\
+    > 中文試試看
+    > ' last
+    第一行
+    中文試試看
+    最後一行
+    中文試試看
+
+    cyril@gyoza:~$ sed '$a\
+    > 中文試試看 故意超過一行看看不做任何處理時 超過一行時
+    > sed會怎麼樣處理這樣的問題
+    > ' last
+    sed: -e expression #1, char 93: Unterminated `s' command
+
+    cyril@gyoza:~$ sed '$a\
+    > 中文試試看 故意超過一行看看不做任何處理時 超過一行時\
+    > sed會怎麼樣處理這樣的問題
+    > ' last
+    第一行
+    最後一行 
+    中文試試看 故意超過一行看看不做任何處理時 超過一行時
+    sed會怎麼樣處理這樣的問題
+    
+    cyril@gyoza:~$ cat address.txt
+    台北市建國南路一段
+    270號
+    <Nick's Address>
+    <Cyril's Address>
+    台北市松江路
+    一段10號
+    <MiMi's Address>
+    
+    cyril@gyoza:~$ cat insert.sed
+    /<Cyril's Address>/i\
+    100 Gyoza Blvd\
+    San Jose, CA
+    
+    cyril@gyoza:~$ sed -f inser.sed address.txt
+    台北市建國南路一段
+    270號
+    <Nick's Address>
+    100 Gyoza Blvd
+    San Jose, CA
+    <Cyril's Address>
+    台北市松江路
+    一段10號
+    <MiMi's Address>
+    
+    \end{verbatim}
+    \verb=c\= change這個命令跟\verb=a\ i\= 很像，只有一點要注意，
+    就是如果要改變的文字跨很多行，則
+    adress是個range 1,10這樣時，所有的range行都會消失，並且只有一行改變了。
+    \begin{verbatim}
+    cyril@gyoza:~$ cat last
+    第一行  first line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ cat change.sed 
+    1,2c\
+    第一行跟第二行都被幹掉了
+    
+    cyril@gyoza:~$ sed -f change.sed last
+    第一行跟第二行都被幹掉了
+    最後一行  last line
+    
+    \end{verbatim}
+    然後如果要作用的字串變數中含有 / ，尤其是路徑名稱中常有這種字串，則 gnu
+    sed 允許使用別的 dlimiter ，最常用的就是用 |
+    \begin{verbatim}
+    sed 's|search|replace|g'
+    \end{verbatim}
+    小寫變大寫
+    \begin{verbatim}
+    把第一行到第十行中的小寫變大寫
+    $ sed '1,10y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' lower.txt
+    \end{verbatim}
+    代換的命令中有很重要的第二層處理，如果在一行內的字串吻合要代換的有很多
+    個，那麼內定會用第一個吻合的換掉，如果想換掉特定的就在後面加上想要的
+    第幾個，想全部換掉用g這個flag
+    \begin{verbatim}
+    cyril@gyoza:~$ cat last
+    第一行  first line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ sed 's/first/line/1' last
+    第一行  line line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ sed 's/first/line/2' last
+    第一行  first line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ cat lines
+    第一行  first line
+    第二行  second line
+    很多行  multiple line line
+    最後一行  last line
+
+    cyril@gyoza:~$ sed 's/line/row/2' lines
+    第一行  first line
+    第二行  second line
+    很多行  multiple line row
+    最後一行  last line
+
+    cyril@gyoza:~$ sed 's/line/row/g' lines
+    第一行  first row
+    第二行  second row
+    很多行  multiple row row
+    最後一行  last row
+    \end{verbatim}
+    \subsection{pattern/hold space的處理}
+    %\include{space}
+    \begin{itemize}
+    \item l list pattern space的東西是甚麼
+    \item h 把hold space裡的東西清掉，把pattern space的東西copy給hold space
+    \item H 把pattern space的東西加在hold space東西後面
+    \item g 把pattern space裡的東西清掉，把hold space東西拿回給pattern space
+    \item G 把hold space的東西加在pattern space東西後面
+    \item p 印出pattern space的東西
+    \item x 交換(exchange)pattern space與hold space
+    \end{itemize}
+    l跟p的差別在對非ASCII的處理
+    \begin{verbatim}
+    cyril@gyoza:~$ cat last
+    第一行  first line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ sed '1,2p' last
+    第一行  first line
+    第一行  first line
+    第二行  second line
+    第二行  second line
+    最後一行  last line
+
+    cyril@gyoza:~$ sed '1,2l' last
+    \262\304\244@\246\346  first line$
+    第一行  first line
+    \262\304\244G\246\346  second line$
+    第二行  second line
+    最後一行  last line
+    \end{verbatim}
+    這邊可以對pattern space有更深的了解，第一行進到pattern space
+    看到p把第一行印出，接著pattern space變成output，所以sed又把
+    他印一遍，接著第二行進來了，在pattern space裡，看到p把第二行印出，
+    同理又有兩個第二行被印出，第三行由於p沒作用，直接是pattern space
+    送到output。再看一個例子(抄出來的)
+    \begin{verbatim}
+    cyril@gyoza:~$ cat command.txt
+    This describes the Linux ls command.
+    This describes the Linux cp command.
+    
+    cyril@gyoza:~$ cat command.sed
+    /Linux/{
+    h
+    s/.* Linux \(.*\) .*/\1:/
+    p
+    x
+    }
+    
+    cyril@gyoza:~$ sed -f command.sed command.txt
+    ls:
+    This describes the Linux ls command.
+    cp:
+    This describes the Linux cp command.
+
+    或者寫成一行
+cyril@gyoza:~$ sed '/Linux/{h;s/.* Linux \(.*\) .*/\1:/;p;x;}' command.txt
+    \end{verbatim}
+    這邊看第一個h把第一行推進hold space，不過記住pattern space還保有
+    原本第一行的句子。然後代換掉變成ls:，現在pattern space只有ls:，
+    然後p印出ls:，最後把hold space跟ls:交換，所以最後pattern space內
+    就是原本的東西，被sed當成output送出，cp是同樣的道理。
+    \\\\
+    所以沒什麼，只是兩個眼睛看不到的space在那邊換來換去，把內容在這兩個
+    地方加加減減copy/paste就好了。如果熟悉vi的人應該很容易體會。
+    \subsection{再進一步}
+    \subsubsection{多行處理與迴圈}
+    在原本的h, H, g, G, x裡面都只有對單一行處理，如果pattern match要跨行
+    時，就捉襟見肘。下面的命令用來處理兩行以上的pattern match及pattern
+    space, hold space的處理
+    \begin{itemize}
+    \item n   把pattern space東西送出，讀入下一行，所以下一行變成pattern
+              space中的東西。
+    \item N   讀入下一行跟目前pattern space的
+              東西連起來變一行，但是裡面有個embedded換行符號。可以用
+              \verb=\n=來表示，記住，只有這時才可以用\verb=\n=來表示。
+    \item D   幹掉到第一embedded newline部份，與N合用喔。
+              如果D在最底下被執行了，則pattern space東西保留下來，
+              迴圈到script頂端再來一次。
+    \item P   print到有embedded newline的一行，保留所有pattern space東西，
+              如果P在最底下被執行了，則pattern space東西保留下來，
+              ，迴圈到script頂端再來一次。
+    \end{itemize}
+    %\include{sed_loop}
+    找到某一行的下一行
+    \begin{verbatim}
+    sed -n '/pattern/{n;p}' mytext.txt
+    \end{verbatim}
+    Join兩行，
+    \begin{verbatim}
+    /join/ {
+    N
+    s/\n/ /g
+    }
+    \end{verbatim}
+    把多行空白行幹掉成一行空白，
+    \begin{verbatim}
+    /^$/ {
+    N
+    /^\n$/D
+    }
+
+    \end{verbatim}
+    請看，找到空白行後，把下一行加進來，如果只有一行空白，空白行與
+    下一行併成一行保留在pattern space，不過這時下個命令
+    \verb=/^\n$/D=沒作用，pattern space全部送出，
+    如果有兩行空白，所以Delete掉第一行空白，剩下一行空白，保留下來，
+    這時因為D命另有作用了，所以並不送出pattern space的東西，
+    繼續\verb=/^$/=，一直會有一行空白行留下來。這邊D與P都有迴圈的作用
+    ，可以拿來作重複的處理。
+
+    \subsubsection{flow control branch}
+    這是用來轉移命令執行的就像是c裡的if else, while這些控制命令
+    這要搭配:一起用。由:設定一個label，然後用b label跳到這個地方執行。
+    \begin{itemize}
+    \item : label, 設定label
+    \item b label  branch 換到label地方執行，如果沒有label就通通不執行
+            直接跳到script尾巴。
+    \item t label  如果一個代換成功，test 測試條件，成立後跳到label，
+            所以必須與s///命令一起用，s命令一定在t命令前。
+    \end{itemize}
+    多說不如看例子
+    \begin{verbatim}
+    $ cat join.txt
+    join
+    second line
+    在C語言中反斜線代表字串的延續 \
+    這一行跟上一行是連在一塊的
+
+    $ sed '{
+    :a 
+    N
+    s/\\\n//
+    t a}' join.txt
+    join
+    second line
+    在C語言中反斜線代表字串的延續 這一行跟上一行是連在一塊的
+    
+    \end{verbatim}
+
+    \subsubsection{多檔處理}
+    \begin{itemize}
+    \item r 讀檔案 將檔案append到目前pattern space中
+    \item w 寫檔案 將pattern space中的東西寫出到一個檔案
+    \end{itemize}
+    \begin{verbatim}
+    $ cat insert.sed
+    /<Cyril's Address>/i\
+    100 Gyoza Blvd\
+    San Jose, CA
+
+    $ cat lines
+    第一行  first line
+    第二行  second line
+    很多行  multiple line line
+    最後一行  last line
+
+    $ sed '/first/r insert.sed' lines
+    第一行  first line
+    /<Cyril's Address>/i\
+    100 Gyoza Blvd\
+    San Jose, CA
+    第二行  second line
+    很多行  multiple line line
+    最後一行  last lin
+
+    $ sed '/first/w firstline.txt' lines
+    第一行  first line
+    第二行  second line
+    很多行  multiple line line
+    最後一行  last line
+
+    $ cat firstline.txt
+    第一行  first line
+
+    \end{verbatim}
+    \subsubsection{其他}
+    \begin{itemize}
+    \item = 印出行號
+    \item q 離開sed
+    \end{itemize}
+    \begin{verbatim}
+    $ cat lines
+    第一行  first line
+    第二行  second line
+    很多行  multiple line line
+    最後一行  last line
+
+    $ sed -e '/first/=' -e '/second/q' lines
+    1
+    第一行  first line
+    第二行  second line
+    \end{verbatim}
+    
+    \section{實用例子}
+    configuration檔的分析與修改是很多system admin或系統整合, embadded系統
+    軟體工程師要負責的，用shell/sed/awk其實都是短短幾行就解決掉的事情。
+    \begin{verbatim}
+    # comment blablabla
+    [main]
+    key0 = value0
+    key1 = value1
+    [section1]
+    key0 = value0
+    key1 = value1
+    [section2]
+    key2 = value2
+    key3 = value3
+    \end{verbatim}
+    在很多configuration檔案中都會有類似上面的分類法，要找到特定section中的
+    某個key的值，修改，新增，刪除等等很多人可能寫了幾百行的程式，但用sed，
+    根本就是幾行內就完成的事。例如要找到main裏面是否有key0，有的話就改value10
+    ，沒有的話就加value10
+    \begin{verbatim}
+if [ "`sed -n -e '/\[main\]/,/\[.*\]/p' $file | grep 'key0 *='`" ]; then
+    sed -i -e "s/\(key0\).*/\1=value10/" $file
+else
+    sed -i -e "/\[main\]/akey0=value10" $file
+fi
+    \end{verbatim}
+    五行code結束的事情，寫成shell function也不過9行的事情，我看過有人寫了上百
+    行的perl在搞定。
+    \begin{verbatim}
+    ip_address {
+            172.25.97.100
+    }
+    \end{verbatim}
+    那如果像這種要更改的呢? 也完全沒有問題，一行就解決了。
+    \begin{verbatim}
+    sed -i -e '/ip_address/,+2c\ip_address {\n\t172.25.97.99\n' my.conf
+    \end{verbatim}
+    這比用 s/// 好的地方是因為 s/// 命令是作用在某內定範圍內，而這範圍
+    一定要有內定結束標誌，而這只能選擇 newline，因此就無法跨行處理。
+    多行刪除我們可以用範圍選擇 '/start line/,/end line/d' ，但 s 語法中沒有
+    這種語法。因此多行處理用 s 有個標準模式，例如我們想換掉從 id 到 xxx 的文字
+    \begin{verbatim}
+sed '/id.*/{      # 如果找到 id ，開始玩
+:b                 # label b
+$!N                # 如果不是檔案最後一行就繼續N ，把下一行放進 pattern space
+/xxx/!bb           # 如果沒找到想要的xxx，跳回 label b，繼續玩
+s/.*/alibuda/      # 不然就用 s 代換掉所有 pattern space 東西變成 alibuda
+}' infile
+    \end{verbatim}
+    \verb=$!N=不到最後一行繼續 N (把下一行放進pattern space)， /xxx/!bb 不找到
+    xxx 則跳到b，這裡關鍵用 "不" 來表示一個 while loop， while [ ! xxx ] 就
+    怎麼樣，而且這個不 ! 是放在條件後面 -> (條件 !)。
+    直到找到，就離開 loop block, 進行整行的 s/// ，因為整個 pattern space 已
+    經被我們加了很多行進來，所以整個 s/.*/alibuda/ 是作用很多行。
+    \\\\
+    而 sed '/start line/,/last line/{s/.*/alibuda/}' ，用這種 range 的方法，
+    會作用在每一行，而不是把所有行一次處理。 所以
+    \begin{verbatim}
+    /first line/{:b;$!N;/last_line/!bb;s/replace/something/}
+    \end{verbatim}
+    也是一種多行代換，但我想用 \verb='//,//c\'= 可能比較方便。
+    \\\\
+    找到一行與下三行
+    \begin{verbatim}
+    sed 's/find/,+3p'
+    \end{verbatim}
+    印出找到一行的上一行面
+    \begin{verbatim}
+    sed '/find/{x;p;d;}; x'
+    \end{verbatim}
+    找到一行與上三行，請 tail 幫忙
+    \begin{verbatim}
+    sed '/find/q' | tail -n 3 含有找到行
+    sed -n '/find/q;p' | tail -n 3 不含找到行
+    \end{verbatim}
+    用 grep 找到一行的上下個三行，但有的 grep 是不行的
+    \begin{verbatim}
+    grep -A 3 -B 3 'find' myfile
+    \end{verbatim}
+    整個文件變一行，清除某個唯一的跨行字串，再變回來
+    \begin{verbatim}
+    tr '\n' '\0' < txt | sed 's/id//' | tr '\0' '\n'
+    \end{verbatim}
+    由於 sed 必須要知道什麼時候處理結束，因此 \verb=\n= 是 delimiter，
+    代換一個多行字串的變數，基本上無法做到很漂亮的一行完成，
+    sed 無法處理 \verb=\n=，必須先用 tr 把 \verb='\n'= 換成某個不可能出現字元
+    再換回來。
+    \\\\
+    另外除了之前在shell外部命令講的幾個有用命另外，還有一些在coreutils裏面
+    的常用命令
+    \begin{description}
+      \item [cut] \hfill \\
+        可切割一行的輸出為多欄位的處理，沒有awk時可以用，例如:
+        echo "f1 f2:f3 f4" \verb=|= cut -d " " -f 1
+        這個 cut 好處是可以處理到 column 裡面的字元，不光是 column 而已。
+        -c2 表示只取第二字元， -f 3-5 還可以表示只處理第三到第五個 field
+        (column) 就好。-d, -c, -f 是常用選項。
+      \item [sort] \hfill \\
+        可以排序很多行的輸出，比較常用有 sort -u，可以刪掉 duplicate 的行。
+        sort -k2.3 根據第2 column的第3字排序，-k3.1,3.2 表示先3.1再3.2排序，
+        這個 sort 好處也是可以處理到 column 裡面的某個字元。可以排整數，
+        排字串，排版本號等等。
+      \item [printf] \hfill \\
+        這是後來posix標準工具。可以用來做hex/dec轉換:
+        printf "\%x" 12345 是 hex 輸出， printf "\%0x" 1 則有
+        leading 0 的輸出格式，跟 c 是很像的。而如果要像 c 
+        \verb=printf("%d",'a');=，則可以用 \verb=printf "%d" "'a"=
+      \item [numfmt] \hfill \\
+        做數字與人類可讀數字的轉換，例如4G -> 4000000000, 138611456 -> 133M
+        numfmt --from=iec 125K, numfmt --to=iec 421384951344
+      \item [od] \hfill \\
+        用來處理 binary 檔案內容的。可以做 hex/dec 轉換，
+        例如看第1 partition:  od -A n -t x1 -N 16 -j 446 /dev/sdc.
+        echo "" \verb=|= od -A n -t x1 ,則會看到跑出 0a 表示換行。
+        a=`echo -ne \verb="\x10"=`; echo \$a \verb=|= od -A n -t x1 -N 1 
+        則會跑出 10。 -t 表示輸出 format, x1 表示一個 hex, -N 表示讀進幾個 byte
+        。-j 表示跳到那個 byte 去。echo -ne 是 string 到 binary 值，od 是 
+        binary 值回到 string， printf 是 string 對 string 的 hex,dec 轉換。
+      \item [dd] \hfill \\
+        用來處理device檔案或一般檔案的I/O。例如寫 mbr signature:
+        echo -ne \verb="\x55\xaa" |= dd if=/dev/stdin of=\$bdev seek=510 bs=1
+        count=2
+      \item [seq] \hfill \\
+        產生一連串的數字，跟 python 的 range 一樣，用來 loop 用的，例如:
+        for i in `seq 3 20`; do echo \$i; done
+      \item [tac] \hfill \\
+        跟 tail 很像，但是倒著印出檔案內容，通常是從檔尾處理檔案時用，例
+        如: tac myfile。
+      \item [wc] \hfill \\
+        計算字元，行數等用途的小計算器。例如: cat my file \verb=|= wc -l
+    \end{description}
+    基本上光 bash, sed + 這些 coreutils 的命令，就可以完成大部分的工作了。
+    尤其很多系統 script 都是在叫用命令來完成，很多人號稱寫 perl, python
+    script 結果不是去呼叫 API 而是在使用系統命令的話是一點意義都沒有的。如果為
+    了簡單的搜尋修改檔案，在那邊 open, fopen, read, write的話，真的不如一行
+    sed -i 就解決。光使用 echo -ne, od, printf, bc, expr, perl, python 等工具
+    基本上就可以完成大部份工作。很多時候去interview 時，老闆根本就不要你會亂七
+    八糟的東西，光真的會bit, byte, string 的處理，就已經非常了不起了。
+
+    \subsection{binary 檔修改}
+    在很久以前，我一直想不通怎麼 Linux 上沒有以前 DOS 下的 binary 編輯器呢？
+    後來我終於想通了，因為二進位檔，根本就不是需要編輯的檔案，這種檔案都是要
+    破解，修改，亂搞，只修改幾個 bytes ，幾個 bits ，根本不會有人從頭到尾用
+    bits, byte 編輯檔案。而這種修改根本就是 sed 一行就解決的事情，所以根本就
+    沒人大費周章的去寫這種軟體，又是以前錯誤的 DOS/Windows 使用習慣而來。
+    \\\\
+    以 Windows 的 EFI 啟動 bootx64.efi 為例，我們想要去改他的BCD位置，只要
+    先抓到 \verb=\.B.C.D= 的位置，再用 xxd -r 去修改就完成了。
+    請看例子，保險起見，印出上下共三行
+    \begin{verbatim}
+$ xxd /mnt/win10/efi/boot/bootx64.efi | grep -A 1 -B 1 '\\.B.C.D'
+
+000e8080: 6500 6400 2000 3000 7800 2500 7800 0d00  e.d. .0.x.%.x...
+000e8090: 0a00 0000 0000 0000 5c00 4200 4300 4400  ........\.B.C.D.
+000e80a0: 0000 0000 0000 0000 4200 4f00 4f00 5400  ........B.O.O.T.
+--
+000ed310: 7400 0000 0000 0000 5c00 4200 6f00 6f00  t.......\.B.o.o.
+000ed320: 7400 5c00 4200 4300 4400 0000 0000 0000  t.\.B.C.D.......
+000ed330: 4c00 6900 6200 7200 6100 7200 7900 2000  L.i.b.r.a.r.y. .
+    \end{verbatim}
+    我們只想改第一個，把 B.C.D 改成 B.W.0
+    \begin{verbatim}
+echo '000e809a: 4200 5700 3000/' | xxd -r - /mnt/win10/efi/boot/bootx64.efi
+    \end{verbatim}
+    這如果寫成 shell script
+    \begin{verbatim}
+bcd_line=$(xxd /w10/efi/boot/bootx64.efi|sed '/4200 4300 4400/q'|tail -n1|cut -f1-9)
+echo $bcd_line|sed 's/4300 4400/5700 3000/|xxd -r - /w10/efi/boot/bootx64.efi
+    \end{verbatim}
+    有 xxd 跟 sed 工具，誰還想用什麼亂七八糟的 binary editor

@@ -1,0 +1,1784 @@
+\chapter{JavaScript}
+JavaScript 已經是目前 web GUI 上的公認語言，他跟 CSS 的結合可以實作很多 web
+application，像 google map, google doc 等都很不可思議，除此外，他還是
+mongoDB 的使用語言，JSON 表示法的鼻祖語法等等。在剛開始時很多資深 programmer
+甚至不屑於使用 JavaScript ，隨著他支援非同步 request ，還有在 HTML 5 能控制
+影音，現在連 server side script 都有人專門使用 JavaScript node.js。所以可能將
+來 perl, python 都不用了，就從front end 到 backend end 都專門用 JavaScript, 
+所以是很值得一學的script。不過他這語言很奇妙，跟傳統 c 或 script 都不像，蠻多
+奇怪的語法。
+\\\\
+一樣不囉唆，直接進入核心。在 debian 上可以裝 spidermonkey-bin 這 package ，
+裝起來後有個 smjs 可以執行。這是 Mozilla 的內部 javascript engine，所以也可以
+去 mozilla 下載自己編譯，在 src 下有個 shell/js 可以執行。或者用 firefox 裡面的
+tool 下有個 scratchpad 可以直接寫 code 測試。不過現在應該直接去下載
+\href{https://nodejs.org/en}{node.js}，就有 js 引擎 v8 + 延伸 server side 實做。
+\\\\
+Javascript 目前寫作習慣可以參考 AirBnB 的
+\href{https://github.com/airbnb/javascript}{Javascript 寫作 convention}
+，在系統程式跟 end user 尤其 GUI 程式中有個很大不同在變數命名習慣，系統
+C 程式多半要求不要廢話，ansi C coding convention，GUI 程式多半要求寫的
+落落長，匈牙利命名。所以 coding convention 是
+\begin{itemize}
+  \item indent 2 空白，網路上很多 windows 上開發的都用 tab, 但落落長。
+  \item 匈牙利命名
+  \item 即使是 block comment 也用 // 一行註解，這點有點百思不解，我猜可能
+    是傳統 block comment 是給 jsdoc 寫文件用，所以故意這樣區分。
+  \item 傳統 ANSI brace while for loop 跟 if 括號
+\end{itemize}
+python 的變數與 function 命名有點像 C ，也沒要求落落長與匈牙利命名，只有
+class 名有規定，這是比較不一樣的。
+\section{資料型別}
+物件導向的 JavaScript 有以下型別。
+\begin{itemize}
+  \item Number 比較特別的有Infinity,100 / 0 會等於Infinity; NaN, 表示not a
+    number。
+  \item Boolean true/false是保留字。
+  \item String "this is a string"
+  \item Object \verb={ key : value }= 可以亂搞
+  \item Array \verb=[ "e1", 2, {key3: value3} ]= 也是可以亂搞。
+  \item Function \verb=function fn(arg1, arg2) { doSomething; }=
+\end{itemize}
+這些資料型別也同時是class的定義，跟c++很像有 new 這 operator 所以
+\begin{verbatim}
+x = new Number(1);
+x = Number(1);
+x = 1
+y = new String("mystr");
+y = String("mystr")
+y = "mystr"
+z = new Boolean(true)
+z = Boolean(true)
+z = true
+\end{verbatim}
+可以用delete x 清掉一個物件。用
+\begin{itemize}
+  \item typeof 測試哪種type, 還回一個小寫字串。
+  \item instanceof 測試哪種instance, 必須大寫第一個字元。還回true/false
+\end{itemize}
+以上面為例，用 typeof x 時，會還回"number"，但其中literal的 x = Number(1) 
+跟 x = 1。用x instanceof Number時，會得到false，只有x = new Number(1)，
+才是真 Number 物件，這才會真的得到一個 true。所以 literal 所產生的東西跟
+用 new 產生的物件是不同的。
+\\\\
+JavaScript 有一些值是很 confused 的 literal 保留字
+\begin{itemize}
+  \item NaN Not a Number, isNaN("string"), isNaN(Infinity)
+  \item null 物件特別給一個 null 的值 。
+  \item undefined 有宣告沒給值時。typeof xxx 會得到 "undefined"，但卻沒有
+    instanceof Undefined。
+\end{itemize}
+所以又來了
+\begin{verbatim}
+js> x = NaN
+js> typeof x
+"number"
+js> x instanceof Number
+false
+js> x = new Number(NaN)
+js> typeof x
+"object"
+js> x instanceof Number
+true
+js> typeof null
+"object"
+js> null instanceof Object
+false
+js> x = new Object(null)
+({})
+js> x instanceof Object
+true
+js> typeof xxx
+"undefined"
+\end{verbatim}
+其中變數使用可以不用宣告就直接用，也可以特別用 var 宣告，差別在變數 scope，
+但判斷式取值時，如果沒有給值或宣告，則會出現 exception error，主要在 var
+宣告後，會自動給一個看不見的 'undefined' 值。
+\begin{description}
+  \item[x = null] \hfill \\
+    可以, x 有 null的值。x 是 global variable。
+  \item[var x] \hfill \\
+    可以, x 沒有值但typeof x 是"undefined"的值。var 宣告 scope 在 function 內。
+  \item[var x = null] \hfill \\
+    可以, x 有 null 的值。
+\end{description}
+JavaScript 沒有所謂的 block scope，只有 global 變數，或者一個 function 裡面
+的變數。任何在 function 內的 if, while ... block 宣告過了，就會存在。例如
+\begin{verbatim}
+function myfunc() {
+  print(a);
+  if (true) { var a = 1; }
+  print(a);
+}
+\end{verbatim}
+
+  \subsection{immutable與call by reference}
+  跟 python 一樣，物件式語言，string 這個型態也是特別奇怪，是 immutable
+  primitive，也就是沒有任何語法方法能去改變一個已經存在的string內容。所以當 
+  x = "mystr" 或 function傳值時，x 不是像 primitive copy/pass value，因為那
+  太沒效率，但也不是 by reference，因為我們沒法拿到 reference 後去改他。
+  總之就是無法正確歸類string。
+  \\\\
+  邏輯的比較，call by value/reference 與 = 的 assignment 或 copy 有如下規則
+  \begin{center}
+  \begin{tabular}{ c | c | c | c }
+    \hline
+    Type   & Copied by & Passed by & Compared by \\
+    \hline
+    Number & value     & value     & value \\
+    Boolean& value     & value     & value \\
+    String & immutable & immutable & value \\
+    Object & reference & reference & reference \\
+    Array  & reference & reference & reference \\
+  Function & reference & reference & reference \\
+    \hline
+  \end{tabular}
+  \end{center}
+  Copied by就是 assignment 時做的動作，所以物件object, array, function 都是
+  reference 指來指去而已。
+
+  \subsection{條件判斷與控制語法}
+  一樣跟 perl, python 等要注意的有空字串，但由於他多了 null 與 undefined，
+  NaN，所以我們也來測試。
+  \begin{itemize}
+    \item false/true 可，有保留字。
+    \item null 可，傳回false
+    \item NaN, 可，傳回false
+    \item undefined, 可，傳回false。
+    \item 0 可，傳回false
+    \item \verb=' '=與\verb=" "=, 可，傳回false
+    \item '0'  不可，不像 perl 會傳回false
+    \item \verb=[]=，不可, 不像 perl傳回false
+    \item \verb={}=, 不可, 不像 perl傳回false
+    \item new Object(null) new Object(undefined), 不可，
+  \end{itemize}
+  由上可以看出，他其實是用物件的 reference 來作 true/false的比較，所以'0',
+  \verb=[] {} new Object()=這是有 reference 值的。
+  \\\\
+  另外多了 === 這個判斷，這是說兩邊的東西不經過type 轉換還是絕對相等的。
+  \begin{verbatim}
+  js> a = 1
+  js> b = "1"
+  js> a == b
+  true
+  js> a === b
+  false
+  \end{verbatim}
+  基本語法跟 C 一樣是
+  \begin{verbatim}
+  if () {
+  } else if {
+  } else {
+  }
+
+  condition ? true_return : false_return ; 
+  \end{verbatim}
+  也有跟 shell 一樣的 string switch，但卻是 C 語法
+  \begin{verbatim}
+  switch (var) {
+    case 'string1':
+    break;
+    case 'string1':
+    break;
+    case 'string1':
+    break;
+    default:
+  }
+  \end{verbatim}
+  while 是 C 語法
+  \begin{verbatim}
+
+while (condition) {
+  do something;
+}
+
+do {
+  do something;
+} while (condition)
+  \end{verbatim}
+  for, foreach 的語法，也是
+  \begin{verbatim}
+for (i=0; i <10; i++) {
+  do something;
+}
+for (key in vars) {
+  do something;
+}
+for (elemnts of array) {
+  do something;
+}
+  \end{verbatim}
+  for 這邊要小心的是像 shell 的 in 其實只有傳回 key，只有 of 才會傳回 array
+  element，另外如果是 array， 那物件還有 forEach, map, keys 等可以用。 以上的
+  break; continue 跟 C 一樣。
+  %各種 for 的使用，
+  %https://stackoverflow.com/questions/9329446/loop-for-each-over-an-array-in-javascript
+  \\\\
+  有像 python Java 的 try catch finally，物件導向的程式，通常都是複雜
+  層層資料結構，因此錯誤處理不會是以往的 return return ... return ，而是做一堆
+  高階的事情，任何一出錯，就 catch throw error 處理，尤其是這種接近 end user
+  的 GUI 程式，都一堆傳進 function 的參數，這可以用一個大 object 傳，然後用
+  try catch 去設值檢查，比起一個個檢查 return 好。
+  \begin{verbatim}
+try {
+  try {
+    throw new Error("oops");
+  } catch (ex) {
+    console.error("inner", ex.message);
+    throw ex;
+  } finally {
+    console.log("finally");
+  }
+} catch (ex) {
+  console.error("outer", ex.message);
+}
+
+function myFunc(initObj {
+  try {
+    let m0 = initObj['m0'];
+    let m1 = initObj['m1'];
+    if (m0 < 0) {
+      throw new Error('m0 less than 0');
+    }
+  } catch (e) {
+    console.error(e.message);
+    throw e;
+  } finally {
+    console.debug('finally ok');
+  }
+  ...
+}
+  \end{verbatim}
+
+\section{基本 class 與 物件}
+有以下一些特徵
+\begin{description}
+  \item[property] \hfill \\
+    member data，用法跟一般變數一樣可以直接設值，book.title = "JavaScript"
+  \item[constructor與this] \hfill \\
+    定義一個function就可以是一個constructor
+    \begin{verbatim}
+    function Rectangle(w,h) {
+        this.width = w;
+        this.height = h;
+    }
+    \end{verbatim}
+    用 new 就可以創一個物件，new Rectangle(1, 1)，每個物件內會有一個自動的
+    property, 叫constructor會等於建造的 function 名稱。每個 member function
+    自動傳進自身物件作為第一 argument，自身物件在裡面用 this 表示。
+  \item[inheritance與prototype] \hfill \\
+    每個class有個內定的 property, 叫 prototype，所有掛在 prototype 下的變數
+    都是所有 object 都看得到的，例如Circle.prototype.pi = 3.1415，
+    要作繼承需用到 prototype, 一個object將會繼承所有prototype的properties。
+  \item[associate array 與 property互換] \hfill \\
+    obj.property 等於 obj["property"]，這個assocaite array的好處是裡面的string
+    是可以變換的。不像obj.property是固定的。
+  \item[class變數與function] \hfill \\
+    除了可以用prototype給變數，但像pi這種東西不需要每個object都有一份copy，
+    所以用Circle.pi = 3.1415 則是class 變數，算是全域變數shared by所有object，
+    同樣Circle.func()也是class function，這種function呼叫只能透過class.method()
+    ，所以裡面不能有 this。
+  \item[toString() valueOf()] \hfill \\
+    每個物件都有toString跟valueOf，這兩個也可以用來做型別轉換，轉成String,
+    或者Number。也可以overwrite這兩個讓他輸出有意義的字串或數字。parseInt
+    與parseFloat也可以拿來轉string成數字。
+\end{description}
+
+\subsection{Array 與 Hash-associate array}
+一些關於 array 的操作
+\begin{itemize}
+  \item a.length 自動就是 a 陣列的長度
+  \item a.join(",") 產生一個字串以 , 分隔。
+  \item a.reverse() a.sort() 顛倒與排列
+  \item a.concat() a.slice() 連結與切割
+  \item indexOf() lastIndexOf() 找到element的陣列index
+  \item a.push() a.pop(), a.shift() a.unshift()
+  \item a.splice(index,1) 砍掉某個 index，後面的 1 表示只砍一個
+  \item forEach(Function(e,i)) 把每一個元素 e 一次一個傳給Function處理，i 是
+    array 的 index。
+  \item map(Function(e,i)) 這跟perl, python的從舊array 新建造array一樣功能的
+    map。 Javascript map 跟 forEach 最重要的是他們都是非同步的，一呼叫
+    Function 就返回，兩者差別是 map 會建造一個新 array return，forEach 就單
+    純執行 Function。
+  \item filter(Function(e)) 從舊 array 根據 Function 的 boolean return 
+    建造新 array，如果 true, 那 element e 就留下，不然就剔除。
+  \item keys() 傳回associate array的所有key陣列。
+\end{itemize}
+沒有double assocaite array 但有
+\begin{verbatim}
+js> a = [ [1,2,3], [4,5,6], [7,8,9] ]
+[[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+js> a[1][1]
+5
+
+> a = [ 1 , 2, 3, 4, 5 ];
+[ 1, 2, 3, 4, 5 ]
+> b = a.map((e) => { return 2*e; } );
+[ 2, 4, 6, 8, 10 ]
+> c = a.filter(function(e) { return e % 2 });
+[ 1, 3, 5 ]
+\end{verbatim}
+
+\subsection{Function}
+function可以有 nested function定義，算是 class 的 method
+\begin{verbatim}
+var f = function Sample0(a,b) {
+            this.x = a;
+            function sample1(x, y) {
+              print(x);
+            }
+            this.y = b;
+        }
+\end{verbatim}
+function 有一些該注意的
+\begin{itemize}
+  \item arguments是一個特殊 property 物件,裡面有陣列\verb=arguments[]=
+    ，是傳進來的參數陣列。
+  \item arguments.callee 等於是被呼叫的function本身。
+  \item arguments.callee.caller 指向上一層呼叫 function，
+    arguments.callee.caller.name 是上層 function 名字。
+    這通常用來作debug的工具用。
+  \item f.length 是這個function物件期望的 arguments 數目。
+  \item \verb=f.apply(o, [arg1, arg2, ...])= 這是用來使別的物件也能暫時擁有這個
+    function。這樣一來 o 物件等於
+    \begin{verbatim}
+    o.newf = f;
+    o.newf(arg1, arg2);
+    delete o.newf;
+    \end{verbatim}
+  \item f.call(o, arg1, arg2, ... ) 等於是apply()，差別就只有不是傳陣列而已。
+  \item f.bind(o, arg1, arg2, ... ) f 裡面的this，將會被o來取代。
+\end{itemize}
+
+\subsection{scope chain與closure物件}
+closure function物件是指一個 nested function 使用了不在他local定義下的變數，
+但卻延伸了這變數的生命週期。等於是包住一個外面變數，延伸了這個外在變數的生命
+週期。例如
+\begin{verbatim}
+var foo = (function() {
+  var foo='boo';
+  return function() {
+    print(foo);
+  }
+  foo = 'foo';
+})();
+foo();
+\end{verbatim}
+foo等於是那個print(foo);而已，可是foo的定義是在外面一層的function中，所以正
+常講，應該真正執行時，是undefined的，但卻會跑出foo這字串來，所以他關住的是
+這個foo變數，在上一層最後的值。這意義是 function 是跑在被定義地方的scope，
+而不是在被執行地方的scope。這有點像 c 的static local變數。所以在recursive
+或者一些namespace上可以用到。
+\\\\
+這變數的生命週期原則很重要的用在找尋變數的順序，是為尋找的scope chain，
+在 browser 的 event callback 中很重要。最外面的當然就是global object。
+如果沒有function，則最外面的code就是找global object。如果有function，
+則回一層層找上去，以DOM來說就是會button, form, document, window, global
+這樣找回去。
+
+\section{字串與regex}
+字串操作
+\begin{itemize}
+  \item s.length 字串長度
+  \item s1 + s2 字串連結用 +
+  \item s.charAt('x') 字元在字串的index
+  \item s.match(regex)
+  \item s.search(regex)
+  \item s.replace(regex, "replaceStr") 替換成 replaceStr，這跟其他 regex
+    工具很像，用( ) 包住想要搜尋的字串，後面代換字串一樣有
+    \begin{itemize}
+      \item \$1, \$2 ... 搜尋到的第一第二... 括號字串。
+      \item \$\& 搜尋到字串
+      \item \verb=$`= 表示搜尋到字串之前的所有字元。
+      \item \verb=$'= 表示搜尋到字串之後的所有字元。
+    \end{itemize}
+  \item s.split(",") 還回一個陣列
+  \item s.substr('mystr') 尋找子字串
+  \item string template 使用 backquote，一般字串代換在物件導向 script 中，
+    不像 shell 那樣好用， string template 跟 shell, Makefile 一樣可以用
+    \$\{var\} 代換成 var 的字串，但字串不是用double/single quote，而是要用
+    backquote，這是 ES6 以後才有的功能。
+\end{itemize}
+regex 與 pattern，pattern用法跟regular express介紹的一樣，用//夾住。一樣
+有modifier, i 不分大小寫,g global,m表示multiple line。
+\begin{verbatim}
+var p = /Javascript/ig;
+var o = new RegExp("\\d{4}, "g");
+var s = 'Javascript';
+
+p.test("javascript"); // true
+o.test("1234");
+s.search(/script/i);
+s.replace(/(search1)alibuda(search2)/, "$2$1")
+
+o.compile("newReg", "i") // don't discard regex object
+\end{verbatim}
+使用test()時，會還回true/false，使用exec()時會還回第一個match string。
+以上是一般語言的觀念，在後來變革中，才有比較像本機 script 的用法，像模組
+library 的使用留待新的說法一併解說。
+
+\section{ECMAScript}
+ECMAScript 是一個由 ECMA international 組織統整 Javascript, ActionScript,
+JScript 的標準語言。在ES5 後，讓Javascript 變得更 powerful。ECMAScript
+這個名字根據 Wikipedia 講法是有很多爭議。從這邊開始，ECMAScript 比較像
+可以是本機跑的類似 perl, python ... 等 script 語言，這邊下載
+\href{https://nodejs.org}{node.js} 來測試比較接近本機使用 script。
+\\\\
+不過 Javascript 的生態是由 GUI 的人主導，當初也是為了網頁而來，因此術語使用上
+比較偏向 GUI 的人，例如 Events, main thread loop 等等，這些在系統程式工程
+師來看就是把這些轉成底層術語而已，不要被這些名詞拖著走，主要是所有的 GUI 上
+的 object 都是在執行畫圖的背景 process/thread，他們隨時在 main thread loop
+監控下等待呼叫，這是一般低階 library 不會幫忙處理的。
+\\\\
+基本上 ES5, ES6 是比較重大的變革，也跟 perl python 一樣，最後都要像 C 一樣，
+對於變數 scope, memory, object, multiprocess 等都要強化，才能寫大型軟體，
+尤其是2015年後的 ES6 算是才比較定型了。 以下介紹我覺得比較重要的變革語法，在
+\href{https://www.w3schools.com/js/js_versions.asp}{w3schools} 有快速的
+改版語法蒐集
+  \subsection{ES5 use strict 與 ES6 新 literal}
+  就跟 perl 一樣，最後一定強制定義檢查所有變數的 scope 定義，script 原本宣傳
+  的好處最後都是自己打臉自己。在js 檔前面宣告 \verb='=use strict\verb='=;
+  後跟 perl 一樣 ，所有的變數都需要宣告，以決定他們屬於 global 或是 local
+  變數 scope。只是這個是一個 string ，並不是語言的 statement，在 browser
+  中使用，就只是個沒意義的 string 物件。舊的引擎看到不會出錯。
+  var 宣告還是特別的，但 ES6 多了 let, const，並且有 block, function, global
+  scope，只要在 function 內宣告的，就只能在 function 內用，只是 let, const
+  特別可用在 while, for loop 的 block 宣告。
+  \begin{itemize}
+    \item var 一旦宣告，就都可以用，所以沒有光 block scope 效果。
+    \item let 可用在 block scope ，一旦離開 block, 就失效。
+    \item const constant 宣告，跟 let 有一樣效果。
+  \end{itemize}
+  例子
+  \begin{verbatim}
+'use stricts';
+var astring = "string1";
+const myconst = 100;
+{
+  let myvar = ['a1', 'a2'];
+}
+
+console.log(myvar);
+  \end{verbatim}
+  新的 literal 與資料型別
+  \begin{itemize}
+    \item Set 像 python 的 Set, 裡面的每個 element 是唯一的。
+    \item Map 另一種 associate array (hash) 的 literal \\
+      \begin{verbatim}
+const fruits = new Map([
+  ["apples", 500],
+  ["bananas", 300],
+  ["oranges", 200]
+]);
+
+fruits.get("apples");
+      \end{verbatim}
+  \end{itemize}
+
+  \subsection{ES5 物件 accessors}
+  一般物件語言的 accessors，get/set 的使用
+  \begin{verbatim}
+var person = {
+  firstName: "John",
+  lastName : "Doe",
+  get fullName() {
+    return this.firstName + " " + this.lastName;
+  },
+  get height() {
+    return this.h;
+  },
+  set height(value) {
+    this.h = value;
+  }
+};
+
+person.height = 100;
+console.log(person.height);
+console.log(person.fullName);
+  \end{verbatim}
+  自動會有兩個 attributes 可以用，像存取 attributes 一樣
+  ，要注意的是 function 名字，不能跟 this 的 attribute 名一樣。
+
+  \subsection{ES6 class 與物件}
+  物件導向的 class 語法終於在 ES6 中塵埃落定，這是非常重要後續 JS 軟體寫法
+  ，在 strict mode 下執行
+  \begin{verbatim}
+class Rectangle {
+  #height;
+  #width;
+
+  constructor(height, width) {
+    this.#height = height;
+    this.#width = width;
+  }
+
+  draw(...) {
+    ...
+  }
+
+  memberf1() {
+    ...
+  }
+}
+
+class FilledRectangle extends Rectangle {
+  #color;
+
+  constructor(height, width, color) {
+    super(height, width);
+    this.#name = "Filled rectangle";
+    this.#color = color;
+  }
+
+  draw(...) {
+    ...
+  }
+
+  memberf1() {
+    ...
+  }
+
+}
+  \end{verbatim}
+  有一個 construtor() 可以定義，繼承也是用 extends，以往用 prototype 寫法
+  慢慢會被淘汰掉。member method 的寫法也不像 perl, python 要特別把 self
+  寫出，他本身就自動有 this 這個自身物件可用，super 只能用在 constructor
+  還有一定要在 this 之前使用。
+  \\\\
+  private member 現在有一種特別寫法是無須加上 let const 的宣告，在變數前面
+  用 \# 符號，用上 \# 符號的變數，在 class 外使用會一開始解譯就 error，這
+  會杜絕 API 使用者直接取用 attribute， 但繼承的 sub class 也是無法存取，
+  所以要被大家繼承公用的變數不行用這 private member。
+  \begin{verbatim}
+#var = 'private_value1';
+  \end{verbatim}
+  \subsubsection{object oriented programming}
+    就像在 perl, python 裡面說到，要 OO 一定要做到封裝，繼承，多型，一般
+    shell 很難做到良好的封裝，就是沒有好的 struct 語法，c, perl 不好做繼承，
+    python 雖有 overloading 但沒有好的 dynamic binding，一般解譯器形式的
+    script 可能也不太需要 dynamic binding。Javascript 同樣沒有好的 overloading
+    同一 class 內也不能有同名 method。一般要做 overloading，也跟 python
+    一樣最後面那個參數必須是變化的 object，只是他語法上不像 python 那麼像 C
+    ，只要單純的傳一個 object 就可以了
+    \begin{verbatim}
+    fun(a,b, opts) {
+      ...
+      if (opts['arg1']) {
+        do_something_with_arg1()
+      }
+    }
+
+    fun(1,2, {'arg1':value1, 'arg2': value2})
+    fun(5,6, {'arg3': value3})
+    \end{verbatim}
+    物件導向程式中封裝繼承設計，有名的 composition 與 inherit 問題
+    \\\\
+    inherit (extend)
+    \begin{verbatim}
+class Fruit {
+  #withSeed;
+  constructor(withSeed) {
+    this.#withSeed = withSeed;
+  }
+  peel() {
+    console.log('No need');
+  }
+}  
+
+class Apple extends Fruit {
+  constructor(withSeed) {
+    super(True);
+  }
+  peel() {
+    ...
+  }
+}
+
+class Banana extends Fruit {
+  constructor(withSeed) {
+    super(False);
+  }
+  peel() {
+    ...
+  }
+}
+    \end{verbatim}
+    composition (contain)
+    \begin{verbatim}
+class Apple {
+  #fruit = new Fruit();
+  constructor(withSeed) {
+    this.#fruit = new Fruit(True);
+  }
+  peel() {
+    ...
+  }
+}
+
+class Banana {
+  #fruit = new Fruit();
+  constructor() {
+    this.#fruit = new Fruit(False);
+  }
+  peel() {
+    ...
+  }
+}
+    \end{verbatim}
+    支持 inherit 的很多喜歡用 is a 跟 has a 來說明，但這也只是英語使用者的
+    文字遊戲跟個人定義，並不是 100\% general，也就是 is a 的情況有的並不是
+    永遠不變的強烈，例如 person, account, employee, engineer, manager 的關係，
+    一個 person 有可能從 is an engineer 的角色跳到 is a manager 的角色，那這
+    種由 person 衍生出的關係就不是那強烈， 另外使用 inherit 會自動有
+    overloading, dynamic binding 的好處，但overloading 與 dynamic binding
+    也不是只有好處沒有壞處，這會跟使用情境有關。還有 script 不太會用到
+    dynamic binding。
+    \\\\
+    支持 compisition 的， 舉特例的時候也常跟使用情境有關，例如常有將來會怎
+    樣怎樣的說法，有很多是在設計 design 中不見得花很大心力就避免的掉。
+    \\\\
+    支持 composition 的通常是說如果 subclass 與 superclass 強烈 couple 在
+    一起，而且'將來'不會改動 superclass method 的才用 inherit， 如果不是tight
+    together 那麼強，或者 superclass 會衍生出多種 type, is a, 的情況，那還
+    是要用 composition， 以上面水果來說，其實有沒有子還有剝皮的情境太多了，
+    將來的定義不確定性太高了，除了一些數學以外，在萬物範圍太多將來不確定，
+    因此其實大多數情況都是屬於 composition 的情境，也認為將來在 code reuse
+    上， 不會寫重複太多相同的 code 。
+    \\\\
+    其實兩種說法都可以找到漏洞，因此開始不必要太執著於哪一種
+    \\\\
+    關於 end user 使用的程式很煩是，資訊太多造成傳進function 的 parameters
+    太多，這種 user 傳進的檢查，非常煩人，又因為不是強型態語言，所以太多
+    function 如果太多參數，實在很難看，通常超過 4 個以上，那可以傳進物件 
+    \{\} 或者 \verb=[]= ，然後用try catch 來捕捉可能的所有 error
+    \begin{verbatim}
+    try {
+      ...
+    } catch (e) {
+      console.log(e.message);
+    }
+    \end{verbatim}
+  \subsection{ES6 Iterator 物件與 generator function}
+  這跟 python 的 iterable 物件類似，就是像 array, set, map 等等列舉物件有
+  些新的好用操作
+  \\\\
+  ... 是把列舉的 elements 全部展開
+  \begin{verbatim}
+q1 = [ "Jan", "Feb", "Mar" ];
+q2 = [ "Apr", "May", "Jun" ];
+q3 = [ "Jul", "Aug", "Sep" ];
+q4 = [ "Oct", "Nov", "Dec" ];
+year = [ ...q1, ...q2, ...q3, ...q4];
+  \end{verbatim}
+  就會展開所有元素成新 array
+  \\\\
+  用 function* 宣告 generator function， generator function 會自動有兩個
+  methods, next() 跟 return()。 generator 函數中使用 yield，表示每次呼叫
+  next()，就會執行到一個 yield 的地方，例如
+  \begin{verbatim}
+function* myiter() {
+  yield 1;
+  yield 2;
+  return 3;
+}
+i = myiter();
+console.log(i.next().value);
+console.log(i.next().value);
+console.log(i.next().value);
+console.log(i.next().value);
+/* last one will be undefined */
+
+function* foo(index) {
+  while (index < 2) {
+    yield index;
+    index++;
+  }
+}
+
+const iterator = foo(0);
+console.log(iterator.next().value);
+console.log(iterator.next().value)
+  \end{verbatim}
+  跟一般 function 不一樣的是，他回傳一個所謂 generator object，當 generator
+  object 執行 member function, next() 時，他回傳兩個值
+  \begin{itemize}
+    \item value : 表示 next 的值。
+    \item done : 是個 boolean 表示 next 是否結束。
+  \end{itemize}
+  要注意的是 Mozilla 支援跟 python 一樣可以是一個 class 裡面有提供 next()
+  method ，而且回傳一個 iterator 物件。
+  \begin{itemize}
+    \item 必須是 extends Iterator 的物件
+    \item 必須有 next()
+    \item 必須回傳一個 iterator protocol 物件
+  \end{itemize}
+  用 class 宣告
+  \begin{verbatim}
+class myIter extends Iterator {
+  next() {
+    return {value: 1, done: true};
+  }
+}
+
+iter = new myIter();
+console.log(iter.next().value);
+  \end{verbatim}
+  但這個在 v8 引擎是不支援的，node.js 跑會出 error。
+
+  \subsection{ES6 Rest arguments}
+  一般 script 的好處是 function 的 arguments 數目是不定的，C 也有，但 script
+  使用比較方便，之前說到 function 有一個特殊 arguments 變數，自動是一個
+  arguments array 藏著所有 arguments，ES6 有一個 ... 的rest arguments
+  \begin{verbatim}
+function myFun(a, b, ...manyMoreArgs) {
+  console.log("a", a);
+  console.log("b", b);
+  console.log("manyMoreArgs", manyMoreArgs);
+}
+
+myFun(1,2,3,4,5,6,7);
+  \end{verbatim}
+  \subsection{ES6 的模組}
+  perl 用 PERL5LIB, python 用 PYTHONPATH, Javascript
+  不限制在本機上，所以並沒有這種環境變數，反而是任意 url ，然後通常就是
+  指到真的 js 檔。 在引用 library 上，，跟 python, Java 很像的用 import，
+  以前使用 require() 跟 module.exports 來使用別的模組或 export 變數
+  出去，但 ES6 引進類似 python Java 的
+  \begin{itemize}
+    \item import 一樣有 package 目錄, module 檔案分別，但使用上不像 python
+      區分 package, module 的 import 不太一樣，一律用 module。
+    \item export 一樣 export symbol。
+  \end{itemize}
+  傳統例子如下
+  \begin{verbatim}
+const req = require('./request');
+const res = require('./response');
+
+/**
+ * Expose `createApplication()`.
+ */
+
+exports = module.exports = createApplication
+exports.json = bodyParser.json
+exports.query = require('./middleware/query');
+exports.raw = bodyParser.raw
+exports.static = require('server-static');
+exports.text = bodyParser.text
+  \end{verbatim}
+  ES6 例子
+  \begin{verbatim}
+import {export1, export2} from "/modules/myexport.js";
+import http from 'http';
+ 
+export let name1, name2/*, … */; // also var
+export const name1 = 1, name2 = 2/*, … */; // also var, let
+export function functionName() { /* … */ }
+export function* generatorFunctionName() { /* … */ }
+export class ClassName { /* … */ }
+
+export { name1, /* …, */ nameN };
+export { variable1 as name1, variable2 as name2, /* …, */ nameN };
+export { variable1 as "string name" };
+
+export default expression;
+
+export * from "module-name";
+export * as name1 from "module-name";
+export { name1, /* …, */ nameN } from "module-name";
+export { import1 as name1, import2 as name2, /* …, */ nameN } from "module-name";
+export { default, /* …, */ } from "module-name";
+export { default as name1 } from "module-name";
+  \end{verbatim}
+  差別在於 require() 相當於 source，整個檔案引進，沒有 private/public 之分
+  ，也不能只引進部份變數，另外 import 是 multithread 非同步引進。如果是多個
+  js ，彼此不會 block 住。 不過在 Node.js 除了語法處理還有很多特別處理，
+  也有辦法不 block 就是。
+  \\\\
+  ES6 import/export 語法中
+  \begin{description}
+    \item[Named import]: import \{ export1, export2 \} from "module-name";
+      用物件 \{ 跟 \} 括號引進的 symbol， 表示 mjs 裡面一定要有 export1, 
+      export2 這兩個一模一樣的名字 export，這應該是最常用方法，require 也
+      是一樣用法。
+    \item[Default import]: import defaultExport from "module-name";
+      表示 mjs 裡面要有 export default defaultExport 這樣的名字存在。
+      這也可以用來換名字 import defaultExport as alias from "module-name"。
+    \item[Namespace import]: import * as name from "module-name";
+      這個等於把 module-name 換成 name，然後所有 mjs 檔裡面 export 的變數名取
+      用必須透過 name.xxxx 還有 name.default.xxxx 方法。
+    \item[Side effect import]: import "module-name";
+      這個等於以前的 require， shell 的 source，整個 include JS 檔跑一遍。
+  \end{description}
+  在 Linux/Unix 中，import 同目錄下的檔名要用 ./xxx.js ，在 Windows 中，可以
+  只給 xxx.js 即可。
+
+  \subsection{ES6 Arrow function}
+  使用 => 表示一個 function的語法， 以前
+  \begin{verbatim}
+hello = function() {
+  return "Hello World!";
+}
+  \end{verbatim}
+  現在可以用
+  \begin{verbatim}
+hello = () => {
+  return "Hello World!";
+}
+
+() => x 等於 () => { return x; }
+  \end{verbatim}
+
+  \subsection{ES6 Promise 物件與非同步}
+  非同步平行處理是所有高級程式課題，從 OS, 資料庫，到 GUI 都是。只是 GUI 的
+  比較接近終端使用者，他使用的術語有他自己那套 events ...等等。 multiprocess
+  multithread 的用語都是寫 GUI 的那套思維。會把 I/O blocking 跟 fork/exec
+  術語包覆起來。
+  \\\\
+  Javascript 一開始就是為了 browser 上的 GUI，因此設計上就是一個眼睛看不到的
+  大單一 main thread 控制，裡面的函數執行都是平行非同步，不管做什麼都是先註冊
+  一個客製觸發，然後馬上回到這個大 main thread， 所以呼叫回傳都不是得到想要的
+  值，而是一個等待處理的物件，例如檔案系統的 stat()，照理應該要得到 stat 的
+  structure，但 JS 不是這樣的，而是
+  \begin{verbatim}
+pobj = fs.stat()
+....
+pobj.then( (stat) => { console.log(stat.size) })
+  \end{verbatim}
+  所有的客製函數觸發都靠
+  callback 註冊，然後發生 event 時呼叫，當所有註冊沒有結束前，JS main thread
+  不會死掉， 這是跟傳統程式寫作很不一樣的基本觀念。
+
+  \subsubsection{setTimout}
+  傳統 JS 用 setTimeout()，相當於進階的 system call alarm()，設定一個時間後，
+  做什麼事情。最常用的就是 setTimeout(functionRef, delay, param1, param2)
+  \begin{verbatim}
+setTimeout(() => {
+  console.log("this is the first message");
+}, 5000);
+setTimeout(() => {
+  console.log("this is the second message");
+}, 2000);
+tobj = setTimeout(() => {
+  console.log("this is the third message");
+}, 3000);
+console.log("HeHe... I am parent process");
+clearTimeout(tobj);
+  \end{verbatim}
+  setTimeout 不會 blocked，只是會在一個時間後執行某特定程式。
+
+  \subsubsection{物件導向與Promise}
+  在傳統 C 語言中，pass 一個 callback 進一個 function 會很難看的語意，
+  \begin{verbatim}
+func1(arg1, arg2, callback);
+  \end{verbatim}
+  最常見的就是加法，string + string 跟  5 + 5 ，兩個不同的資料型別，
+  在外面想用同樣 function 呼叫，但內部需要用不同方法來做加法
+  \begin{verbatim}
+add(arg1, arg2, callback);
+  \end{verbatim}
+  但物件導向是
+  \begin{verbatim}
+result = arg1 + arg2
+  \end{verbatim}
+  適用於任何資料都可以，傳統 C 語法， 在物件導向程式中很難看，
+  (說實話，物件導向很多都在做這些文字遊戲，就是
+  語法的好看不好看，結果惹出更多新觀念出來加重程式師的痛苦)
+  \\\\
+  使用 Promise 非同步物件， promise 物件跟 setTimout 物件一樣會 fork 一個
+  process 後，不等待像 waitpid() 中使用 WNOHANG，然後可以用 .then() method
+  來處理成功或者失敗，在下一次的 event loop 之前得到 promise 物件的回傳值。
+  他有幾個很常用的 methods, resolve, reject 跟 then
+  \begin{itemize}
+    \item Promise.resolve(value); 回傳一個 Promise 物件，裡面有個隱藏的變數，
+      將來會傳給處理成功的 function 做參數。
+    \item Promise.reject(reason); 回傳一個 Promise 物件，裡面有個隱藏的變數，
+      將來會傳給處理失敗的 function 做參數。
+    \item Promise.then(sucessCallBack, failCallBack);
+    \item Promise.all([ promise1, promise2, ...]) 當所有 promise 陣列
+      fullfilled 後，回傳一個 Promise 物件。
+    \item Promise.any([ promise1, promise2, ...]) 任一 promise 陣列
+      fullfilled 後，回傳一個 Promise 物件。
+  \end{itemize}
+  最簡單的
+  \begin{verbatim}
+const promise1 = Promise.resolve(123);
+
+promise1.then((value) => {
+  console.log(value);
+});
+  \end{verbatim}
+  看個例子來了解一般非同步用法
+  \begin{verbatim}
+const promise1 = new Promise((res, rej) => {
+  setTimeout(() => {
+    res('foo');
+  }, 3000);
+});
+
+promise1.then((value) => {
+  console.log(value);
+});
+
+console.log(promise1);
+console.log("I am parent");
+setTimeout(() => {console.log(promise1);}, 4000);
+  \end{verbatim}
+  constructor 的參數是一個 executer function，constrcutor 直接執行它。 這個
+  function 自動裡面有兩個參數, res 表示 resolve, rej 表示 reject method，
+  設定了 resolve reject methods 後，等待 3 秒後,
+  resolve 送出 foo 字串，這時，then 的 successCallBack 收到 resolve 送來的
+  value 是 foo ，就把他印出來。要特別注意的是，這些都是非同步的，以都不會
+  blocked 原本程式，所有的 then, all, any 都只是註冊一個 event handler，
+  可以看到.then, console.log(promise1), I am parent 都沒有被 blocked，繼續往
+  下走直到等待 4 秒的 setTimout 出現， 然後最後過了 4 秒，印出的 promise 物件
+  字串不同。
+  \\\\
+  第一個console.log(promise1) 會印出目前promise 物件的 status，他有
+  \begin{itemize}
+    \item pending
+    \item fullfilled
+    \item rejected
+  \end{itemize}
+  fullfilled rejected 的條件是呼叫那個 res() 跟 rej()，當呼叫 res(obj)時，
+  就是 fullfilled 了，當呼叫 rej(errobj) 時，就是 rejected 了。也就是先設定
+  ，然後讓他自己跑，後面用一個 then 的程式碼，then 的第一 function 參數是
+  fullfilled 的，第二 function 參數是 rejected 來處理成功失敗。
+  \\\\
+  EMACScript 現在還是繼續不斷出新的語法，但 ES6 是最重大的變化，使用 ES6
+  是最基本的保障。
+  \subsubsection{async function 與 await}
+  如果 function 用 async function 來宣告，那他每次都會回傳一個"新的" Promise
+  物件，自動 resolve 的 value 是 async return 的那個值，reject 的 error
+  是 async function 裡面沒有被處理的 exception，這個 function 物件是為一個
+  AsyncFunction 物件，也因此多工時可以使用 promise 或者 aysync function 兩種
+  是一樣的意思。
+  \begin{verbatim}
+async function foo() {
+  return 1;
+}
+  \end{verbatim}
+  類似於
+  \begin{verbatim}
+function foo() {
+  return Promise.resolve(1);
+}
+  \end{verbatim}
+  當我說類似，表示他不是一樣的，因為他回傳不同新的 promise 物件
+  \begin{verbatim}
+function handle_s(value) {
+  console.log(value)
+}
+async function foo() {
+  return 1;
+}
+pobj = foo();
+pobj.then(handle_s);
+  \end{verbatim}
+  會印出 1 來。
+  \\\\
+  使用例子來看強迫等待的 await 使用
+  \begin{verbatim}
+function resolveAfter2Seconds() {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve('resolved');
+    }, 2000);
+  });
+}
+
+async function asyncCall() {
+  console.log('calling');
+  try { 
+    const result = await resolveAfter2Seconds();
+  } catch (err) {
+    console.log(err)
+    process.exit(1)
+  }
+  console.log(result);
+}
+
+asyncCall();
+  \end{verbatim}
+  當呼叫 asyncCall 時，await 一個 Promise 物件，相當於 block 在這邊等待
+  fullfilled 或 rejected，等於使用 wait() system call，本來呼叫 Promise 或者
+  async function 時回傳一個 Promise 物件，但使用 await 時，會得到那個
+  fullfilled 的值。then 不會 blocked 但 await 會 blocked/synchronized，所以
+  用上 await 時，會像傳統 python script，error control 要用 try catch finally
+  而不是用 promise 的 resolve/reject 或 callback (err,stdout,stderr) 方式。
+  \\\\
+  JS 沒有 sleep 函數，不會 blocked，要 sleep 就要自己用 await setTimeout
+  做一個。
+  \begin{verbatim}
+await new Promise((r) => {setTimeout(r, 1000)});
+  \end{verbatim}
+  await 要在 async 裡面使用， 而且一定要相匹配的 asyn function 與 await，
+  也就是 await 所在最內那個 function 一定要是個 async function，不然就會出錯。
+  有些操作是一定要做 synchronous 的，例如檔案操作等等，所以一定要用 await。
+  \\\\
+  這能與 import() 一起來做 dynamic import，這跟 python 的 \_\_import\_\_
+  一樣意思，能在程式碼中根據條件 import 別的模組。
+  \begin{verbatim}
+(async () => {
+  if (somethingIsTrue) {
+    await import("/modules/my-module.js");
+  }
+})();
+  \end{verbatim}
+  另外在 JS 語言中有內定的 Atomics 物件的 methods 能做 atomic 操作，算是
+  在非同步中的重要工具，同時也能拿來做 blocked 的功能，例如 sleep。
+  \begin{verbatim}
+Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+  \end{verbatim}
+  在一般一行一行同步邏輯中， 很多乍看之下覺得是多此一舉， 但基本上 GUI
+  或者人機界面處理中都是非同步的，因此常用的非同步處理用簡單的界面函數跟
+  術語處理掉，讓程式師簡單的使用非同步處理。
+
+\section{Node.js 與 server side script}
+跨平台說穿了，就是有沒有大神喜歡這個語言，為他在各個 OS 中用 C 再重寫一遍
+編譯出一個新的執行檔而已。而所有功能其實都是靠 library 解決，就是有沒有大
+家寫了一堆的 library 讓這語言連結而有一堆功能。所以 python, perl, ...
+都能跨平台，Javascript 一樣只要有人寫出能解釋這語法的執行引擎，就能在各OS
+跑 javascript 語法寫的邏輯程式。而隨著所有 OS 都要支援美國政府要求的 POSIX
+標準，這樣的程式編譯早就問題不大。
+\\\\
+在以往Javascript 都只能在 broswer 上處理人機界面輸入錯誤處理，圖形處理等，
+不像 perl, python 很早就有跟 System call 溝通的能力，例如 perl, python
+都有提供 fork, exec, open, read/write 等等處理本機事物的library call。因
+此 Javascript 就有大神幫他寫了 Node.js 這個 library ，提供了相對應的系統
+能力，也因此用 javascript 可以寫跨平台的 server/ desktop GUI 程式了。最
+早也有 \href{https://www.electronjs.org/}{Electron JS} 這 library ，這是
+很多程式的後端 library，像 github, vsCode，我記得好像 line 還是 skype 
+曾經嘗試用這寫 Linux 的程式過。
+\\\\
+Node.js 使用 v8 這個 javascript 引擎，並且多加上一些自己定義的環境處理，
+javascript 引擎蠻多家的，不像 python , perl ... 只此一家別無分店，像 C 有
+MS visual C, gnc c, clang ...等。node.js 利用已有 v8 引擎，再加上自己的 c/c++
+程式然後 binding JS，提供新的 system call JS API，就像 perl, python 一樣。
+當然別人一樣也能做，例如 Electron JS 的 fork
+\begin{verbatim}
+utilityProcess.fork()
+\end{verbatim}
+Node.js 的 fork 是
+\begin{verbatim}
+child_process.fork(modulePath[, args][, options])
+\end{verbatim}
+不過他們這 fork 跟 C 的已經差別很大了，只是故意名字類似，事實上跟原本C 呼叫
+的含意都不一樣了。
+GUI 也是一樣的道理而已，就是把 JS 的呼叫轉成 X 或 Windows 的呼叫。
+現在有很多這種 JS 引擎，除了 node.js, electronjs, 還有像 bun, deno等等，
+不過還是玩 node.js 比較齊全，
+首先要 \href{https://nodejs.org/en/download}{下載 node.js}
+
+  \subsection{npm 與 library, module}
+  只要程式語言就會有 library 堆疊問題，就一定要有套件管理，所以 Node.js
+  出了 npm 管理，npm 不只 package 管理，也是軟體 project 管理， release
+  等功能於一身的管理程式。
+  \begin{itemize}
+    \item 用npm 啟動 project 管理與 package 管理
+      \begin{itemize}
+        \item mkdir proj
+        \item cd proj
+        \item npm init
+      \end{itemize}
+      就會建立一個 package.json 檔案，這個檔案是 node.js 最重要的檔，相當多
+      的設定，文件有四個 Modules 開頭文件。由此開始，在 init 時，有一個 entry
+      point ，他像是C 裡面的 header .h 檔案，任何project module 要 export 
+      的變數，api 都在這裡，在 web application 的 framework 中，就是 app.js 
+      。 當別人引用這個 library 時，會用 require() ，這個填入的就是 entry
+      point 名字，然後有個相對應的 JS 檔，內定是 index.js，所以自己要新建
+      這個 JS 檔。
+      \\\\
+      npm test command，主要是 package.json 裡面的 scripts 定義名字， 這個定
+      義用 npm test, start, run, run-script 跑自己寫的 js 檔都是一樣的。
+      必須自己往 package.json 裡面加上自己想要的命令，通常 unit-test 是要自己
+      這邊加進去，內定就是 shell echo 字串離開而已。
+    \item npm install <package-name>@<version>
+    \item npm test
+    \item npm run, npm run xxx
+  \end{itemize}
+  npm install 會產生一個 node\_modules 的目錄， node.js 在模組引用上
+  比 JS 語法引擎會多做處理，例如之前說的 require, import 的差別，還有如果在
+  node.js 裡面使用 require 會自動搜尋相對
+  node\_modules 下的程式庫，這是一般 JS 引擎不會做的，也就是像 PYTHONPATH
+  會自動有 node\_modules，所以這邊真的要小心 JS 跟 node.js 環境是不一樣
+  的。 在 node.js 中 package.json 跟 node\_modules 就是最根本的兩個起始。
+  \\\\
+  JS 原本就沒有像 python 那樣分 package 目錄, module 檔案，node.js 這邊多了
+  package 與 node\_modules package 目錄, 與實做 JS 模組檔，把 package 的資訊
+  放進 package.json 檔案去，這樣的分層管理比較沒有 python 的模組命名問題。
+  其他重要安裝命令，對於套件來說，無非就是搜尋，裝了什麼，dependency
+  \begin{itemize}
+    \item npm uninstall
+    \item npm update
+    \item npm search
+    \item npm ls
+    \item npm query
+    \item npm publish
+  \end{itemize}
+  搜尋其實應該是去\href{https://www.npmjs.com/}{npmjs}網站搜尋，
+  node.js 的內定模組是屬於內部 source 的一部分，定義在 lib/node\_modules 下的
+  npm/node\_modules/builtins/index.js， 所以一個簡單的 8080 http server
+  \begin{verbatim}
+var http = require('http');
+
+http.createServer(function (req, res) {
+  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.end('Hello World!');
+}).listen(8080);
+  \end{verbatim}
+  裡面的 http 模組是看不到 js source code，他是在
+  \href{https://github.com/nodejs/node/tree/main/src}{c++} 裡面 implemented。
+  所有模組的文件在\href{https://nodejs.org/docs/latest/api/}{nodejs 網站docs}
+  \\\\
+  而一個 module 裡面含有另外 module，就很簡單在這目錄下重複剛剛的步驟，或者
+  直接是一個 JS 檔案放在 node\_modules 下。
+  \\\\
+  從 8.5.0 開始， node.js 支援 ES6 module 與傳統 module
+  \begin{itemize}
+    \item 使用 ES6 方法的 import/exports/class module 的方法 
+      \begin{itemize}
+        \item 副檔名用 mjs
+        \item 在 package.json 加個 \verb="type" : "module"=
+        \item 使用 node 命令時，使用 \verb=--=input-type module
+      \end{itemize}
+    \item 用傳統的為 common JS
+      \begin{itemize}
+        \item 附檔名用 cjs。在 node.js 中
+        \item 在 package.json 加個 \verb="type" : "commonjs"=
+        \item 使用 node 命令時，使用 \verb=--=input-type commonjs
+      \end{itemize}
+  \end{itemize}
+  import, require 不能出現在同一檔案中，在 mjs, cjs 只能分別用 import, require
+  的方法。
+  \\\\
+  最後除了 npm, 也有一個叫 yarn 的 package management，是大同小異，有人喜歡
+  用這個。
+
+  \subsection{檔案系統 File I/O}
+  使用
+  \begin{itemize}
+    \item fs 模組
+    \item path 模組
+  \end{itemize}
+  但這邊要特別注意的是很多檔案操作是必須 synchronized 的，必須是檔案狀態已經
+  是某種狀態才能往下操作，例如當要 read/write 時，就是要等 open 處理完，才能
+  往下走，unlink 也要有檔案才能砍掉檔案，
+  因此 fs 模組裡面會特別提供一些 sync 的 API，Javascript 在使用上要小心非同步
+  API，很多都是一直往下走得非同步，忘記這點，會讓程式處理檔案邏輯變得跟傳統使
+  用 C python 不一樣。
+  \\\\
+  檔案系統 fs 模組有 promise 跟傳統 callback 兩種方法做錯誤處理， node.js
+  不再有很麻煩的 open()/read()/write()，而是直接提供非同步的檔案高階操作，
+  \\\\
+  使用 promise 方法，API 都回傳一個 Promise 物件
+  \begin{verbatim}
+const { unlink } = require('node:fs/promises');
+
+(async function(path) {
+  try {
+    await unlink(path);
+    console.log(`successfully deleted ${path}`);
+  } catch (error) {
+    console.error('there was an error:', error.message);
+  }
+})('/tmp/hello');
+
+const fsPromises = require('fs/promises');
+
+// 可直接用 fsPromise.writeFile() 可是這會開開關關檔案
+fsPromise.writeFile('/tmp/file1', 'content data', {'mode': 0o644, 'flag':'a+'})
+
+// 用 open 傳回 fileHandle object
+try {
+  fsPromises.open('file1','w+',0o644).then((fileHandle) => {
+    await fileHandle.writeFile('file1', 'my content')
+  })
+} finally {
+  fileHandle.close() 
+}
+  \end{verbatim}
+  使用 callback 方法
+  \begin{verbatim}
+const { unlink } = require('node:fs');
+
+unlink('/tmp/hello', (err) => {
+  if (err) throw err;
+  console.log('successfully deleted /tmp/hello');
+});
+
+const fs = require('fs');
+
+fs.writeFile('file1', 'my content', (err) => {
+  if (err) {
+    console.log(err)
+  } else {
+    console.log('write file successful')
+  }
+)
+
+  \end{verbatim}
+  簡單 path
+  \begin{verbatim}
+const path = require('node:path'); 
+console.log(path.basename('/home/myhome/myfile'));
+console.log(path.dirname('/home/myhome/myfile'));
+  \end{verbatim}
+  簡單 os
+  \begin{verbatim}
+const os = require('os');
+console.log(os.cpus());
+  \end{verbatim}
+  這些 module 的 API 就跟 python 一樣，就是去查，就該有什麼就有什麼。
+
+  \subsection{subprocess/thread}
+  既然是跟系統連結，那自然就有系統的 multiprocess, filesysem 跟 IPC，Hmm...
+  他的 API 基本上就是懂 system call 就應該看得懂，但 node.js 提供很多高階直接
+  非同步呼叫，而不用自己從 fork/waitpid/exec 慢慢刻出來，例如上面講的 fs 模組
+  就很簡單的 open，然後 write 都是非同步了，主要是 Javascript 本來就不是為了
+  低階應用， 因此直接綁定平行處理為必備使用，掛在每一個物件 library 裡面了，
+  並沒有像 perl,python 提供那麼低階類似系統呼叫的 fork/waitpid/exec 等呼
+  叫，而使用
+  \begin{itemize}
+    \item process 模組設定或回傳 process 的 attributes，像 pid, uid ...。
+      但 process 物件雖然有些操作仰賴 process 模組，但他是 EventEmitter 物件，
+      自動跑一個 JS 檔，不用宣告就有的物件，代表目前跑的 process。
+    \item child\_process 模組執行外部程式，不需要像 C system call 那麼麻煩，
+    \item tty 模組 當 JS 被 node.js 執行並且發現在 tty 環境中，這會自動 init
+      一個 process 物件, process.stdin 是 tty.ReadStream, process.stdout,
+      process.stderr 是 tty.WriteStream 物件。
+    \item worker thread 是 node.js 提供的 thread 方法，這跟 child process 的
+      fork 都才有提供 IPC 的能力。
+  \end{itemize}
+  process 一般資訊
+  \begin{verbatim}
+console.log(process.pid);
+process.stdout.write("write to the standard out of current process\n")
+  \end{verbatim}
+  簡單的 shell 外部命令使用
+  \begin{verbatim}
+const { exec } = require('node:child_process');
+exec('echo $HOME | grep -i home', (error, stdout, stderr) => {
+        console.log(stdout);
+  }
+);
+  \end{verbatim}
+  可以看出，物件導向語言很麻煩的是，所有執行結果都會封在一個物件裡面，要
+  進一步處理，都要用他的物件裡面的物件，並且用他的 API methods 處理，這也是
+  物件導向程式特性之一。總共有 4 個執行外部程式手段
+  \begin{verbatim}
+child_process.exec(command[, options][, callback])
+child_process.execFile(file[, args][, options][, callback])
+child_process.spawn(command[, args][, options])
+child_process.fork(modulePath[, args][, options])
+  \end{verbatim}
+  其中只有 exec 的參數不用放在 array 中，也比較像在 shell 執行命令一樣，
+  所以他其實是會先產生一個 shell 來執行，像 system()，其他用 arguments
+  array 的，就沒辦法解釋 shell 的一些奇怪的字元。
+  \\\\
+  這些都是非同步執行， 當要執行 multi process 時， 這些都是會
+  背景執行的， 就像 shell 執行命令加上 \& 符號一樣。 也就是傳統 C 用 fork
+  然後在程式中， 自己拆開 child pid 然後 exec 這麼不直覺的事情， JS 就不用了，
+  他完全都是自動非同步執行。
+  \\\\
+  exec, execFile 有 callBack 有三個參數處理 error,stdout,stderr 三個物件。
+  \\\\
+  spawn 跟 execFile 一樣，但由於他不像 execFile 只是存在小 buffer 裡，200kB
+  而已， spawn 的 child process 的 output 是存在一個大 file stream 裡面，
+  因此如果 output 很大要處理，用 spawn 才對。
+  \\\\
+  fork 只能執行 JS，無法執行 shell command，binary，
+  \\\\
+  這四個都會回傳一個 ChildProcess 物件，用 fork ，還會建立一個 ChildProcess
+  channel 物件，可用來做 IPC message channel，以及相關 channel 操作 ，例如
+  disconnect(), send()，kill()，所以 fork 是裡面唯一沒有 shell 這個選項的
+  \\\\
+  沒有 callback 的 spwan/fork stdout, stderr 處理要用 event 的 on
+  \begin{verbatim}
+// 用 spwan
+const { spawn } = require('node:child_process');
+const subprocess = spawn('ls', ['-l']);
+
+subprocess.stdout.on('data', (data) => {
+  console.log(data.toString());
+});
+subprocess.stderr.on('error', (err) => {
+  console.error('Failed to start subprocess.');
+});
+
+// 用 exec
+const { exec } = require('child_process');
+const subprocess = exec('ls -l / | grep vmlinuz', (err,stdout,stderr) => {
+    if (err) {
+      console.log(stderr)
+    } else {
+      console.log(stdout)
+    }
+  }
+)
+
+// 用 execFile
+const { execFile } = require('child_process');
+const subprocess = execFile('node', ['--version',], (err,stdout,stderr) => {
+    if (err) {
+      console.log(${err})
+    } else {
+      console.log(stdout)
+    } 
+  }
+)
+  \end{verbatim}
+  跟原本 Javascript 標準的 Promise  
+  物件關係可用 util.promisify，取得後用原本 Javascript 的 async function
+  \begin{verbatim}
+const util = require('node:util');
+const execFile = util.promisify(require('node:child_process').execFile);
+async function getVersion() {
+  const { stdout } = await execFile('node', ['--version']);
+  console.log(stdout);
+}
+getVersion();
+  \end{verbatim}
+  使用一般 fork 來執行 JS 程式，fork 只能執行 Javascript
+  \begin{verbatim}
+const fork = require('child_process').fork;
+const program = path.resolve('other.js');
+const child = fork(program, [], {
+  silent: true
+});
+console.log(child.pid)
+  \end{verbatim}
+  silent 是 true 表示不會顯示結果到 stdout，但用 fork 好處是 child, parent
+  彼此可以用 message channel 溝通，在 IPC 再說明。
+  \\\\
+  exec 會執行 shell，其他則不會，用 spwan 來執行像 shell pipeline，on
+  必須處理 data 與 close 兩個 event ，其實就是原本的 parent 的 close()
+  呼叫與 child 的 read() 呼叫，沒有呼叫 close(), child 的 stdin read()
+  是會 blocked 的
+  \begin{verbatim}
+const  {spwan} = require('child_process)
+const ps = spawn('ps', ['ax']);
+const grep = spawn('grep', ['ssh']);
+
+ps.stdout.on('data', (data) => {
+  grep.stdin.write(data);
+});
+grep.stdout.on('data', (data) => {
+  console.log(data.toString());
+});
+
+ps.on('close', (code) => {
+  if (code !== 0) {
+    console.log(`ps process exited with code ${code}`);
+  }
+  grep.stdin.end();
+});
+grep.on('close', (code) => {
+  if (code !== 0) {
+    console.log(`grep process exited with code ${code}`);
+  }
+});
+  \end{verbatim}
+  spawn 中的 options 中有個 stdio 的 array
+  \begin{verbatim}
+const spawn = require('child_process').spawn;
+
+const command = 'node';
+const parameters = [path.resolve('program.js')];
+
+const child = spawn(command, parameters, {
+  stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ]
+});
+  \end{verbatim}
+  其中重要的 stdio 參數設定是指跟 parent 的 stdin, stdout, stderr 的關係，
+  是一個 array ，index 分別代表 fd 0, 1, 2, 3 ..... 裡面的字串值
+  \begin{itemize}
+    \item pipe 表示 child 的 0,1,2 到  parent 的 0,1,2
+    \item overlapped 在 unix 系統中，這跟上面的 pipe 是一樣的。
+    \item ipc 這跟 fork 一樣，是會建立 parent child 間的 message channel
+    \item ignore 忽視 child 的這個 fd, 也就是 /dev/null 會等於 child 的 fd，
+      例如 shell 中的 cmd > /dev/null 2>\&1 中需要導到 /dev/null 去。
+    \item inherit parent 的 0,1,2 等於 child 的 0,1,2
+  \end{itemize}
+  使用 tty 模組會自動 init process.stdin, process.stdout, process.stderr
+  ，這些其實是 tty.ReadStream 與 tty.WriteStream 物件，可以直接拿來用。
+  \begin{verbatim}
+'use strict';
+import tty from "tty";
+console.log("TTY width: " + process.stdout.columns);
+  \end{verbatim}
+  傳統 C 的 multiprocess 如果是 fork/exec ，那在 JS 就是用 exec/execFile
+  就達到一樣效果， 如果像傳統 C 程式，從 fork 起，程式內變為 child 的做法，
+  那就是 setTimeout , Promise 做法。
+  \\\\
+  而從 10.5.0 版本開始，也提供了W3C 制定的 Worker class 呼叫，就是當初
+  browser 的 multiprocess，在 node.js 中放在 worker\_threads 這個模組中
+  \begin{verbatim}
+const {
+  Worker,
+  isMainThread,
+  setEnvironmentData,
+  getEnvironmentData,
+} = require('node:worker_threads');
+
+if (isMainThread) {
+  setEnvironmentData('Hello', 'World!');
+  const worker = new Worker(__filename);
+} else {
+  console.log(getEnvironmentData('Hello'));
+}
+  \end{verbatim}
+  \_\_filename 是自身 js 檔名，所以他用 worker fork 了一個 child thread，
+  並且能用 isMainThread 判斷。
+  \\\\
+  不管如何都不要跟 web application 扯上關係， web browser 是 web browser，
+  這裡的 node.js 就是不折不扣的像 perl, python 的 script 語言。很多在講
+  JS thread 的其實都是在說 browser 的 thread 能力。
+
+  \subsection{IPC}
+  GUI 中跟傳統 system call 不同的是，使用者都只是大 library 下的韭菜，跟
+  系統中會隔著一個大的 main thread loop，由這個大 main thread 控管一切，
+  派送不同的 event 與處理相對應的 callback，node.js 不提供 bsd socket,
+  sysv 的 message qeuee, shared memory, semaphore。
+  \\\\
+  在古早jQuery widget set API 有提供一個 on method 來註冊 event 與 handler，
+  Node.js 持續用這個 method 在 events 這個內定模組中，所有有 event 的物件
+  都應該會繼承 events 這個 class 而自動有 on method。以下為 eventEmitter
+  class 物件例子。Node.js 也提供 setImmediate 來馬上執行，不過 web 程式中
+  ，現在是不建議使用這個 setImmediate 的。
+  \begin{verbatim}
+const EventEmitter = require('node:events');
+class MyEmitter extends EventEmitter {}
+const myEmitter = new MyEmitter();
+myEmitter.on('event', (a, b) => {
+  setImmediate(() => {
+    console.log('this happens asynchronously');
+  });
+});
+myEmitter.emit('event', 'a', 'b');
+  \end{verbatim}
+  process 這個物件本身就是一個 EventEmitter 物件，是自動就帶有的 global 物件。
+  \\\\
+  system call 中的 signal, pipe, fifo, socket, SVR4 msg queue, shared memory,
+  semaphore 都是 IPC 手段，但僅有少數提供，大多數都隱藏進他們 GUI 程式師的思
+  維去了。
+  \\\\
+  signal 處理，使用 process.on，process 物件
+  \begin{verbatim}
+process.on('SIGINT', () => {
+  console.log('Receive SIGINT.');
+});
+ 
+function handle(signal) {
+  console.log(`Signal Received is ${signal}`);
+}
+ 
+process.on('SIGINT', handle);
+  \end{verbatim}
+  除了 on 以外，還有 once 可以用來註冊一次性的 event handler。
+  \\\\
+  使用原本 process, child\_process 的 fork，在四種 child process 執行方法中，
+  使用 spawn 可以給 stdio 的參數陣列來設定 parent 跟 child 的溝通關係，
+  使用 fork 可以建立一個內定的父子溝通管道。還回的 object 中有 send()
+  這個 method 可以用來送 message，彼此 process 裡面有 message 這個 event 來
+  呼叫 handler，這個後面 node.js 的 C 實做在 Linux
+  是用 domain socket，在 Windows 是 named pipe，這最後就是不要去管什麼
+  pipe, fifo, shared memory 了，就統一用他的 pipe，在 Unix 系統骨子裡是
+  用 dmoain socket 就是。
+  \\\\
+  child.js
+  \begin{verbatim}
+if (process.send) {
+  process.send("Hello");
+}
+
+process.on('message', message => {
+  console.log('message from parent:', message);
+});
+
+setTimeout( () => {
+  process.exit(0)
+}, 3000);
+  \end{verbatim}
+  parent.js
+  \begin{verbatim}
+const path = require('path')
+const fork = require('child_process').fork;
+
+const program = path.resolve('child.js');
+const child = fork(program)
+
+child.on('message', message => {
+  console.log('message from child:', message);
+  child.send('Hi');
+});
+
+console.log("parent pid: " + process.pid)
+console.log("child pid: " + child.pid)
+child.on('exit', () => {
+  console.log("child exit: " + child.exitCode)
+});
+  \end{verbatim}
+  兩邊都會 blocked 在 system call 的 read() 的等待中，才能互相送 message，
+  child 必須自己 exit， 因為是 socket 程式，所以有 I/O，才會 close()，parent
+  才會看到 EOF 繼續往下走，不然 parent 會一直 blocked 在 read() 中。
+  Node.js 必須等到所有的 exit event 的 handler (listener) 被呼叫了才會結束。
+  \\\\
+  最後在新的 10.5.0 後可以用 worker thread，這裡面也有 message 功能，每一個
+  建立的 worker thread 都有一個 MessagePort 這個內定 channel 跟 boss 溝通，
+  所以他們都有一個postMessage() 這個 methods.
+  \begin{verbatim}
+'use strict';
+
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+import {
+  Worker,
+  isMainThread,
+  parentPort,
+  workerData, threadId,
+  setEnvironmentData, getEnvironmentData,
+  MessageChannel, receiveMessageOnPort, BroadcastChannel
+} from 'node:worker_threads';
+
+// 這些 global variable 是無法像 C/python threading 一樣使用的
+let tcount = 0
+const buffer = new SharedArrayBuffer(1);
+const uint8 = new Uint8Array(buffer);
+
+// new MessageChannel 會得到兩個 MessagePort 物件
+// 使用 receiveMessageOnPort() 來得到 message
+// 如果有一個 new Worker, 這會被執行兩次
+const { port1, port2 } = new MessageChannel();
+port1.postMessage({ hello: 'world' });
+console.log(receiveMessageOnPort(port2));
+
+if (isMainThread) {
+console.log("######################################")
+// worker 使用 BroadcastChannel 來 broadcast message 給所有 thread
+  console.log("boss: " + threadId)
+  // 使用 environment 與 workerData 傳遞 message
+  setEnvironmentData('Hello', 'Use environment!');
+  const worker1 = new Worker(__filename, { workerData: 'Use workerdata!' });
+
+  // 內定有個 MessageChannel 產生 MessagePort 物件
+  // parent 能使用 worker.postMessage 傳 message 給 child
+  // 也能從 child 接到 message
+  worker1.postMessage('Use MessagePort channel to worker and back to boss!');
+  worker1.on('message', (message) => {
+    console.log(message);
+  });
+
+  // BroadCast channel
+  const bc = new BroadcastChannel('testing');
+  let c = 0;
+  bc.onmessage = (event) => {
+    console.log("boss get msg from bc: " + event.data);
+    if (++c == 2) bc.close()
+  };
+
+  bc.postMessage("boss post")
+
+  const worker2 = new Worker(__filename);
+  worker2.postMessage('thread 2')
+} else {
+  console.log("worker: " + threadId)
+  // worker gets message from environment and workerData
+  // Javascript 的 multithread 其實只是 multiprocess
+  // 無法像 C/python 的 multithread access 同一份 global variable
+  tcount++
+  Atomics.add(uint8, 0, 1)
+  console.log(getEnvironmentData('Hello') +
+    ":" + tcount +
+    ":" + Atomics.load(uint8, 0));
+  console.log("child get workData: " + workerData);
+
+  // javascripot 全靠 message passing 存取共同資料
+  // worker 能使用 parentPort.postMessage 傳 message 給 boss
+  parentPort.on('message', (message) => {
+    console.log("thread: " + threadId + " " + message);
+    parentPort.postMessage("thread: " + threadId + " toBoss " + message);
+    parentPort.close()
+  });
+
+  // Broadcast.postMessage 只能由 worker 傳 message 給其他人
+  const bc = new BroadcastChannel('testing');
+  bc.postMessage('broadcast from every worker');
+  bc.onmessage = (event) => {
+    console.log("worker get msg from bc: " + event.data);
+  };
+  bc.close()
+}
+  \end{verbatim}
+  但這要非常小心，跟正常 C fork 程式不一樣。
+  \begin{itemize}
+    \item multiprocess 但 global 的程式碼都會被執行，所以會有執行兩份，一直
+      到 isMainThread 這個 branch 才會分開。
+    \item 他這不是 multithread，global variable 不會被共同看見。
+    \item 目前用 node.js 20.11.1 但 broadcast channel 完全沒有文件上說的
+      broadcast 效果，只能 worker 往 boss 發出而已。
+  \end{itemize}
+  Javascript 當初並沒有想那麼多，只能用 message passing 做到憋腳的 multiple
+  processing，然後後面用 message passing，完全是 GUI 人的想法。所以 worker
+  thread 基本上還是用 message passing 方法來溝通兩個 thread (process)。
+  任一個 message passing channel 就是 socket 程式，沒有 close() 就會 block
+  住。
+  \\\\
+  要做到像
+  c 真的 threading，使用 global 變數來讓兩個執行 function 溝通，是沒有辦法的，
+  即使用 EMACScript 2017 年 global 的 SharedArrayBuffer ，也還是需要
+  postMessage 丟來丟去，是非常沒有意義的做法。
+  \\\\
+  message passing 或者可以用外部 package 的 message 來做 IPC，
+  兩個不相干 process 通常用 socket， install node-ipc 模組
+  \\\\
+  process 1
+  \begin{verbatim}
+  const ipc = require('node-ipc');
+
+ipc.config.id = 'a-unique-process-name1';
+ipc.config.retry = 1500;
+ipc.config.silent = true;
+ipc.serve(() => ipc.server.on('a-unique-message-name', message => {
+  console.log(message);
+}));
+ipc.server.start();
+  \end{verbatim}
+  process 2
+  \begin{verbatim}
+const ipc = require('node-ipc');
+
+ipc.config.id = 'a-unique-process-name2';
+ipc.config.retry = 1500;
+ipc.config.silent = true;
+ipc.connectTo('a-unique-process-name1', () => {
+  ipc.of['jest-observer'].on('connect', () => {
+    ipc.of['jest-observer'].emit('a-unique-message-name', "The message we send");
+  });
+});
+  \end{verbatim}
+  他這是有 unix domain socket 也有 tcp socket 的，只是這個例子用最簡單
+  message， 還有其他 message queue 工具，像rabbitMQ, redis ... 等，只是這
+  些是外來的，包括 node-ipc 都是外來的模組。
+  \\\\
+  javascript 的學習也很豐富，主要還是要多做從做中學，不做，永遠都在 
+  hello world。
+  \href{https://github.com/lydiahallie/javascript-questions}{Javascript問答}，
+  還有一個跟 web application 有關的
+  \href{https://github.com/wesbos/JavaScript30}{Javascript 30天挑戰}，
+  Javascript 關於web application 的應用，留待網路 API 再解說。
+
+  \section{JSDoc}
+  Javascript 有個 API 文件產生器 jsdoc，跟 pydoc, doxygen 類似的 comment
+  寫法。先安裝
+  \begin{verbatim}
+npm install -g jsdoc
+  \end{verbatim}
+  然後在 JS 檔的 function, class 上方
+  \begin{verbatim}
+/**
+ * This is a function.
+ *
+ * @param {string} n - A string param
+ * @param {string} [o] - A optional string param
+ * @param {string} [d=DefaultValue] - A optional string param
+ * @return {string} A good string
+ *
+ * @example
+ *
+ *     foo('hello')
+ */
+
+function foo(n, o, d) {
+  return n
+}
+
+jsdoc foo.js
+  \end{verbatim}
+  @param, @return, @example ... 這些稱為
+  \href{https://jsdoc.app/#block-tags}{tags}，
+  用 \verb={}= 框起來的為資料型別 type。用 \verb=[]=框起來的是 optional的
+  參數。 只要根據定義標準寫完，用 jsdoc 命令就能在 out 這個目錄下轉出 html
+  文件。
+  \\\\
+  由於他設定太多，所以要用個 json 檔案做 jsdoc configuration 設定，如果有
+  玩過 Doxygen ，這個就相當於 Doxygen 檔。
+  \begin{verbatim}
+jsdoc -c /path/to/conf.json
+  \end{verbatim}
+  type 例子
+  \begin{verbatim}
+type:
+@param {string=} n 	Optional
+@param {string} [n] 	Optional
+@param {(string|number)} n 	Multiple types
+@param {*} n 	Any type
+@param {...string} n 	Repeatable arguments
+@param {string} [n="hi"] 	Optional with default
+@param {string[]} n 	Array of strings
+@return {Promise<string[]>} n
+
+typedef:
+@typedef {Object} Song
+@property {string} title - The title
+@property {string} artist - The artist
+@property {number} year - The year
+  \end{verbatim}
+
+  \section{nmp package 的產生}
+  類似 perl, python 的 package ，但不一樣的是通常不會用檔案形式的 package，
+  他的 package 有下面幾種情況
+  \begin{enumerate}
+    \item 一個目錄，藏著 package.json 之前說的那些檔案。
+    \item 一個 tar.gz 檔，是第一形式的壓縮檔。
+    \item 一個 URL 指向一個tar.gz 檔。
+    \item 一個 <name>@<version> 字串，而這個字串是 public registry 註冊的。
+    \item 一個 <name>@<tag> 字串由上一個字串 public registry 註冊 tag。
+    \item 一個 <name> 字串，然後這個 public registry package 有 lastest 這個
+      tag 註冊。
+    \item 一個 git url 指向第一形式的目錄，在 package.json 的 "repository" 
+      設定。
+  \end{enumerate}
+  這個是在 package.json 裡面可以指定的。基本上當說要建造 package，其實是要
+  把自己的傑作送上 npmjs.org 註冊的，當然也可以自己 tar.gz 但就自己站在目錄
+  上面打包就好。
+  \\\\
+  npmjs 維護一個網站與 registry 資料庫，可以有公開與私有的註冊，也有付錢註冊
+  ，維護更多選項包含商業，付費等 package 維護。
+  可以從單一 npm 命令產生。package 有
+  \begin{itemize}
+    \item private package(也叫scope package), package 名字用 @xxx/pkg-name 形式，
+      "exports": "./index.js"。這種 package 是要註冊付費會員的。
+      \begin{itemize}
+        \item User-scoped private packages,只能自己存取或指定特定人存取。
+        \item Organization-scoped private packages, 能由一組公司人員存取。
+      \end{itemize}
+    \item public package, package 名字用 pkg-name。
+  \end{itemize}
+  首先要先去 https://registry.npmjs.org 建立會員，然後要login
+  \begin{itemize}
+    \item npm login
+    \item npm publish 這是 publish 一個 private package
+    \item npm publish \verb=--=access public
+  \end{itemize}
+  以下為練習範例
+  \begin{verbatim}
+  ls . -R
+  file-progress-bar.js node_modules package.json unit-test.js
+
+./node_modules:
+numfmt
+
+./node_modules/numfmt:
+index.js  package.json  unit-test.js
+  \end{verbatim}
+  \begin{itemize}
+    \item 我這個叫 file-progress-bar 的模組下面還有一個 numfmt 的模組，被
+      file-progess-bar.js 引用。
+    \item 每個裡面有一個 unit-test.js 的測試檔，所以在 package.json 中，
+      "scripts" 會有這個 unit-test.js entry。
+    \item 我這裡面都用 ES6 module 的方法寫，所以 package.json 中會有
+      "type": "module"
+  \end{itemize}

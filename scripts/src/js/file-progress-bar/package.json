@@ -1,0 +1,15 @@
+{
+  "name": "file-progress-bar",
+  "version": "1.0.0",
+  "description": "file progress bar implementation",
+  "main": "file-progress-bar.js",
+  "type": "module",
+  "scripts": {
+    "test": "node unit-test.js"
+  },
+  "keywords": [
+    "progress"
+  ],
+  "author": "Cyril Huang",
+  "license": "GPL-3.0-or-later"
+}
