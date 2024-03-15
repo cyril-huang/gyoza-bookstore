@@ -1,0 +1,86 @@
+%      Copyright (c) 2014, Gyoza Book Store
+%      Permission is granted to copy, distribute and/or modify this document
+%      under the terms of the GNU Free Documentation License, Version 1.1
+%      or any later version published by the Free Software Foundation;
+%      with the Invariant Sections being LIST THEIR TITLES, with the
+%      Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+%      A copy of the license is included in the section entitled "GNU
+%      Free Documentation License".
+
+\documentclass[a4paper,10pt,twoside]{book}
+
+\usepackage{fontspec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{xeCJK}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{array}
+\usepackage{makeidx}
+
+\usepackage{layout}
+\usepackage{pifont}
+\usepackage{amsmath}
+\usepackage{mflogo}
+\usepackage{metalogo}
+
+\usepackage[margin=2cm]{geometry}
+
+\parindent=0pt
+\setCJKmainfont{TW-Sung}
+\setmainfont{Noto Sans Mono}
+\makeindex
+
+\hypersetup{
+  backref,
+  unicode=true,
+  bookmarks=true,
+  pdfauthor=Cyril Huang,
+  colorlinks=true,
+  breaklinks=true,
+  hyperfigures=true,
+  pdfstartview=FitH,
+  linkcolor=blue
+}
+
+\lstloadlanguages{bash,[ANSI]C,[gnu]make}
+\lstset{basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries
+}
+
+\pagestyle{fancy}
+\fancyhead[RO]{\small\bfseries\rightmark\ \ \thepage}
+\lfoot{餃子出品必屬佳作}
+\cfoot{}
+\rfoot{}
+
+%  \includegraphics{images/gyoza.eps}
+  
+\title{自由的軟體開發工具v2}
+\author{
+  cyril\_huang@gmx.com\\
+  餃子出版社
+}
+\begin{document}
+  \maketitle
+  \tableofcontents
+  \newpage
+  就像傳統工業工程上的製程一樣，軟體工業也有他的製作流程與管理，這些流程所
+  需要的管理必須有工具來執行。
+  \\\\
+  以我們公司來說，我們還包括了opensource的asset管理，主要是現在已經沒有人在
+  從頭開發所有的軟體了，所有的embedded系統已經全部走向Linux/BSD了，大部份系
+  統通通都是拼裝出來的，裡面全都是opensource的套件，這裡面的法律跟license
+  遊戲規則是必須遵守的，跟公司利益有衝突的都必須小心，所以也有這asset管理。
+  不過有的管理軟體是公司內部自己實作的。
+  \include{editor}
+  \include{srm}
+  \include{analyser}
+  \include{compiler}
+  \include{build}
+  \include{debug}
+  \include{package}
+  \include{testing}
+  \include{devops}
+\end{document}

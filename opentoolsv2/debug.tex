@@ -1,0 +1,624 @@
+\chapter{除錯工具}
+寫完程式編譯完成了，跑出來的結果卻不是我們要的，所以一定又有bug了，
+基本上最簡單的除錯或者有效的還是用印出來的logger，一般logger是起始project第一
+個要做的API，通常就是用以下工具
+\begin{itemize}
+  \item fprintf : 不要忘了因為printf到 standard output是buffer I/O，所以有時程
+    式先死掉了裡面的buffer沒有印出來，因此記得印到standard error。
+  \item logger shell 標準logging命令
+  \item syslog 能夠遠端logging並且使用標準logging priority與logging facility
+  \item printk Linux kernel的fprintf
+  \item 各語言的logger library，例如寫 java的人喜歡用的log4j等等。
+\end{itemize}
+運用以上工具在包裝自己想要的wrapper是大部份project的logger API。
+這些API，在編譯，測試，除錯時是要用到的，但有些priority 像 debug message在發行
+的code是沒必要出現的，所以編譯時也有分別。
+\begin{verbatim}
+內部測試時
+gcc -DDEBUG myfile.c
+
+真正發行時
+gcc myfile.c
+\end{verbatim}
+
+\section{gdb基本}
+如果要用debug工具，gcc編譯時不要忘了加-g這個參數，但是會讓你的執行檔
+肥一點。一般用除錯工具要做
+\begin{itemize}
+  \item 載入程式(load)
+  \item 設中斷點(break point)程式跑到這裡會停下來
+  \item 開始跑程式(run)讓程式停在中斷點上
+  \item 慢慢追程式(step, next ...)
+  \item 檢查一些變數值(examine)
+\end{itemize}
+*nix 上的debug工具是gdb, gdb不僅能debug C/C++/Objective-C
+還包括了Fortran, Java, Module 2 還有Ada。gdb有很多frontend, Kdevelop, ddd等。
+只要有debug, trace程式的觀念，GUI的debugger非常容易上手。所以就不介紹，只
+專注在gdb CLI的使用上。gdb是個命令列模式的交談(interactive)除錯器，跟
+telnet或其它的unix交談式程式一樣有個提示符號，然後要下命令
+  \begin{verbatim}
+      
+(gdb)COMMAND
+      
+  \end{verbatim}
+  不要忘了gcc編譯時要加 -g 參數， 基本gdb命令
+  \begin{verbatim}
+      
+檔案處理
+========
+file a.out                 載入可執行檔a.out
+path                       告訴gdb obj code在那
+directory                  告訴gdb source code在那裡
+
+SHELL
+=====
+shell ls                   就會執行ls了
+cd xxx                     不過用shell的方法跟Makefile一樣喚起sub shell而已
+                           要真的cd到目錄要用cd
+
+中斷點(Break point and watch point)處理
+=======================================
+break                      設定中斷點 
+clear                      清除中斷點
+delete                     清除中斷點
+disable                    暫時使中斷無作用
+enable                     使中斷再作用
+condition                  進一步設中斷點的條件 如果條件為true則中斷
+commands                   如果中斷了則執行commands與end中的一連串gdb命令
+.....
+end
+      
+      其中
+      中斷點可以用source code的行數來代表(這些資訊藏在ELF格式
+      裡的.line這個section裡)，也可以用中斷點的流水號來表示
+      
+br                         在目前位置設中斷點
+br 100                     在100行中斷
+br func1                   在func1中斷
+br +100                    目前位置+100行中斷
+br *0x08048123             在這位址中斷
+br file.c:100              因為如果是多個c檔案時指定file.c
+tbreak                     同break的寫法 不過中斷一次後 此中斷點就失效
+br 100 if (var == 5)       條件中斷 後面跟著c語法的條件判斷式
+br 100                     在第100行中斷並且執行command...end中的gdb命令
+commands
+  silent
+  printf "x is %d\n",x
+end
+break String::func1        C++ Function Overloading的中斷 String是class
+
+clear 100                  清除中斷點  後面跟著行號或函數名
+clear func1
+
+delete 5                   清除5號中斷點  後面是中斷點流水編號
+disable 3                  暫時使3號中斷點沒作用  後面是中斷點流水編號
+enable 2                   使2號中斷點作用  後面是中斷點流水編號
+
+condition 3 (var > 3)      設3號中斷點的條件 如果條件為true則中斷
+condition 3                清除3號中斷點的條件
+
+程式執行
+========
+set args xxx               給執行程式參數xxx，就是main裡的**argv            
+run                        開始跑程式
+continue                   中斷後繼續跑
+next                       往下跳一步c程式 如果有副程式 執行完整個副程式
+step                       往下跳一步c程式 如果有副程式 追進副程式
+until                      跳離一個while for迴圈
+nexti                      往下一步CPU組語的指令(Instruction)執行完整個副程式
+stepi                      往下一步CPU組語的指令(Instruction)追進副程式
+until                      執行到source code的行數比目前的大
+                           如果目前所在行是loop的最後一行就會跳離loop
+
+程式變數值(data)處理
+====================
+print var                  看var的值
+print &amp;var             印出var的位址(其時這就是C 啦)
+print *var                 印出*var值 var是pointer
+display var                display會每次step, next時都會印出值來,print只印一次
+print (var=value)          設var的值為value
+                           其實print 可以只用p代替 很多指令都可以簡寫代替
+p/x                        /x表示印hex值
+                           /u表示unsigned digit
+                           /d    signed digit
+                           /t    二進位值
+                           
+                           /是列印的選項 在Solaris上的adb也有相似形式
+x/3uh 0x8048012            印出記憶體
+                           其中
+                           3表示看3個
+                           u      unsigned digit(跟上面p命令一樣意義) 
+                           h      halfword就是2bytes(bhwg分別是1248bytes)
+
+GDB內定變數(跟程式變數不一樣喔)
+===============================
+一些gdb方便的變數(convenience variable)
+$_                         用x命令所得到的最後一個位址
+$__                        用x命令所得到的最後一個位址的值
+$_exitcode                 程式離開的code就是用exit時的code
+
+CPU暫存器(registers)
+$pc                        program counter就是目前cpu指到的執行位置啦
+$sp                        stack pointer
+
+訊息觀看與設定
+==============
+info                       得到一些program debug資訊
+                           info break
+                           info frame
+                           info display
+
+                           info program
+                           info share
+                           info registers
+                           
+show                       得到一些系統(OS, CPU Arch), GDB資訊
+                           show args       (系統傳進來的argv[0],argv[1]...)
+                           show os         (OS是什麼)
+                           show endian
+                           show prompt     (gdb的提示符號)
+
+list                       看原始碼
+                           list x  從第x行的source code印出，x不寫從目前行印出
+	                   list *addr  秀出addr所在source code的行
+                                       可以先用info program找出目前PC的值
+                                       再用list *addr
+                           search REGEXP 在目前source code做RE搜尋
+
+disas                      想看machine code用這個
+
+whatis var                 告訴我var的資料型別是啥 int, char or double
+ptype var                  告訴我var的資料型別是啥 這用來看struct用的
+
+set                        設定gdb, 系統的控制變數值(這些變數不是program內的)
+                           set listsize xx  設定要看xx行source code
+                           set $pc xx       把PC設到 xx
+                           set convenience可以自己設變數
+
+help                       可以得到命令HELP
+
+程序與副程式(process and sub-function)
+======================================
+backtrace(bt)2             程式執行到這裡前的兩個副程式，2不寫則列出全部
+frame        2             選擇2號frame跳過去  2不寫就列出現在執行到那裡
+up           2             往上走2個副程式
+down         3             往下走2個副程式
+return       expression    不要玩了,回到上一層呼叫的routine去並return一個值
+finish                     繼續玩完一個選擇的stack frame(副程式)
+
+kill                       砍掉child process
+signal       procss-id     送signal給process
+attach       procss-id     debug一個已經在記憶體跑的process
+detach       procss-id     釋放attach的process脫離gdb的控制
+  \end{verbatim}
+  其中每次程式呼叫副程式時，原本的執行的世界的東西(變數值啊等等)必需先保存起來，
+  然後再跳到新世界(將要執行的副程式)這就是stack，每叫一個sub routine就等於進到
+  一個stack frame
+  \begin{verbatim}
+
+(gdb)frame 2 
+
+  \end{verbatim}
+  就是選擇2號frame，而0號frame就是目前在執行的副程式，1號是呼叫0號的副程式，以
+  此類推，finish搭配frame這個命令來用
+  \\\\
+  所以bt這個命令很重要，可以追回之前叫了那些function來到目前的地方。
+  通常在命令列也有類似的追蹤system call的程式，因為system call很重要，
+  在Solaris上我們可以用
+  \begin{verbatim}  
+$ truss prog1
+  \end{verbatim}  
+  在Linux上
+  \begin{verbatim}  
+$ strace prog1
+  \end{verbatim}  
+  來看現在程式到底叫了甚麼system call導致他毀掉。
+  \\\\
+  attach, detach必需在有支援process 的環境，因為有的沒記憶體保護OS，或embadded 
+  system沒有支援，另外也要有能力送signal給process的環境才行，這主要可以來debug
+  deamon或做multiprocess的除錯      
+  
+  \subsection{訊號(signal)處理}
+  除了可以送signal給程式外孩可以指定如何處理signal
+	
+  \begin{verbatim}
+handle signal keyword
+  \end{verbatim}
+  signal是下面其中一個
+  {\small \begin{verbatim}
+(gdb) shell kill -l
+1) SIGHUP   2) SIGINT   3) SIGQUIT  4) SIGILL   5) SIGTRAP
+6) SIGABRT   7) SIGBUS   8) SIGFPE   9) SIGKILL 10) SIGUSR1
+11) SIGSEGV 12) SIGUSR2 13) SIGPIPE 14) SIGALRM 15) SIGTERM
+16) SIGSTKFLT 17) SIGCHLD 18) SIGCONT 19) SIGSTOP 20) SIGTSTP
+21) SIGTTIN 22) SIGTTOU 23) SIGURG  24) SIGXCPU 25) SIGXFSZ
+26) SIGVTALRM 27) SIGPROF 28) SIGWINCH  29) SIGIO 30) SIGPWR
+31) SIGSYS  34) SIGRTMIN  35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+63) SIGRTMAX-1  64) SIGRTMAX  
+\end{verbatim}
+}
+    keyword是
+  \begin{description}
+    \item [nostop] 當接到這個signal時GDB 不要停止你的程式
+    \item [stop] 當接到這個signal時GDB 停止你的程式
+    \item [print] 當接到這個signal時GDB 印出這是什麼sginal
+    \item [noprint] 當接到這個signal時GDB 不印出這是什麼sginal
+    \item [pass] GDB pass這個signal給你的程式 也就是你的程式有能力處理這個siganl
+    \item [nopass] GDB 不會讓你的程式看到這個signal
+  \end{description}
+	
+  \subsection{multi-thread與multi-process除錯}
+  multi-thread mutli-process除錯最討厭的是程式邏輯不再是一步一步，
+  而是會有時這個process or thread執行到一半，時間到就被排程到後面去了，
+  造成輸出的沒有前後關係，所以講到thread/process，就一定要講到OS的Scheduler
+  \\\\    
+  一個thread就是一個sub-routine在同一個process image下，所以常聽教科書說 stack 
+  pointer不一樣 (所以thread的text執行位置還是跟process一樣，
+  不過stack區域每個thread有自己的保存區，原本process的是在最下面)
+  programe couter(就是目前CPU應該指到的執行位置)不一樣，
+  可以同時access變數(所以此變數為global變數)，
+  其實只要說是可以fork subroutine的就是thread，
+  看一下前面Linux的執行image， 然後真的寫個multithread程式就懂了，
+  以pthread而言
+  \begin{verbatim}
+pthread_create(&t_id, &t_attr_obj, sub_func_name, &arg);
+  \end{verbatim}
+  這就是一個thread的建立方法，每次呼叫這個就會把一個執行的單位(context)放到
+  OS的scheduler後面去。等到一個個的執行一直到這個context了，就會被執行了。
+  \begin{verbatim}
+pthread_join(t_id, &status)
+  \end{verbatim}
+  相當於waitpid()會block住的等著這個要返回的thread，status是個指標的指標**status。
+  其中作為thread的副程式如果要還回一個值，通常要還回一個指標型的位址，指著一串的還回值。
+\begin{verbatim}
+void * func_thread(void *arg)
+{
+       xxxxx
+       xxxxx
+}
+\end{verbatim}
+ arg就是在create的傳進去的arg，sub\_func\_name就是這個func\_thread副程式名。
+ return必須return一個pointer。(compiler有的不會complain傳回不是void *，
+ 其他有的compiler就會complain)
+ \\\\
+  multi-thread程式中比較常見的錯誤是如果caller thread不等forked thread，
+  也就是不join， 而傳遞local變數像在用一般程式傳遞， 因為local變數如果副程式走完了
+  stack也消失了， 而scheduler的單位是thread， 此時forked thread往往得到錯誤的值，
+  thread的除錯跟傳統的很像，只是要追蹤thread編號
+  \begin{verbatim}
+info threads                   跟info frame很像看thread號碼(pthread_create的ID)
+thread xxx                     跳到xxx號thread
+break 13 thread 2              執行第二號thread時在第13行中斷
+break frik.c:13 thread 28 if bartab > lim
+  \end{verbatim}
+  break 的用法跟一般一樣，不過多一個thread的字眼其餘是一樣的
+  multi-process 用gdb其實沒什麼， 只能在fork後的小孩放個sleep，
+  讓child進到sleeping狀態停住， 然後再開一個gdb用attach的方法把小孩叫進來，
+  在不同的process(就是不同的gdb啦所以要另外喚起一個gdb)中切換trace，
+  每走一步每改一個想要的值，這相當於把多個process放到gdb來控管，
+  以下面程式做例子
+  \begin{verbatim}
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int func2 ()
+{
+        int c;
+        static int d;
+
+        return 2;
+}
+static int func1 ()
+{
+        static int b;
+        int *c;
+        int d;
+        func2();
+
+        return 1;
+}
+
+int main()
+{
+	int a, pid, status;
+        tid_t &tid;
+
+	if ((pid = fork()) < 0)
+                printf("fork error");
+	else if (!pid) {  /* child */
+                sleep(100);
+                a = 1;
+                printf("I dont want to be a zombie");
+	}
+	else {
+	        printf("I dont want to be a orphaned");
+	        waitpid(pid, &status, 0);
+                a = 100;
+	}
+
+        pthread_create(func1);
+        pthread_join()
+	return 0;
+}
+  \end{verbatim}
+  先開一個gdb並且用file命令來load進a.out在parent直接run
+  \begin{verbatim}
+GNU gdb 19990928
+Copyright 1998 Free Software Foundation, Inc.
+GDB is free software, covered by the GNU General Public License, and you are
+welcome to change it and/or distribute copies of it under certain conditions.
+Type "show copying" to see the conditions.
+There is absolutely no warranty for GDB.  Type "show warranty" for details.
+This GDB was configured as "i686-pc-linux-gnu".
+(gdb) file a.out
+Reading symbols from a.out...done.
+(gdb) run
+Starting program: /home/cyril/tmp/a.out
+  \end{verbatim}
+  由於我們放了waitpid()，爸爸會停下來
+  再開一個gdb也把a.out load進來，並且用shell ps -aef|grep a.out來看
+  child的process id並且把它attach進來
+  \begin{verbatim}	
+cyril    26689 26678  0 12:20 pts/1    00:00:00 /home/cyril/tmp/a.out
+cyril    26690 26689  0 12:20 pts/1    00:00:00 /home/cyril/tmp/a.out
+cyril    26691 26687  0 12:20 pts/5    00:00:00 ps -aef
+(gdb) attach 26690
+Attaching to program: /home/cyril/tmp/a.out, Pid 26690
+Reading symbols from /lib/libm.so.6...done.
+Reading symbols from /lib/libc.so.6...done.
+Reading symbols from /lib/ld-linux.so.2...done.
+0x400b2081 in nanosleep () from /lib/libc.so.6
+	
+	0x400b2081是libc裡的sleep這個function，我們不要理它，所以我們下
+	
+(gdb) return
+	
+	讓它回到我們main裡來
+	
+(gdb) info program
+Using the running image of attached Pid 26690.
+Program stopped at 0x400b2081.
+It stopped with signal SIGSTOP, Stopped (signal).
+(gdb) return 
+Make selected stack frame return now? (y or n) y
+#0  0x80486b8 in main ()
+    at debug.c:45
+45                  sleep(100);
+(gdb) s
+Single stepping until exit from function nanosleep, 
+which has no line number information.
+46                  printf("I dont want to be a zombie");
+(gdb) s
+47              }
+  \end{verbatim}
+  可以看到小孩process在我們掌控下了，接下來就可以step, next...來追它了
+  \\\\
+  通常multi-thread中很麻煩的就是有dead lock，
+  \begin{verbatim}
+# ps -aef | grep apa
+root      2189     1  0 Mar04 ?        00:00:59 /usr/sbin/apache2 -k start
+www-data 21759  2189  0 06:25 ?        00:00:00 /usr/sbin/apache2 -k start
+www-data 21801  2189  0 06:25 ?        00:00:00 /usr/sbin/apache2 -k start
+www-data 21802  2189  0 06:25 ?        00:00:00 /usr/sbin/apache2 -k start
+
+# gdb /usr/sbin/apache2 21759
+
+(gdb) info threads
+(gdb) interrupt -a
+(gdb) thread apply all bt
+  \end{verbatim}
+  interrupt -a是把所有threads停下來，然後去抓所有threads的backtrace，就是這樣
+  而已。其他的追steps的方法就跟上面是一樣的。
+  \\\\
+  同樣在後面multi-thread的程式中，我們可以來觀察thread與thread stack的記憶體
+  在Linux中一般程式可以print一些變數或函式名試看看，例如printf() cos()，或者
+  程式的動態變數，static變數， 對照一下之前的"linux下的ELF image"，
+  看一下thread的stack在0x0 ~ 0x08048000，
+  奇怪這片這麼大片的記憶體幹什麼去了， 原來是thread拿去玩了，
+  一般傳統的subroutine呼叫的stack變數從0xbfffffff往上長起，
+  thread frame從0x8048000這邊開始長起
+  \\\\
+  client/server程式除錯， 寫過socket程式的人都知道有個無窮迴圈在那邊等待request，
+  這部份應該跟用multiprocess的方法一樣，只不過變成兩台機器的multiprocess
+  或multithread程式除錯	
+  
+  \section{release image的debug}
+  在使用gcc -g後，整個的obj檔變得非常的大，在真正release時，我們是會用strip
+  把這些多餘的information拿掉的，這些對客戶沒有用但一旦客戶發生問題時，又是
+  非常重要的debug info與symbol tables的資訊，我們必須先把他拿出來，
+    \begin{verbatim} 
+$ gcc -g test.c
+$ objcopy --only-keep-debug a.out a.out.debug
+$ strip a.out
+$ objcopy --add-gnu-debuglink=a.out.debug a.out
+    \end{verbatim} 
+    用objdump -s a.out會發現他多了一個新section，裡面有一個a.out.debug的值。
+    這個a.out.debug就是相對於a.out而只藏有debug info與symbol table的檔案。
+    假設a.out在絕對路徑/usr/bin/下，當用gdb /usr/bin/a.out時他會根據下列順
+    序來找a.out.debug
+    \begin{verbatim} 
+/usr/lib/debug/.build-id/ab/cdef1234.debug
+/usr/bin/a.out.debug
+/usr/bin/.debug/a.out.debug
+/usr/lib/debug/usr/bin/a.out.debug. 
+    \end{verbatim} 
+    其中build-id這是gcc編譯時，多加--build-id的給的，如果沒有就沒有。上面假設
+    build-id是abcdef1234，所以取前面兩碼為目錄名，然後後面id加上.debug檔名。
+    gdb有一些設定path的命令來讓gdb抓到a.out.debug檔案與source。
+    \begin{verbatim} 
+set debug-file-directory 內定就是/usr/lib/debug
+set directories 內定是$cdr目前目錄。
+    \end{verbatim} 
+    要小心的是用debug-file-directory時，他其實是會從這個目錄下去找絕對路徑名的。
+    例如當你gdb a.out時，其實是gdb `pwd`/a.out，gdb會嘗試著去找
+    debug-file-directory/`pwd`/a.out.debug，而不是debug-file-directory/a.out.debug
+    。如果binary很複雜的動態連結自己的so檔。
+    \begin{verbatim} 
+solib-search-path     : 設定so library的搜尋目錄
+solib-absolute-prefix : 設定so library絕對路徑的prefix
+    \end{verbatim} 
+    通常比較大條的都是客戶那邊發生 core dump, 
+    C處理不好的話很容易記憶體跨出範圍， 或者系統毀了(panic)， 這時都會產生
+    一個core dump， 就是毀掉的瞬間記憶體內部的內容會搬到一個檔案core，
+    core file 包含了程式的read/write的memory部份， 也就是程式躺在記憶體時的狀態，
+    executable只是一個可執行檔也就是程式躺在硬碟時。 gdb可以根據這個檔來除錯，
+    只是這時的target是core 或exec 不是remote。
+    通常這可以拿來做系統毀掉時的debug
+    \begin{verbatim}	
+gdb a.out core        命令列上給executable與core file
+target exec a.out     跟file命令不一樣的是exec不load symbol table 
+                      只loadTEXT與initialized DATA這時程式只可run
+                      無法看source code與檢查任何變數
+
+target core core      core file 
+    \end{verbatim}
+    用下面程式做例子
+    \begin{verbatim}
+#include <stdio.h>
+#include <string.h>
+int func2()
+{
+        char *x = 0x0;
+
+        *x = 1;
+        printf("%s", x);
+        strcpy(x, "This is wrong");
+}
+int func1()
+{
+        func2();
+}
+int main()
+{
+        func1();
+}
+    \end{verbatim}
+    先ulimit 設定要產生 core, 跑它之後產生core dump檔並用gdb來看它
+    \begin{verbatim}
+chuang@dsuen-lnx:~$ ulimit -c 1024
+chuang@dsuen-lnx:~$ ./a.out
+Segmentation fault (core dumped)
+chuang@dsuen-lnx:~$ !gdb
+gdb a.out core
+GNU gdb (Debian 7.7.1+dfsg-5) 7.7.1
+Copyright (C) 2014 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from a.out...done.
+[New LWP 5707]
+Core was generated by `./a.out'.
+Program terminated with signal SIGSEGV, Segmentation fault.
+#0  0x000000000040051a in func2 () at core.c:7
+7   *x = 1;
+(gdb) bt
+#0  0x000000000040051a in func2 () at core.c:7
+#1  0x0000000000400562 in func1 () at core.c:14
+#2  0x0000000000400573 in main () at core.c:19
+    \end{verbatim}
+    當然這例子很簡單，不過不用自己一步步追到死掉的地方，
+    gdb a.out core自動用file命令load了symbol table進來，所以我可以用
+    print x來看它。通常捉到問題點就是用bt(backtrace)捉出之前到底叫了甚麼。
+
+  \section{遠端除錯}
+    一般device或者遠端機器上，如果沒有環境跑gdb來除錯，可以用gdb這項特異功能
+    來除錯，或者我在i386機器上跑ddd 或gdb 除錯遠端是 arm64 embedded binary 
+    環境，古時候，有點麻煩的要自己寫 gdb stub 連結 gdb 跟 terminal 的一些能力
+    ，但現在只要 gdb 在local跑， 遠端機器跑 gdbserver 與要被除錯的程式就可以，
+    gdbserver 是 gdb 現在會附上的 remote gdb stub 程式。
+    gdb可以透過serial line或TCP/IP來對遠端除錯， 常用的serial line方法也可以
+    透過terminal console server。假設使用 port 9999 attach process id 5312
+    \begin{verbatim}
+xyz $ gcc -g testing.c
+xyz $ gdbserver :99999 a.out
+    \end{verbatim}
+    本地端
+    \begin{verbatim}
+$ gdb -q
+(gdb) target remote xyz:99999
+    \end{verbatim}
+    通常有
+    \begin{verbatim}
+(gdb) target remote /dev/ttyA
+(gdb) target remote machine:TCP_port (machine 是terminal server)
+(gdb) target cisco machine:TCP_port
+    \end{verbatim}
+    可以直接用 ssh 叫起一個程式或者現在流行的 container
+    \begin{verbatim}
+(gdb) target remote | ssh -T xyz gdbserver - --attach 5312
+(gdb) target remote | sudo docker exec -i e0c1afa81e1d gdbserver - /bin/sh
+    \end{verbatim}
+    傳統上這個要被除錯的可執行檔除了-g 以外還要 link 到一些特殊的sub-routine，
+    這些subroutine是跟機器有關的程式叫stub， 用來在遠端執行然後跟本地的gdb溝
+    通用的， stub跟target CPU有關才知道怎樣控制 target CPU 的 trace 功能，另
+    外stub還要能解釋 gdb 送過來的 message 也就是 gdb 自己溝通用的protocol。
+    所以是伴隨gdb package過來有的程式。
+    \\\\
+    現在有的stub i386-stub.c, sh-stub.c, VxWorks, sparc, m68k...，後來 arm
+    等等，所以新的 gdb 把這些 stub 包成一個 gdbserver ，常用目前的 CPU，可以
+    直接使用不需要自己處理這些了。
+    \\\\
+    這些是伴隨gdb來的.c source code， 例如 i386-stub.c， 這些xxx-stub.c
+    裡面都含有
+    \begin{verbatim}
+set_debug_traps()
+handle_exception()
+breakpoint()
+    \end{verbatim}
+    但是gdb 只曉得CPU 而已，CPU 跟外界溝通的I/O chip gdb不管， 自己必需寫5個
+    低階的函數來溝通。所以去看stub的code都會去呼叫下面函數， 不過這要自己
+    implement。
+    \begin{verbatim}	
+getDebugChar()
+putDebugChar()
+flush_i_cache()
+exceptionHandler()
+memset()     這是ANSI C的標準應該都有的不用寫了
+    \end{verbatim}	
+    也就是set\_debug\_traps breakpoint 負責處理掉 target CPU 中的單步 trace 
+    部份， 並且會處理由gdb送來的訊息，也就是remote protocol知道怎麼處理。像
+    Cisco有他們自己的 protocol。ok gdb經由Host serial port到target，但是target
+    系統中CPU還是要靠 I/O serial chip來跟Host溝通，這邊每家的I/O chip是gdb
+    不知道的，不像Host這邊 OS已經處理掉serial port driver。所以target那邊的
+    gdb stub會去呼叫自己要implement的getDebugChar putDebugChar...。另一種作法
+    是用JTAG， 也就是target CPU跟外界溝通用JTAG，不用serial port，target CPU
+    只跟JTAG 控制晶片溝通，JTAG message protocol算是一種介面，凡是想要給CPU的
+    命令用JTAG的好處是不比針對某個特定CPU寫instruction，有比較大的general特性
+    ，JTAG 會負責跟後面的 CPU 溝通，把該要的 Instruction 轉成這一個 CPU 懂的
+    instruction。如果用這種方法則不需要stub在target CPU上compile，但必須要有
+    個中介box作gdb remote protocol與 JTAG的轉換。(有人在賣這種盒子還貴的嚇人)
+    \\\\  
+    在要被debug的程式最前面需要呼叫
+    \begin{verbatim}	
+set_debug_trap();
+breakpoint();
+    \end{verbatim}	
+    然後編譯時要把這些一起link起來最後丟到遠端機器跑，
+    然後在gdb ddd 下
+  	
+    \begin{verbatim}	
+target remote /dev/ttySx
+or
+target remote machine:TCP_port
+    \end{verbatim}	
+    就可以像正常的gdb用法來用了，不過要注意的是 image 是不是有symbol table，
+    有些image的格式當初編譯時由於是embadded system，image大小很重要，所以拿掉了
+    symbol table。記住gdb參照的symbol table image與source code是在local端，
+    所以local host用gdb命令"path"指的image要有symbol table，這個要跟上一個章節
+    的 release 後的 image 除錯合用。

@@ -1,0 +1,1098 @@
+\chapter{project與build管理}
+我們在前面編譯test.c test1.c 時，發現有很多動作是很重複的，或者整個大 project
+的c cc檔案很多時，編譯過的不想再重編，只想編譯有修改過的c檔，或者編譯時需要
+其他東西配合的相依管理等等。傳統上用 Makefile 做這些，而unix like 的系統彼此
+之間的差異性與相依性在 opensource 中靠 autotools 幫我們處理。
+\\\\
+java 的世界可能用ant, maven，但那語法就是xml語法與他的tag了。現在還多了個
+gradle ，ant 可能是那些不習慣奇怪變數的人發明的，maven 比 ant 好是多了相關
+library 的相依性紀錄與下載，gradle 就是還多了groovy 的 script，這些東西其實
+就是差不多那樣， 也沒什麼好不好的，就跟svn/git一樣，code 寫的亂七八糟，用什
+麼工具都沒用。 不過make可以用熟悉的 shell script， 所以我還是喜歡 make 多一點。
+
+\section{Makefile}
+寫程式寫很大時，我們會分成好幾個模組，就是一個個的C或其他程式語言的
+小檔案。make是編譯大量的 source code 一定要用到的工具，最常用的就是寫一個
+Makefile，他會根據這裡面的目標(target)所定義的規則(rule)來做編譯的
+動作，並創造出可執行的程式來。一般人都會說拿到 source code 不知從何
+讀起，其實除了 README 等文件外，Makdefile 是最能知道程式流程的檔案，
+你可以看 Makefile 然後找到程式的入口檔案，一步步追下去，用我們在
+編輯器講到的方法來追程式。不過現在 Makefile 越寫越專業越來越大也
+不太容易看懂。
+\\\\
+一個 Makefile 其實只是一堆的規則(rule)所組成。一個規則的型式是這樣的
+target:prequiste ; command(新文件變成recipe) 通常是寫成
+\begin{verbatim} 
+target: prerequiste
+	command
+	command
+	command
+\end{verbatim} 
+如果一行不夠寫要分兩行，可以用\verb=\=來變成兩行底下是一個簡單 Makefile 例子
+\begin{verbatim}
+SHELL=/usr/bin/bash
+
+edit:	main.o kbd.o command.o display.o \
+        insert.o search.o files.o utils.o
+        $(CC) -o edit main.o kbd.o command.o display.o \
+        insert.o search.o files.o utils.o
+      
+command.o : command.c command.h
+        $(CC) -o command.o command.c
+
+clean:
+        @rm *.o *~
+\end{verbatim}
+其中定義了 SHELL 這個變數，表示用/usr/bin/bash來解釋shell執行。
+有3個目標 (target) : edit command.o 與clean，
+雖然沒有定義CC這個變數，用了內定變數\$(CC)去編譯程式。
+如果給
+\begin{verbatim}
+$ make clean
+\end{verbatim}
+make會另外叫起一個shell來執行 command 這裡面的字串也就是rm *.o。如果給
+\begin{verbatim}
+$ make edit
+\end{verbatim}
+make會去檢查需要的先決條件(prerequiste)發現有個檔名target command.o 
+存在，會依序根據規則來編譯。rebuild時，會根據target與prerequiste的
+timestamp 決定要不要重新rebuild，如果沒有這檔案，或者有新c檔案等，
+就會重新編譯，不然就只是編譯prerequiste檔的timestamp比較新的檔。當然也可以
+touch directory或使用永遠編譯的選項。
+  \subsection{變數(variables)}
+  像寫程式一樣，make規則裡面的組成可以有動態的值，這時就需要用變數來
+  設值來取代與轉換以及日後維護。另外還有就是有時字太多了，打字打到
+  可能會出錯，這樣除錯起Makefile很不好除錯，用變數代換值可以減少一
+  些打字錯誤。變數也有一些規定，
+  \begin{itemize}
+    \item 字母大小有差。不要用字母數字底線以外的字元。可以有空格在前面後面。
+          (像shell script就不行有空格在變數前後。Var = value跟Var=value
+          是不一樣的)。
+    \item 使用變數用\$(VAR)或者\${VAR}都可以。
+    \item 如果要用\$，請多加一個\$變成\$\$，在Shell Command會用到Shell
+          變數此時就要加\$。
+          \begin{verbatim}
+linuxsubdirs: dummy
+	  set -e; for i in $(Subdirs); do $(MAKE) -C $$i; done
+          \end{verbatim}
+    \item 變數代換有兩種很重要的不同代換。遞迴的變數代換 var  = value 
+	  (recursively expand)只要變數的值又是另一個變數值時，
+	  就會一直代換下去。簡單的變數代換(simple expand) var := value 
+          只代換一次變數的值。傳統的Makefile是沒有var :=的，這是GNU 的
+          \begin{verbatim}
+	  例子
+foo = $(bar)
+bar = $(ugh)
+ugh = Huh?
+	      
+all:
+	echo $(foo)
+	  會echo Huh?
+          \end{verbatim}
+          ，遞迴的方法有個壞處，不能夠加東西上去，例如
+          \begin{verbatim}
+CFLAGS = -Isrc/include
+CFLAGS = $(CFLAGS) -O
+          \end{verbatim}
+	  則會一直玩不完，就慘了，這可以用
+          \begin{verbatim}
+CFLAGS := $(CFLAGS) -O
+或
+CFLAGS += -O
+          \end{verbatim}
+          兩種方法解決，其中 := 又可以寫成 ::= ，這是新的posix 2012定義。
+    \item shell與Makefile變數
+	  wildcard在shell變數中可以展成所有的意義，但是在Makefile中使用要小心,
+          例如
+          \begin{verbatim}
+OBJECTS = *.o
+foo: $(OBJECTS)
+	cc -o foo $(OBJECTS)
+          \end{verbatim}
+          如果目前目錄下有.o檔，會自動展開這些.o檔作 target，如果目前目錄下面
+          沒有.o檔，則wildcard展不開，make並不知道你要的target是那些.o檔，
+	  他以為要去找一個叫*.o的target，這時就會跟你說找不到。但由於implicit
+          rule(內隱規則)中，Makefile會自動去找x.o的生成時，會自動找x.c x.s ...
+          等檔案， 會用內隱規則 \verb=$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<=
+          去編譯，結果就變成 \verb=$(CC) $(CPPFLAGS) $(CFLAGS) -c -o '*.o' *.c=
+          ，但由於 \$< 只是第一個所有先決條件，所以就是 wildcard 還回來的第一個
+          .c 檔案被編譯而已，因此 OBJECTS 要設成 prog1.o prog2.o 這樣的形式比
+          較好。 另外每一行 command 其實是喚起一個 sub shell 來執行所以*.o會被
+          shell, bash 解讀而沒有問題。
+	  cc -o foo \$(OBJECTS) 的 \$(OBJECTS) 是可以展成所有的.o檔的。
+	
+    \item 變數給Shell可以用
+          \begin{verbatim}
+export var1 var2 var3....
+          \end{verbatim}
+	  而想要把shell變數的值傳給Makefile變數有兩個情況，
+	  一個是原本的環境變數自動會變成同樣的Makefile變數名，
+	  可以直接使用。如果兩個有相同的變數名，用make -e 則
+	  Shell的會蓋掉Makefile裡的定義。
+	  另一個狀況是想要根據一個shell的執行傳回的字串來設變數，
+	  這時需要用內建函式，\$(shell shell\_command)
+          \begin{verbatim}
+VAR := $(shell shell_command)
+          \end{verbatim}
+    \item 特定Target的變數
+	  例如
+          \begin{verbatim}
+prog : CFLAGS = -g
+prog : prog.o foo.o bar.o
+          \end{verbatim}
+	  當要編譯 prog 這個target時，才設CFLAGS為`-g'，同時當要編譯
+	  prog.o foo.o,bar.o時也會同時設CFLAGS=-g，這是因為某種設定只為了
+	  某個特定的target才須要，例如程式除錯時就很有用。
+  \end{itemize}
+
+  \subsection{target}
+  目標可以是檔名或者是一個代表動作的識別符號，如果不是檔名的Target叫 phony 
+  target。make根據指定的target來做相關動作。要完成一個目標前會先檢查他所需
+  要的檔案或要先做的phnoy target，即相依性檔案或先決條件目標 (dependency 
+  or prerequiste) 如果要的相依或先決目標不存在，則make會失敗。如果這裡的先決
+  目標是 phony target 則 PHONY TARGET 每次都會被執行。
+  \\\\
+  如果你在 shell prompt 只下 make 命令而已，第一個 rule 永遠被執行。這叫
+  default goal。如果你有指定target名字，例如make clean，則會去執行這個
+  target的動作，以上面例子看就是會執行 rm *.o *~ 這個動作。
+  \\\\
+  \subsubsection{一些目標規定}
+  有些phony目標是GNU建議的，不見得一定要有啦只是建議目標。例如
+  \begin{itemize}
+    \item all           :內定的編譯動作
+    \item install       :安裝binary檔的動作
+    \item clean         :清除obj檔的動作
+    \item dist          :產生configure的動作
+    \item distclean	:清除configure所產生的檔
+  \end{itemize}
+  有的像clobber，這個也常出現在phony target中，表示剷了再除，除了在剷徹底剷除。
+  \subsubsection{特別的內定目標(built-in target)}
+  有些是已經有特殊意義的target，比較常用的
+  \begin{itemize}
+    \item .PHONY 在這個後面的target無條件執行。因為例如
+      \begin{verbatim}
+clean:
+         rm *.o
+      \end{verbatim}
+      如果萬一真的有一個叫clean的檔案在make的目錄下，偏偏這個檔沒有update，日期
+      沒變，所以當你make clean時，make認為這個clean已經有了，也沒有相依性檔案需
+      要重新編譯，於是就不執行rm *.o了 。 所以我們要把它寫在.PHONY，則每次make
+      clean就無條件執行，不會把clean看成是檔名。
+    \item .SUFFIX 副檔名內定編譯名單。make有一些內定方法編譯特別副檔名，這些
+      副檔名規則的副檔名 (名單)list，是在SUFFIXS這個變數裡，可能有.c .o .cpp
+      等等。用
+      \begin{verbatim}
+.SUFFIXS:
+      \end{verbatim}
+      清掉名單，或用
+      \begin{verbatim}
+.SUFFIXS: .sgml .hack  
+      \end{verbatim}
+      加到名單去，則在用內隱規則的suffix rule時，會自動引用。
+    \item .SILENT 這裡面的target執行時 命令(command)將不會印出來
+    \item .EXPORT\_ALL\_VARIABLES 把所有變數告訴後來sub shell的子程序
+  \end{itemize}
+
+  \subsection{command}
+  命令就是要完成一個目標所要做的動作，有幾個比較重要的規定要清楚
+  \begin{itemize}
+    \item command 前面一定要是個TAB鍵。不可以用空白鍵。
+    \item 每一行的命令其實都是喚起一個sub shell來執行命令，做完了，
+          這個sub shell就沒有了。
+    \item 所以更改過的變化不能傳給下一行命令。如果要把執行結果傳給下一
+          行必須寫在同一行裡。例如
+          \begin{verbatim}     
+cd editor
+$(MAKE) all
+          \end{verbatim}     
+          這樣cd到editor目錄的結果並沒有傳給下一個make all的這個shell。
+          必須這樣寫
+          \begin{verbatim}     
+cd editor; \
+$(MAKE) all
+          \end{verbatim}     
+          所以如果有if, while等等判斷在shell內，就必須寫成一行，
+          或用\verb=\=來分成很多行。
+    \item 要把錯誤掠過不看在命令前加個-，
+          要不秀出命令在螢幕上加個@，例如前面例子裡的clean這個target。
+    \item 喚起的sub shell要用什麼shell，是定義在SHELL這個變數裡。
+  \end{itemize}
+
+  \subsection{內隱規則(Implicit Rules)}
+  implicit rules的使用是Makefile最重要的部份，也是一般人剛接
+  觸摸不著邊的問題所在。裏面有很多看不到的自動使用要清楚。
+  通常我們編譯程式時有很多算是每個人都有的共同習慣，例如我就是把
+  foo.c 編成foo.o。像這樣的編譯習慣，gnu make有一些內定規則來編譯，
+  也就是有的target你不寫，make也可以根據內定規則把他編譯出來。不用
+  對每個不同的.o寫不同的規則，
+  如果有個程式由foo.c foo1.c foo2.c......寫這些就寫得會發瘋了，例如
+  \begin{verbatim}
+foo.o:foo.c
+        gcc -c -o foo.o foo.c
+foo1.o:foo1.c
+        gcc -c -o foo1.o foo1.c
+....
+  \end{verbatim}
+  因此如果你不寫foo.o的規則，那麼make當別的規則用到foo.o時，他找不到規則
+  來編，就會自動找foo.c來編譯。這樣看不到的編譯規則有很多，如
+  \begin{verbatim}
+$(CC) -c $(CPPFLAGS) $(CFLAGS) xxx.c來編譯
+  \end{verbatim}
+  或者找不到.c時會去找.cc, .cpp, .C檔
+  \begin{verbatim}
+
+C++程式產生 xxx.o
+$(CXX) -c $(CPPFLAGS) xxx.cpp
+
+TeX 產生 xxx.dvi
+$(TEX) xxx.tex
+
+Pascal 產生xxx.o
+$(PC) -c $(PFLAGS) xxx.p
+
+  \end{verbatim}
+  如果是單一檔名例如foo為target，則是會先自動找foo.o，自動使用
+  LDFLAGS, LOADLIBES, LDLIBS 這3個變數
+  \begin{verbatim}
+
+$(CC) $(LDFLAGS) foo.o $(LOADLIBES) $(LDLIBS)
+
+  \end{verbatim}
+  \subsubsection{自己的內隱規則}
+  因為可能有的時候你希望做些dependency檢查，或者加上一些gcc
+  用的旗標，不是很單純的編譯而已你可以給make自訂的內隱規則，
+  自訂規則通常有兩種常用，pattern rule與suffix rule.
+  \\\\
+  樣式規則(pattern rule)使用百分比符號代表一個 pattern，
+  你可以用pattern rule來做一些自定的內隱規則。像這樣
+  \begin{verbatim}
+%.o : %.c prog.h
+	$(CC) $(CFLAGS) $(DEBUG_FLAG) -c -o $@ $<
+  \end{verbatim}
+  或者
+  \begin{verbatim}
+%.pdf : %.sgml
+	db2pdf $<
+  \end{verbatim}
+  \%表示所有相對於後面先決條件的檔名的意思，他不是*，因為他
+  有一對一的相對應關係，foo.o 就要找foo.c，foo1.o就要找foo1.c，
+  所以他不是*。所以上面的意思是所有碰到要.o的target時，去找相
+  對應的.c檔，並根據先決條件prog.h做檢查，如果找不到prog.h就不
+  做下去了。\%不只可以表現主檔名，其實可以表現任一個相對應的字串，
+  所以叫pattern，你可以用s.\%.c，不只用\&.c，其中對應到\%的子字
+  串叫stem。另外\$@ \$<...這種符號，叫自動變數，
+  \\\\
+  pattern rule也可以有特定變數設值，特定樣式(pattern)的變數，例如
+  \begin{verbatim}
+%.o : CFLAGS = -O
+  \end{verbatim}
+  表示只要有要編譯xxxx.o的規則時，通通要設CFLAGS為-O。
+  \\\\
+  副檔名規則(suffix rule) 是比較古老的一種，但他是內定內隱規則的 rule，
+  例如前面編譯 .o 的內隱規則，其實是
+  \begin{verbatim}
+.c.o:
+        $(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+  \end{verbatim}
+  很多老Makefile也都用這種rule, 這種方法就有限制性，因為只能用在副檔名的規
+  則。例如
+  \begin{verbatim}
+.c.o:
+        $(CC) -c -o $*.o $<
+.S.o:
+        $(CC) -c -o $*.o $<
+  \end{verbatim}
+  小心，跟pattern rule的 \%o : \%c順序不一樣喔
+  \\\\    
+  因為這樣動態的編譯手法，它需要代替一些動態改變的字串。所以有所謂的自動變數
+  \begin{itemize}
+    \item \$@   同一個規則的目標名
+    \item \$*   這個只有在內隱規則中有用。表示樣式或副檔名規則中對應到的字串。
+      就是stem
+    \item \verb=$<=   同一規則的第一個先決條件名，這個大部分用在suffix rule，因為
+	suffix rule只有一個檔。
+    \item \$?   同一個規則的所有先決條件名，但是只有原始程式碼改過的比obj檔新
+      才會符合，也就是比target還新的先決條件檔案。
+    \item \verb=$^=   所有先決條件，但是有的make像solaris make可能不認得這個自
+      動變數。
+  \end{itemize}
+  上面是比較常用的，比較常用還是\verb=$< $@ $*=這3個。內隱規則內也預設了一些編譯變
+  數，例如
+  \begin{verbatim}
+AR = ar
+AS = as
+CC = cc
+MAKE = make
+CXX = g++
+CPP = $(CC) -E
+FC = f77
+PC = pc
+...
+...
+ARFLAGS = rv
+CFLAGS =
+CXXFLAGS =
+CPPFLAGS =
+LDFLAGS =
+FFLAGS =
+PFLAGS =
+  \end{verbatim}
+  當有內隱規則被編譯時，如果什麼都沒有寫他會根據副檔名叫用特別的預設變數
+  的compiler，像\$(FC)是fortran 77, \$(AS)是assembly外，當有.c檔案需要編譯
+  時除了直接拿\$(CC)來用，還會使用\$(CFLAGS)來當作\$(CC)的compile參數。
+  \$(LDFLAGS)當作link時的參數。如果你沒有設CC這個變數，則自動是cc這個值，
+  可以直接拿\$(CC)來用。所以光設定CFLAGS跟LDFLAGS完全不用寫怎麼compile .c
+  檔案，只要是使用內隱規則的，他也會自動的編譯.c檔案。自定內隱規則可以寫在任
+  何地方，make會自動先找到他們，等到要用時就會去用。
+  \\\\
+  例如有個mk.c
+  \begin{verbatim}
+$ echo -ne '#include <stdio.h>\nint main() { printf("Hello World\\n"); }' > mk.c
+$ cc mk.c -o mk
+\end{verbatim}
+當make mk時，就會自己找mk.c來編譯，什麼都不需要寫，連Makefile都不用寫
+
+  \subsection{內建函數}
+  GNU make有一些內建函式讓我們處理上方便些，函式呼叫的格式是
+  \begin{verbatim}
+$(function arguments)
+  \end{verbatim}
+  例如
+  \begin{verbatim}
+$(subst from,to,text)
+$(patsubst %.o,%.c,$(objects))
+$(suffix src/foo.c src-1.0/bar.c hacks)
+$(dir mydir0/mydir1/myfile)
+$(notdir mydir0/mydir1/myfile)
+$(wildcard *.c)
+$(error err_msg)
+files := $(shell echo *.c)
+  \end{verbatim}
+  可以用subst, patsubst做pattern代換，也可用dir, notdir做類似dirname,basename
+  處理。另外由於單純使用*.o, *.xxx有解釋上的問題，所以用 wildcard 得到真正的所
+  有名字回來處理。suffix 是用來擷取副檔名用的，任何句點 . 後面的字串會還回來，
+  所以例子裏面會還回 .c .c 而已。error則會印出error message後死掉。 常用的最後
+  一個，把shell執行結果傳回Makefile做進一步處理，有了 shell 我們可以為所欲為了。
+  shell 裡面同樣用變數要兩個\$，可以跨行，但也要用反斜線變一行，跟用 command
+  的規定一樣。
+  \\\\
+  比較常用的字串檔名代換的函數有
+  \begin{verbatim}
+$(dir src/foo.c pkgs/rpm/rpm.spec) 產生 src pkgs/rpm
+$(notdir src/foo.c pkgs/rpm/rpm.spec) 產生 foo.c rpm.spec
+$(basename src/foo.c src-1.0/bar hacks) 產生 src/foo src-1.0/bar hacks
+$(suffix src/foo.c src-1.0/bar.c) 產生 .c .c
+$(addsuffix .c,foo bar) 產生 foo.c bar.c
+$(addprefix src/,foo bar) src/foo src/bar
+$(wildcard *.c)
+$(realpath ./mydoc) 產生真的絕對路徑名
+  \end{verbatim}
+  字串處理，這跟 shell 的字串處理能力很像，但要注意的是多了 Makefile pattern
+  rules 的 \% 處理。
+  \begin{verbatim}
+$(subst ee,EE,feet on the street) 代換 ee 變成 EE
+$(strip " a b c d   ") 去掉前後的空白
+$(findstring gyoza,gyoza good good eat) 找 gyoza 這個字，回傳 true/false
+$(sort list) 排序
+$(wordlist 2, 3, foo bar baz) 傳回 bar baz
+$(firstword foo bar) $(lastword foo bar) 只是像 wordlist 方便的呼叫
+  \end{verbatim}
+  suffix 與 pattern rule 的字串處理，這很有用
+  \begin{verbatim}
+$(patsubst %.c,%.o,x.c.c bar.c) 像 pattern rule 的代換，產生 x.c.o bar.o
+
+這有一個變數的簡單語法，包含 suffix rule
+$(var:pattern=replacement)
+$(var:suffix=replacement)
+$(target:%.c=%.o) 把變數 target 的 .c 變成 .o
+$(target:.o=.c) 把變數 target 的 .c 變成 .o
+
+$(filter %.c %.s,foo.c bar.c foo.s doc.rst foo.h) 只會傳回 .c .s 的檔案
+  \end{verbatim}
+  錯誤與 logging 處理
+  \begin{verbatim}
+$(info info message)
+$(warning warning message)
+$(error error message we want to print and exit)
+  \end{verbatim}
+  \subsection{條件編譯與MAKE}
+  GNU make 裡面可以有條件判斷後，決定要不要做設變數或make，
+  其實主要處理一些makefile內的變數與環境，例如
+  \begin{verbatim}
+ifeq ($(CC),gcc)
+  libs=$(libs_for_gcc)
+else ifeq ($(CC),clang)
+  libs=$(libs_for_clang)
+else
+  libs=$(normal_libs)
+endif
+  \end{verbatim}
+  判斷\$(CC)這個內隱規則的變數是不是gcc然後選擇函式庫，
+  其中ifeq或者ifneq有四種寫法
+  \begin{verbatim}
+ifneq (arg1, arg2) 
+ifneq 'arg1' 'arg2' 
+ifneq "arg1" "arg2" 
+ifneq "arg1" 'arg2' 
+ifneq 'arg1' "arg2" 
+  \end{verbatim}
+  除了ifeq, ifneq還有ifdef, ifndef，很像c裡面的前置處理。ifdef ifndef 只會測試
+  variable是否有定義，如果要測試空字串必須用\verb=ifeq(,$(var))=。
+  但如果需要logical and logical or怎麼辦呢？ 這時必須用ifneq 跟 function filter
+  來達到
+  \begin{verbatim}
+  ifneq (, $(filter $(GCC_MINOR),4 5))
+  \end{verbatim}
+  filter的用法是filter X, A B C ..., 傳回 A B C ...任何符合X pattern 的字串，
+  所以上面的意思是 GCC minor 號是4 或是 5的都會讓這個ifneq fail掉。就有或的
+  logic在裏面了。另外有 function \verb=(or c1,c2,c3 ...) (and c1,c2,c2 ... )=
+  ，c1 c2 c3會依序展開，如果有non-empty string, or會停下回傳那個string，如果
+  全是空字串，回傳空字串, and 反過來如果碰到空字串，停下回傳空字串，不然就回傳
+  最後那個字串。
+  \\\\
+  最後這些逗號，空格要小心，這些有的一定要空格有的會變成字串的一部份，所以如果
+  出問題時要小心空格的位置。
+
+  \subsection{parallel make與gcc dependancy檔}
+  當編譯很大時，有些不相關的jobs 可以平行處理編譯，這必須仰賴對build job的了解
+  ，以及良好的Makefile撰寫，不然是辦不到的。使用
+  \begin{verbatim}
+make -j 8
+  \end{verbatim}
+  會啟動8個平行編譯job。如果有編譯過kernel 的，然後機器是多core 的cpu 時，用-j會
+  使kernel編譯快上很多。自己寫的Makefile 要注意的是 dependancy 是從左到右，而
+  且要自己注意missing depandancy 的問題如
+  \begin{verbatim}
+all: t3 t2 t1
+        @echo Making $@
+t1: t3 t2
+        touch $@
+t2:
+        cp t3 $@
+t3:
+        touch $@
+  \end{verbatim}
+  這個t2就不對，因為t3可能根本就還沒被 touch, t2就被執行了。另外有些目錄或暫時
+  檔名被兩個target共用時也要小心。另外還看過有人這樣build
+  \begin{verbatim}
+make clean all
+  \end{verbatim}
+  這是有問題的，因為make 並沒有說這樣build target, target有相依關係，相反的如果
+  裏面target沒有相依關係，則同時可能進行 build target，這樣的結果有時會在一些
+  filesystem，或者virtual machine 上造成race condition 而使得 build 怪怪的，這
+  必須要小心。
+  \\\\
+  在gcc中可以給-MD 或 -MF，會把所有這個c檔include的相依c h檔列出來，導到一個.d
+  檔去，這可以拿來做rebuild與parallel編譯的參考。
+  \begin{verbatim}
+%.d : %.c
+         $(CC) -MD -o $@ $<
+  \end{verbatim}
+  在Makefile裏面可以用include來include這些.d檔，每個.d檔就是.o檔所需的dependancy
+  。 最後可以用distcc而不是gcc來使用多台機器同步編譯。但沒有試過。
+  \\\\
+  最後在使用make時，儘量用MAKE這變數，例如遞迴make
+  在Makefile裡面叫make來用，請用\$(MAKE)，例如我們常在source code的
+  最上層打個make，它會自動跑到底下所有的目錄去，裡面都有個Makefile，
+  然後每個都做make。 例如
+  \begin{verbatim}
+all:
+	cd user;$(MAKE) $@
+	cd kernel;$(MAKE) $@
+  \end{verbatim}
+  通常在一些系統上例如 Solaris, AIX...已經有Sun IBM 的make了，所以系統管理者通
+  常會把 GNU make 叫gmake，這時可以設MAKE=gmake。
+
+\section{autotools}
+autotools是用來跨平台的building工具。
+一般說來C程式在各個Unix Like的平台上都應該可以編譯，不過由於Unix發展歷史悠久，
+雖然要達到的功能一樣，但是各家有些獨門標頭檔，函式庫，或者特殊的用法，有名的
+如BSD的bzero()，這些其實可以用條件編譯的方法做到，例如
+\begin{verbatim}
+#ifdef Solaris
+xxxx
+#endif
+    
+#ifdef HP_UX
+xxxx
+#endif
+\end{verbatim}
+    只要編譯時
+\begin{verbatim}
+$ gcc -DSolaris
+\end{verbatim}
+會編譯Solaris 這段程式碼而不會編譯HP的程式碼，但你得寫寫好多個Makefile，
+或者在Makefile中作判斷，但這樣還是有個問題，有時程式寫作用到的同樣名字的函
+式，但是可能在不同平台上的標頭檔不一樣或者根本它需要的某個函式庫沒有等等問
+題。例如同樣time.h是sys/time.h還是time.h等等一堆跨平台的問題。這也就是為甚
+麼後來寫c程式，都希望能遵循POSIX 標準的原因。因為Makefile 不能寫死，因此open 
+source 裡面有個 autoconf / automake / libtool 可以測試目前你的平台上有什麼函式庫
+，有什麼標頭檔它需要等等。所以一般用到這些工具的軟體，一解開來就是用
+./configure 來偵測目前的平台是甚麼以及如何build 起來這個程式。這個 configure
+就是autoconf 產生的。用這個configure 產生的Makefile 是根據一些目前系統上所有
+的條件產生的，可以來做出目前compile 環境的binary. 如果configure 偵測不到
+該有的條件，那就無法產生Makefile 就無法編譯了。
+\\\\
+auto tools基本上有三個，
+\begin{itemize}    
+  \item autoconf 跨平台的環境偵測
+  \item automake 跨平台的make
+  \item libtool 跨平台的library建造。
+\end{itemize}
+在一個任意的source上，假設已經安裝了autoconf, automake, libtool等工具。
+簡單的基本應用命令流程如下：
+\begin{enumerate}
+  \item 在source上autoscan，這時會產生configure.scan與Makefile.am，我們必須
+        修改configure.scan存成configure.ac與修改Makefile.am
+  \item libtoolize --force
+  \item aclocal
+  \item autoheader
+  \item automake --force --add-missing --copy
+  \item autoconf
+  \item touch NEWS README AUTHORS ChangeLog
+  \item ./configure
+  \item make
+\end{enumerate}
+    整個架構是 autoheader建立config.h.in 給automake使用。
+    其中--add-missing --copy會加上一些COPYING,README等檔案，是GNU的版權說明等檔案。
+  \subsection{程式設計師的準備}
+    Programmer最基本必須要準備兩個input檔給這些工具，
+    一個是configure.ac(或者以前是configure.in)，這是給autoconf用的。
+    一個是Makefile.am。這是給automake用的。configure.ac可以在source
+    tree上先用autoscan掃一下，會產生一個configure.scan的檔案，由這個
+    檔去modify後存成configure.ac.
+    \\\\
+    autoconf跟configure.ac是用來檢查系統上有沒有存在適當的編譯環境，例如你
+    要編譯gtk的程式，結果根本沒有gtk的header,libraries等等，這時就會停
+    下來。autoconf裡面有一些已經是寫好的就好像C裡面的printf()已經寫好的，
+    可以直接來用的m4 macro藏在/usr/share/aclocal。
+    通常檢查項目順序跟常用的m4 macro是
+    \begin{verbatim}
+    0. comment
+	#  註解 
+	dnl 註解
+    1. boilerplate
+	AC_INIT()		: 每個configure.ac一定要有的init
+	# for automake
+	AM_INIT_AUTOMAKE	: automake的init
+	AM_CONDITIONAL(DEBUG, test $enable-debug = yes)
+				: aotomake的條件設定
+	AC_CHECK_FILE		: 檢查某一檔案存在否
+	AC_CONFIG_SRCDIR	: 是
+	AC_CONFIG_HEADERS	: 使用config產生header，不是用-D在
+	     			: 通常用AM_CONFIG_HEADER
+    2. options
+	AC_ARG_ENABLE		: 用來定義configure的新argument, --enable-xxx
+	AC_ARG_WITH		: 用來定義使用別的套件。例如--with-readline。
+	AC_DEFINE()		: autoconf的變數定義
+    3. programs:
+	AC_CHECK_PROG		: 檢查是否有特殊program 
+	AC_PROG_CC		: 檢查是否有cc
+	AC_PROG_LIBTOOL		: 檢查是否有libtool
+    4. libs:
+    5. headers:
+	AC_HEADER_STDC		: autoconf的標準c header檢查
+	AC_CHECK_HEADERS	: 檢查特殊header
+    6. typedefs and structures:
+	AC_HEADER_STDBOOL	: 檢查是否有stdbool這樣的header
+	AC_TYPE_SIZE_T		: 檢查是否有size_t這種typedef
+	AC_C_INLINE		: 檢查c是否支援inline
+	AC_STRUCT_TM		: 檢查是否有struct tm這樣的資料結構宣告。
+    7. functions:
+	AC_CHECK_FUNCS		: 檢查特別function
+	AC_FUNC_MALLOC		: 檢查是否有malloc
+	AC_FUNC_VPRINTF		: 檢查是否有vprintf
+    8. output:
+	AC_PROG_INSTALL		: 產生make install的script
+    	AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile])
+		   		: 輸出的makefile
+	AC_OUTPUT		: 最後跟AC_INIT相呼應的結束macro.
+    \end{verbatim}
+    用autoscan會先掃描你的source tree看看你有甚麼需求做出一個
+    configure.scan，去修改這個configure.scan改名成想要的configure.ac
+    或configure.in。最簡單的範例 configure.in
+    \begin{verbatim}
+AC_INIT([mypgr], [0.0.1])
+AM_INIT_AUTOMAKE
+AC_PROG_CC
+AC_CONFIG_FILES([Makefile src/Makefile])
+AC_OUTPUT
+echo "Testing ...."
+    \end{verbatim}
+    基本m4的語法的括號
+    \begin{verbatim}
+([xxx0 xxx1], [a >= b])
+    \end{verbatim}
+    文字部份都用""框起來。基本的設值，就是中括號給值，兩個值以上的list就是跟
+    shell一樣用空白分開。 參數間以,分開，呼叫Function不能有空白。變數引用也要
+    用quote, \verb="$var"=，不能像shell一樣只用\verb=$var=
+      \subsubsection{help-string的格式}
+      在./configure --help時，會看到有很多選項，其中我們可以用AC\_ARG\_ENABLE跟
+      AC\_ARG\_WITH來加入我們自己的configure選項，而其中兩者的的介面中有
+      help-string，我們可以用AC\_HELP\_STRING來產生indent的string跟其他內定的
+      選項對齊。例如
+      \begin{verbatim}
+AC_ARG_WITH(
+[gtk3], 
+[AC_HELP_STRING([--with-gtk3], [compiled with GTK3])],
+[GTK3="$enableval"; gtk_version="gtk+-3.0"],
+[gtk_version="gtk+-2.0"]
+)
+      \end{verbatim}
+      這個會產生一個--with-gtk3的選項，提示文字是compiled with GTK3, 而當你
+      ./configure --with-gtk3時，所有的"-"會變成\verb="_"=。 他會設定with\_gtk3
+      與enableval兩個shell變數為"yes"，兩個是一樣的。 所以上面例子會設定
+      GTK3=yes，如果沒有給--with-gtk3時， 則會設定gtk\_version是gtk+-2.0。
+      同樣的道理enable也是一樣。
+  \subsection{程式的配合}
+  首先可以include autoconf產生的config.h檔，這可以使用autoconf裡面的
+  變數在程式裡。當然沒有用到的話也可以不用include。這主要是用來使用
+  一些內定的文件或者翻譯檔的目錄位置。像datadir=/usr/share，或者i18n中的
+  GETTEXT\_PACKAGE。
+  \begin{verbatim}
+#include <config.h>
+  \end{verbatim}
+  如果有條件編譯時，或者不確定的header或function名，程式中要有
+  \begin{verbatim}
+    #if HAVE_XXXX
+    ...
+    #else
+    ...
+    #endif
+  \end{verbatim}
+  其中大寫的XXXX可以是header檔或者function名稱。例如
+  \begin{verbatim}
+HAVE_STDARG_H
+HAVE_BCOPY
+HAVE_BZERO
+  \end{verbatim}
+  通常這是去設定\verb=#=define HAVE\_XXX = 1的作法，所以不要閒閒沒事幹兩個
+  矛盾的互相一起檢查，例如string.h跟strings.h一起叫autoconf檢查。
+  或者在.h .c裡面有設\verb=#=ifdef HAVE\_STDARG\_H，而AC\_CHECK\_HEADERS卻沒有加
+  stdarg.h的檢查。該檢查的沒去做也不行。如果將來系統上編譯時有這些
+  東西，則產生的Makefile會自動define這些條件。
+
+  \subsection{Makefile.am的特殊設定}
+  Makefile.am是給automake來看的，基本上，他幾乎就是Makefile。
+  除了Makefile的正常用法，他有些特定已經有的Makefile macro和命名規則。
+  當然也有一點點不一樣。如果你的Makefile沒有甚麼特別要distribute的，
+  例如kernel的code，也可以把Makefile改成Makefile.am就可以。
+  底下是簡單範例。
+  \begin{verbatim}
+      bin_PROGRAMS = xxx yyy
+      xxx_SOURCES = xxx1.c xxx1.h xxx2.c
+      yyy_SOURCES = yyy1.c yyy1.h yyy2.c
+  \end{verbatim}
+      重要的還有
+  \begin{verbatim}
+      xxx_CFLAGS = 
+      xxx_LDFLAGS =
+      xxx_LDADD = 
+      xxx_DEPENDENCIES =
+      xxx_LIBADD = 
+      EXTRA_xxx_SOURCES = @VAR_SET_BY_CONFIGURE@
+      ...
+      AM_CFLAGS =
+      AM_LDFLAGS =
+      AM_CXXFLAGS = 
+      INCLUDES =
+  \end{verbatim}
+  重要的就是bin\_PROGRAMS, 這就是要編成的binary名字。xxx\_SOURCES是
+  要編譯的 source code xxx.c xxx.h。而經由configure設定的變數，必
+  需由@VAR@來取回。其他的就是以往Makefile裡面幾個特殊的內定變數加以
+  延伸而來的新Makefile.am的內定變數。
+  \subsection{Primaries與安裝}
+  前面的PROGRAMS, SOURCES...這些叫做primaries，還有其他的primaries，這些
+  是定義在automake工具裡面的。加在PRIMIARIES前不同的prefix可以決定這個
+  命名為何。
+  \begin{verbatim}
+      lib_LIBRARIES	: 這是用來安裝/usr/lib
+      DATA		: 這是用來安裝/usr/share
+      HEADERS		: 這是用來安裝/usr/include
+      SCRIPTS		: 這是用來區隔DATA的可執行script.
+      MANS		: 這是用來manpage的安裝使用的。
+      TEXINFOS		：這是GNU的文件說明, texinfo的使用。
+  \end{verbatim}
+	一些例子
+  \begin{verbatim}
+mypgrdir = $(datadir)/mypgr
+mypgr_DATA = mypgr.txt
+man1_MANS = mypgr.1
+  \end{verbatim}
+  這樣mypgr.txt會被安裝到\verb=$(datadir)/mypgr=下面去，而mypgr.1會被裝到
+  \verb=$(MANPATH)/man1/=
+	
+  \subsubsection{configure與Makefile.am的變數}
+  在./configure --help裡面，自動都能設定prefix, exec-prefix來指定要裝到哪裡去。
+  內定是/usr/local。除此之外由prefix延伸的其他內定變數對於我們的package 
+  compile, install等等動作都有影響。我們可以直接在Makefile.am拿來用。而在
+  Makefile.am中使用必須用@variable@ 才行。
+  \begin{verbatim}
+
+  編譯時期用到的變數
+      
+CFLAGS			: 編譯時期的flags
+CPPFLAGS		: CPP的
+DEFS			: 這是用來設定gcc -D的使用。
+LDFLAGS			: link時期的flags
+LIBS			: 指定library path的通常是-Lxxx/xxx
+OBJCFLAGS		:
+builddir		: 沒東西，真奇怪。
+top_srcdir		: 沒東西，真奇怪。
+srcdir			: .
+      
+
+installation用到的
+      
+prefix
+exec_prefix		: 通常是$(prefix)
+bindir			: $(prefix)/bin
+datadir			: $(prefix)/share
+datarootdir		: 通常就是datadir
+docdir			: $(prefix)/share/doc
+includedir		: $(prefix)/include
+libdir			: $(prefix)/lib
+libexecdir		: $(exec_prefix)
+localedir		: $(prefix)/share/locale
+mandir			: $(prefix)/share/man
+pkgincludedir		: $(includedir)/$(PACKAGE)
+pkgdatadir		: $(datadir)/$(PACKAGE)
+pkglibdir		: $(libdir)/$(PACKAGE)
+sbindir			: $(prefix)/sbin
+sysconfdir		: $(prefix)/etc
+  \end{verbatim}
+  在上面的變數中，有些變數跟一些變數是有重複性的，
+  例如CFLAGS，主要原因是在分工中，auotconf的工程師是屬於packaging的，
+  他的變數本來應該不能有CFLAGS這種編譯變數，所以automake另外給了
+  AM\_CFLAGS，另外在primaries中，我們也可以定義xxxx\_CFLAGS，這是給編譯
+  xxxx這個target時，特別給的CFLAGS。另外在古老時期有個INCLUDES這個變數跟
+  AM\_CPPFLAGS, AM\_CFLAGS是一樣的，不過目前盡量不要用了。
+  \\\\
+  而PACKAGE是一開始在AC\_INIT裡面定義的。而有些變數是可以強迫autoconf在
+  AC\_OUTPUT時，代換給將來的automake的Makefile.am 使用的，可以用AC\_SUBST
+  來設定shell變數給Makefile.am使用。
+  \subsection{recursive directory - SUBDIRS}
+  如果source是有結構的多層目錄，那每個目錄都要有個Makefile，那有兩件事
+  \begin{enumerate}
+    \item 在configure.in裡面也必須每個都寫出來。這以前是在AC\_OUTPUT寫，現在
+     在
+      \begin{verbatim}
+  AC\_CONFIG\_FILES([Makefile src/Makefile ...])
+      \end{verbatim}
+
+   \item Makefile.am內可以有一個內定變數SUBDIRS是可以用來告訴automake自動往下
+    去作Makefile的
+  \end{enumerate}
+
+    \subsection{Makefile.am跟Makefile的不同}
+    Makefile.am跟GNU Makefile有些不同，主要是GNU Makefile 有很多新招數，
+    在很多平台的Makefile是沒有的，在傳統的UNIX上的 Makefile 限制很多，
+    所以Makefile.am也相對有很多限制。例如GNU make 裡面可以用ifeq，但是
+    很多就不能用。只能用if。
+    \begin{itemize}
+      \item comment用\verb=##=，用\verb=#=的comment會在最後產生的 Makefile
+        出現，但\verb=##=不會。
+      \item 有include，automake支援include其他make file，主要是有的平台
+        Makefile不一定支援include，automake自動轉換並且\$(top\_srcdir)
+        表示project根目錄，\$(srcdir)表示從目前目錄下去找。
+      \item 支援+=，automake會自動轉換=。這是因為有些平台上的Makefile不支援
+        +=，只有GNU make才有。但只要用automake，他會自動轉換不用怕。
+    \end{itemize}
+
+    \subsubsection{Makefile.am的條件編譯}
+    在GNU Makefile裡面，我們可以有ifdef ifndef來作條件編譯，最常見的
+    就是DEBUG這個條件。但由於那是GNU make特有的，在很多平台是沒有的，
+    只能用if，所以在Makefile.am中的條件必須在configure.in中設定一個值，
+    用AM\_CONDITIONAL([var], [shell test])來使用。如果shell test為true，
+    那麼var的值在Makefile.am中就為TRUE.請看以下範例。
+    \begin{verbatim}
+      在configure.ac
+      
+AC_ARG_ENABLE([debug],
+      [AC_HELP_STRING([--enable-debug], [compiled with DEBUG])]
+)
+AM_CONDITIONAL([DEBUG], [test "$enable_debug" = "yes"])
+      
+      在Makefile.am
+      
+if DEBUG
+AM_CFLAGS = -DDEBUG @GTK_CFLAGS@
+else
+AM_CFLAGS = @GTK_CFLAGS@
+endif
+    \end{verbatim}
+      簡單的範例
+    \begin{verbatim}
+      最外層Makefile.am
+      
+SUBDIRS = src test
+      
+      src子目錄下
+      
+bin_PROGRAMS = mypgr
+mypgr_SOURCES = mypgr.h mypgr.c
+      
+      test子目錄下
+      
+bin_PROGRAMS = mytest0 mytest1
+mytest0_SOURCES = mytest0.h mytest0.c
+mytest1_SOURCES = mytest1.h mytest1.c
+    \end{verbatim}
+
+  \subsection{libtool與autotool}
+  不是所有的library在unix like的機器上都有相同的結構，而且或許你的
+  系統library並不支援shared library等等情況，這些考量有libtool來幫你完成。
+  ，不用自己寫一堆條件判斷。前面有稍微件紹，其標準原理是libtool帶有編譯安裝的
+  mode命令選項，如下：
+  \begin{verbatim}
+libtool --mode=compile gcc -c hello.c
+	產生3個檔案
+        .libs/hello.o shared library object, 這是多加了-fPIC的編譯
+	hello.o , normal standard object, 這是準備用來做static lib的object
+	hello.lo, 這是libtool產生的物件檔，就是文字檔記載了上面兩個的位置。
+libtool --mode=link gcc -rpath /usr/local/lib -o libhello.la hello.lo
+	產生
+	libhello.la
+	.libs/libhello.a	-> static lib
+	.libs/libhello.so.xxx   -> PIC dynamic lib
+	.libs/libhello.la	-> 文字檔記載
+	.libs/libhello.lai	-> 文字檔記載
+libtool --mode=link gcc -o hello main.c libhello.la
+	hello		-> static binary
+	.libs/hello	-> dynamic, will search /usr/local/lib by -R in gcc
+libtool --mode=execute gdb hello
+libtool --mode=install install -c libhello.la /usr/local/lib/libhello.la
+libtool --mode=install install -c hello /usr/local/bin/hello
+libtool -n --mode=finish /usr/local/lib
+libtool --mode=uninstall rm /usr/local/lib/libhello.la
+libtool --mode=uninstall rm /usr/local/bin/hello
+  \end{verbatim}
+  libtool的標準動作就是這些，他會產生新的lo, la這種檔，所以必須把他跟autoconf
+  合起來一起使用，讓 libtool 來幫我們處理跨平台時的動態與靜態library的產生與
+  連結處理。autoconf 裡面有內定的macro來處理libtool，在configure.in內加上
+  AC\_PROG\_LIBTOOL 就會自己處理了。在configure.in中用libtool，必須
+  \begin{enumerate}
+    \item 在configure.in中的 AC\_PROG\_XXX 裡面放 AC\_PROG\_LIBTOOL 或新版的 LT\_INIT
+      就可以了。
+    \item 在Makefile.am中的lib\_LIBRARIES要改成lib\_LTLIBRARIES
+         libhello\_la\_SOURCES =
+         libhello\_la\_LDADD =
+    \item 執行 libtoolize
+      把目前使用的libtool版本中的ltmain.sh, config.guess等scripts
+      copy一份到source中來，你可以copy到source的最上層目錄，也可以copy
+      到AC\_CONFIG\_AUX\_DIR()指定的目錄中。這些scripts其實藏在/usr/share/libtool
+      下面。
+  \end{enumerate}
+  目前debian的autoconf所使用的libtoolize是在libtool這個package，而真正做事
+  的libtool在libtool-bin這package，這怕有人會搞混，總之libtoolize是autoconf
+  使用的介面，libtool才是真做事的工具。
+
+  \subsection{Makefile policy與目錄}
+  稍微會玩Makefile與autoconf之後，我們要簡單講一下Makefile的重要target與
+  一些熟悉的一般規則，作為如果要寫Makefile的準則。一般target的分類
+  \begin{verbatim}
+  BUILD, all
+  CHECK check
+  CLEAN clean
+  INSTALL install, uninstall
+  DISTRIBUTION dist, distclean: source distribution .tar.gz
+  PACKAGE pkgs: binary distribution .rpm, .deb .pkg
+  \end{verbatim}
+  make install跟用binary package如rpm, deb有甚麼不同呢？通常 make install
+  做的事情就是裝到系統上去的事情，rpm, deb 卻是根據特有的 distribution
+  所做的安裝, 所以make install 需要在後來變成動態的可以安裝到任何的fake的
+  root 上通常會有個 DESTDIR 的選項。
+  \\\\
+  source tree的目錄結構想想好像很簡單，不過當很複雜時，是要對應相對的分工的。
+  就像是team裡面也一樣，程式架構最好跟手中的人力資源架構有對等的分工，這樣
+  寫起code來才不會覺得redundent或者亂七八糟的責任劃分。例如
+  按照模組分類的，那.h .c要不要在同一個目錄下呢?
+  按照程式結構分類的，這樣模組跟模組間的區隔不是很明顯，造成team work不方便。
+  \begin{verbatim}
+doc     : documents
+src     : common code然後可以再根據模組往下目錄分類。
+lib     : build好的lib放在這可以給別的code用-Llib參照使用。
+include : 共有的include，或提供別人使用的.h檔。自己使用的.h 放在src下即可。
+scripts : 系統使用上或者configuration上需要的script。
+man     : man page
+po      : localization翻譯檔。
+pkgs    : binary package, rpm, deb, pkg等。
+tests   : 測試code
+  \end{verbatim}
+    如果覺得散在外面很亂，也可以收到一個自己的build裡面去，他也可以當成要作一個
+    binary package 的先遣目錄。這也可以當成一個假的 fakeroot。另外
+    compile 時需要的 include 與 libraries 我們想要把他們集中到一個地方讓
+    -I 與 -L 都用得到，可以有兩種選擇，一用lib/ include/，二用build/include
+    build/lib，第二種就是用上build dir，用這種build dir還有一個很重要的用法，
+    就是同時為不同的平台compile。例如我有一份source，但是同時支援不同的
+    kernel, distribution, OS。那我可以建立一個compile build環境，並且有不同
+    的build dir，進行同時的building process.
+    \begin{verbatim}
+    build_solaris6/etc
+    build_solaris6/include
+    build_solaris6/lib
+    ...
+    build_solaris7/etc
+    build_solaris7/include
+    build_solaris7/lib
+    ...
+    build_linux/etc
+    build_linux/include
+    build_linux/lib
+    ...
+    \end{verbatim}
+    這通常需要 Makefile 對 VPATH 有所支援，但是很不幸的 POSIX 並沒有規範
+    VPATH，於是各家有各家的語法，所以用 VPATH，必須死跟著一家的 Makefile 
+    規則。 GNU VPATH 是指在內隱規則中去尋找 dependancy 找不到時，去 VPATH 
+    指定的目錄下尋找。所以像剛剛這樣的目錄規劃中，include 那個目錄就可以放在
+    VPATH 裏面，當要編譯不同的地方時就變換不同的 VPATH 就好。
+    \\\\ 
+    一種是對整個source全盤了解的，好處是集中處理，壞處是通常要有一個人或者
+    build team來處理整個build跟distribution的事務。如果公司很大，對外的
+    software release是有一個規則的那就需要build team.台灣大概沒有這樣的公司。
+    一種是整個source不是很了解，且拆成很多部份交給人家，好處是組員自己maintain
+    自己的Makefile，壞處是有很多code會重複寫得很厲害或者組員很肉腳時，這
+    Makefile還是需要額外的人來maintain。
+    \\\\
+    兩個的優缺點就是對方的優缺點，通常這種情況就是manager出來的時候了。
+    manager根據自己擁有的resource做出決定。 如果組員超強的，
+    那就可以用功能性的分工。通常manager要認清的是 - 
+    大家都很肉腳。為了完成project，一定要認清自己是肉腳的。
+
+\section{版本號碼與pkg-conifg}
+  話說系統上的library是不能亂編version number跟release number的
+  。以我們用libtool做出的shared library來說，每個version number是由3個
+  號碼組成。像這樣 0.0.0。由左至右分別是
+  \begin{itemize} 
+    \item current  如果你的interface改變，且跟原本的version不compatible，加一
+    \item revision 如果你的code改變，例如更好的algo，但interface不變，加一
+    \item age      如果你的interface改變，但跟原本的version是compatible，加一
+  \end{itemize}
+  內定值從0.0.0跳起。系統linker會根據這樣的規則去對你的binary作link動作，
+  如果你的binary例如ls他編譯時就說要libc的6.2.0，則你用6.2.2的，還是可以
+  的。但是如果你的系統只有7.0.1時，那就要看運氣了。因為current number
+  已經變了，表示已經不compatible 6的interface了。6.3.0的呢，因為只是修正
+  bug等等部份，interface沒有變，還是可以使用的。
+  \\\\
+  另外有個release number跟version number是不一樣的。他才是正式的對外
+  發表的發行版本號碼。他也適合用來作patch
+  release的，例如產品已經走到了2.1.2但要支援之前version2.1.1時，
+  因為2.1.2已經被用了，所以只能有release number來表示bug的修正等等。
+  例如gtk的libgtk-x11-2.0.so.0.800.13，他的revision號碼已經到800號了。
+  但是interface的current號碼居然是0號。
+  \\\\
+  當然binary build你可以用build number掛在最後面，例如nightly build可以
+  每晚自動作。但是build number不應該是對外正式release的。如果一個release
+  project作了兩年還作不出來，那build number頂多7百多號，那我看這家公司大
+  概也差不多了。
+  \\\\
+  後來在 https://semver.org/ 定義了major.minor.patch-preRelease+buildMetadata
+  這樣的版本格式，例如 1.0.1-alpha+20171203.amd64 ，主要是為了沒有正式對外
+  release 前在自己家裡開發時的版本號碼，而把 release 拆成 preRelease與
+  buildMetadat , 例如我們有nightly build 等等一直在變化的號碼。前面三碼的定義
+  還是一樣，在makefile, package時，可以根據原則定義自己的每次release號碼。
+
+  \subsection{package config檔}
+  程式執行時的相依性，系統有package manager幫我們處理掉，end-user就不管了，
+  可是程式在編譯時的相依性，就沒人控管，必須程式師自己來，(Java 世界 的 maven
+  就是在處理 Java 編譯時的程式庫相依性)
+  在以前header/lib的dependancy沒有這麼複雜的時代，還可以一個個自己來，
+  後來X上的GUI程式的相依性越來越嚴重，或後面compile的要求某個相依性的版本
+  的資訊很嚴重，就有了package config這個東西出來，通常必須每個package會寫上
+  自己的這個package版本資訊，xxx.pc檔，然後放到特定的PKG\_CONFIG\_PATH上去。
+  系統上的通常為/usr/lib/pkgconfig:/usr/share/pkgconfig。所以後來產生的
+  configure作makefile時，會去搜尋這裡面的資訊，同時也會作一個xxx.pc檔出來。
+  以libpng.pc為例
+  \begin{verbatim} 
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: libpng
+Description: Loads and saves PNG files
+Version: 1.2.8
+Libs: -L${libdir} -lpng12 -lz
+Cflags: -I${includedir}/libpng12
+  \end{verbatim} 
+  當想要用libpng為我們的底層library，那我們可以
+  \begin{verbatim} 
+$ gcc -o test test.c $(pkg-config --libs --cflags libpng)
+  \end{verbatim} 
+  則自動會帶上cflags跟libs所有的對應參數。
+  \\\\
+  autoconf與pkgconfig的相互使用為
+  pkg-config這個套件會在/usr/share/aclocal下安裝一個pkg.m4的檔案，裡面有
+  \begin{verbatim} 
+  PKG_CHECK_EXISTS(MODULES, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+  PKG_CHECK_MODULES(VARIABLE-PREFIX, MODULES, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+  \end{verbatim} 
+  其中VARIABLE-PREFIX只是一個變數用來hold住pkg-config傳回的結果。這個
+  prefix加上\_LIBS跟\_CFLAGS的變數就是pkg-config --libs pkg-config --cflags
+  的結果。通常大家用大寫的任一字串。例如如果你寫gtk的程式，需要gtk+2.0的
+  2.18版以上，那就要多加
+  \begin{verbatim} 
+  PKG_CHECK_MODULES([GTK], [gtk+-2.0 >= 2.18])
+  \end{verbatim} 
+  這時pkg-config --cflags的結果自動在GTK\_CFLAGS變數內，你必須在後面的
+  Makefile.am裡面用@GTK\_CFLAGS@來引用。
+  \subsection{i18n/L10n}
+  國際化的autoconf，使用intltool或者gettext這兩個套件，裡面有
+  一些m4 macro，
+  使用上必須把所有翻譯檔xxx.po檔放在po目錄下，Makefile.am的
+  SUBDIRS要加上po，intltool裡面使用intltoolize這個命令，會去掃描
+  po目錄，並且提供一個Makefile.in.in與POTFILES.in檔在po目錄內。
+  
+  \begin{verbatim} 
+
+$ intltoolize -f -c
+
+    其中我們要提供的檔案有
+po/LINGUAS	: 這是所有支援的語言
+po/POTFILES.in	: 這是所有含有L10n字串的檔案
+    
+po/LINGUAS範例
+    
+en_US
+zh_CN
+zh_TW
+    
+po/POTFILES.in範例
+    
+src/mypgr.c
+lib/mylib.c
+    
+    configure.ac檔的macro
+    
+IT_PROG_INTLTOOL
+ALL_LINGUAS="zh_TW"
+GETTEXT_PACKAGE=mypkg-domain
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE",
+		   [The gettext catalog name])
+AM_GLIB_GNU_GETTEXT
+AC_OUTPUT([po/Makefile.in])
+    \end{verbatim} 
+    其中GETTEXT\_PACKAGE就是c裡面用上的
+    \begin{verbatim} 
+bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+    \end{verbatim} 
+    GETTEXT\_PACKAGE可以從config.h得到，但是LOCALEDIR必須自己在Makefile.am
+    定義。因為這個都是c裡面的代換，所以要把雙引號"給帶進去。要用\verb=\"=。
+    最後轉出的 mo 檔要安裝在系統的 /usr/share/xxx/ 裡面，這時要去用上內定目錄
+    datadir，所以c程式檔裡面，對於 bindtextdomain，或者有關唯讀的資料檔路徑
+    設定必須用上外面的環境變數。
+    
+    \begin{verbatim} 
+AM_CFLAGS = -DDATADIR=\"@datadir@\" -DLOCALEDIR=\"@datadir@/locale\"
+    \end{verbatim} 
+    要寫這種跨平台的C程式要對這些歷史，還有一些規格都很熟悉，還有像 shell
+    的寫法等等，才知道要寫的好。在 header 檔或 c 檔裡面加上
+    HAVE\_XXX 的編譯條件。現在大部份 interface 都已經底定。也互有支援，不然遵循
+    POSIX 的 interface 寫就八九不離十了。通常我們會在系統 library calls 上多加上
+    一層 application 的 interface。負責處理不同作業系統的差異。
+    不過這種產生 Makefile 的方法還蠻有趣的，一般人拿到 opensource 的 distribution
+    現在都很自然的要求要有./configure的方法運作了。所以閒閒沒事幹的話，可以去
+    安裝FreeBSD 或 openindiana 其他的*nix like 作業系統後，玩玩自己的 autoconf。
+    另外可以看\href{https://www.gnu.org/prep/standards/html_node/Makefile-Conventions.html}
+    {GNU的Makefile conventions}，來了解過往的人的一些習慣。

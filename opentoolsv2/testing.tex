@@ -1,0 +1,68 @@
+\chapter{testing 測試}
+測試其實是開發過程中最重要的一環，程式寫的再爛，只要有最後測試嚴格把關，
+最後修修補補的成品可以動，就可以出產品，因此東西是不是能出去，應該是
+QA 講了才算數。
+\\\\
+一般所謂的測試就是打個東西進去系統，看系統的反應合不合我們所期望的。
+測試可以根據不同狀況與定義有以下分類。
+\begin{itemize}
+  \item unit test : 通常是DE自己寫的function 子函數的輸入參數與return測試，
+    尤其API必須保證良好，別人才能用。
+  \item sanity test : 由於完整測試通常相當大，這sanity表示前面基本一定要過的
+    測試，通常用在要commit code前的automation測試。
+  \item function test : 單一功能測試。
+  \item feature test : 這是整個承諾客戶的大功能測試。
+  \item system test (integration test) : 整體系統測試，包括 booting, 
+    initial，重開機，回復，升級等等測試。
+  \item security test : 安全性測試。這有的公司的 guideline 非常複雜。例如
+    password的儲存，encript，library FIPS，網路安全等等。
+  \item end to end test : 更大的系統測試，通常在網路服務產品中，兩端中間會
+    經過很多子系統，例如switch, NAS等，必須兩端在 error handling, 
+    都能保持穩定功能。
+  \item regression test : 以前的測試做完後，新release有可能去改到舊code造成
+    過去功能失效。所以必須對過去的功能重新測試，這通常會做成automation。
+  \item stress test : 通常是產品的極限值測試。
+  \item performance test : 一些速度，時間等的量測比較，尤其要跟競爭對手比較
+    時的數據。
+  \item UX test : 使用者習慣，UI 經驗測試。
+  \item blackbox test : 測試者像白痴一樣，不管細部，就單純根據feature測試，
+    通常end user的使用測試, 
+  \item whitebox test : 測試者必須了解code的 if, else,等condition的細部，例如
+    code path test 必須寫程式去仔細的測試這些condition碰到的反應。
+\end{itemize}
+當然大分類下還可以有細部測試分類。但手動manual測試，自動automation測試是最
+大分類，一般測試者要準備的東西
+\begin{itemize}
+  \item test plan
+  \item test case
+  \item test report
+  \item test statistics
+\end{itemize}
+
+test plan的 template 例子
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+  \hline
+  \hline
+  Test case Id & description & category & pass criteria & Pass/Failed \\
+  \hline
+  t1001 & Test 1 description &  feature/vlan test & be good & passed \\
+  \hline
+  t1002 & Test 2 description &  regression/v1.0 1.1 & be good & failed \\
+  \hline
+\end{tabular}
+\end{center}
+傳統測試都是手動 manual 的，但產品愈來愈複雜，測試項目會變得很多，尤其
+regression 很多都是重覆性質的，因此會把手動的步驟用 script 寫成自動跑的
+測試。現在美國大公司都把這種繁多，成熟的測試丟到印度去做。其實台灣可以在
+這邊搶到一些軟體生意，只要把測試整個流程的產線做出，就跟硬體一樣在軟體
+供應鏈中找到生意機會。他同樣包含了文件，程式，軟工，只是美國大公司的重要
+經理人現在都被阿三佔住，所以管理階層做決策時，是只會丟到印度去的。
+印度公司為了搶這些測試生意，軟體公司都巨大的可以，還會通過CMMI Level 5
+的認証。
+\\\\
+另外現在test plan, report等都會整合到網頁上去，也是 DevOps 的一部份，
+從開 project 的 project 時間控管，requirement 文件，design 文件，
+prototype, source code 控管，bug 控管，build, release, testing, 使用文
+件，客戶issue 控管等等都有。
+很多傳統的手寫文件(還是電腦文件)方式都不再用了。

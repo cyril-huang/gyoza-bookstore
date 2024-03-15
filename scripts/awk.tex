@@ -1,0 +1,551 @@
+\chapter{awk}
+    \section{簡介}
+    field的觀念是awk比sed好用的地方，相對於sed一行一行的處理，awk提供了
+    一行內部欄位拆解的處理，還有更powerful的像C程式語法迴圈控制處理。
+    通式可以是
+    \\\\
+    awk 'script' var=value files \\
+    awk -f scriptfile var=value files \\\\
+    其中var是自定的awk變數，value是給定的值。這可以用來跟shell變數溝通。
+    \\\\
+    另外像sed的regular express都拿一行行來作內定的輸入，再做比對，這樣很沒有
+    彈性，awk允許用awk的一個變數來作regular express的輸入比對，因此像欄位也
+    可以輕鬆的拿來比對。主要是用比對算符 ~ 來跟一個regular express比對，
+    \\\\
+    var \verb=~= /re/  \\
+    var \verb=!~= /re/ \\\\
+    這樣就很方便了，而且這比對也同樣會傳回true, false，可以當成一個condition。
+    \\\\
+    除了欄位處理以外awk還有更多好用的function可以呼叫，另外也有了if,while, 
+    for與自定function的能力，這些比sed跟shell合併的能力又大上了許多，也是將來
+    perl的基本功能的基礎。
+
+    \section{script基礎}
+    一個script由
+    \verb=condition{procedure},condition{procedure},.....=組成。
+    跟sed很像，找到什麼條件(pattern部份)，做什麼動作(procedure部份)，
+    有一些內部的變數可以幫我們設定一些條件。condition可以是pattern regular 
+    express或某個符合條件，這個請看邏輯運算符號與比對算符 ~ 。其中有兩個重要
+    的內定condition, BEGIN跟END。一個script通常是這樣
+    \\\\
+    BEGIN \verb={xxx}= /re/\verb={xxx}= END\verb={xxx}=
+    \\\\
+    一般寫程式，一定要有init初始化一些值，就像人有出生年月日八字一樣，
+    程式結束也要有處理善後的routine來處理。awk作為一個程式型態的script語言，
+    提供了一個general的初始與結束的處理。
+    \begin{verbatim}
+    算算有幾個空白行
+    $ awk 'BEGIN{x=0} /^$/{x++} END{print x}' scripts.tex
+    \end{verbatim}
+    一開始設定x=0後，BEGIN後的就不在執行，然後每讀一行進來，如果是空白行就
+    x++，最後讀scripts.tex這檔案完到檔尾，印出x。
+    \\\\
+    要記住在上面的例子裡，awk的變數跟c是一樣的也就是沒有錢符號的，這邊跟shell
+    perl等script比較不一樣。
+    \section{變數與欄位處理}
+    awk裡面很重要的兩個定義
+    \begin{itemize}
+    \item record 就是一行一行的資料
+    \item field  通常由space或者tab鍵隔開的資料欄就是field
+    \end{itemize}
+    請看例子，並注意shell command line的單引號雙引號
+    \begin{verbatim}
+    $ cat /etc/mnttab
+    /proc   /proc   proc    dev=31c0000     1022606134
+    fd      /dev/fd fd      rw,suid,dev=32c0000     1022606198
+    mnttab  /etc/mnttab     mntfs   dev=3380000     1022606209
+    swap    /var/run        tmpfs   dev=1   1022606209
+    swap    /tmp    tmpfs   dev=2   1022606211
+
+    $ awk '/swap/{print $2}' /etc/mnttab
+    /var/run
+    /tmp
+
+    $ awk '{print "Hello World"}' /etc/mnttab
+    Hello World
+    Hello World
+    Hello World
+    Hello World
+    Hello World
+
+    一二欄位中間是tab二三欄位中間是空白
+    $ cat datafile
+    99		98 3.5
+    300		298 4.9
+    498		493 5.9
+    699		698 7.6
+    900		748 9.0
+    1200	703 9.6
+    1500	651 10.4
+    1698	627 10.8
+
+    記住  這樣是從input兩個欄位輸出output一個欄位
+    $ awk '{print $1 $2}' datafile
+    9998
+    300298
+    498493
+    699698
+    900748
+    1200703
+    1500651
+    1698627
+
+    這樣是從input兩個欄位輸出output兩個欄位
+    用print輸出欄位由逗號 , 分開
+    $ awk '{print $1,$2}' datafile
+    99 98
+    300 298
+    498 493
+    699 698
+    900 748
+    1200 703
+    1500 651
+    1698 627
+
+    這樣是從input兩個欄位輸出output一個欄位
+    $ awk '{print $1 "," $2}' datafile
+    99,98
+    300,298
+    498,493
+    699,698
+    900,748
+    1200,703
+    1500,651
+    1698,627
+
+    也就是說print $1$2 等於print $1 $2
+
+    \end{verbatim}
+    \subsection{內定變數}
+    除了像C語法的自訂變數，x,y,z....。awk有一些內定的變數名。
+    欄位上的內定變數
+    \begin{verbatim}
+    ARGC        :  number of arguments on command line
+    ARGV        :  array containing the command line arguments
+    ARGIND      :  
+    $0          :  整行record
+    $1....$n    :  第n個欄位(field)
+    
+    ENVIRON     :  一個associate array含有全部的環境變數
+    ERRNO       :  最後system出錯的error number請看/usr/include/errno.h
+    
+    FILENAME    :  current filename
+    FIELDWIDTHS :  list of field widths
+   
+    FS          :  field separator內定是空白或tab
+    OFS         :  output field seperator內定是空白
+    RS          :  record separator內定是newline
+    ORS         :  output record seperator內定是newline
+    NF          :  number of field	這常常也是陣列與loop要用到的length
+    NR          :  number of record	這常常也是陣列與loop要用到的length
+    \end{verbatim}
+    其中FS, OFS, RS, ORS, NF, NR是常用到的請看例子
+    \begin{verbatim}
+    $ cat /etc/passwd
+    list:x:38:38:SmartList:/var/list:/bin/sh
+    irc:x:39:39:ircd:/var:/bin/sh
+    nobody:x:65534:65534:nobody:/home:/bin/sh
+    cyril:x:1000:1000:Cyril Huang,,,:/home/cyril:/bin/bash
+
+    $ awk '{FS=":"; print $7}' /etc/passwd
+    /bin/sh
+    /bin/sh
+    /bin/sh
+    /bin/bash
+
+    $ awk '{FS=":"; OFS=","; print $1,$6,$7}' /etc/passwd
+    list,/var/list,/bin/sh
+    irc,/var,/bin/sh
+    nobody,/home,/bin/sh
+    cyril,/home/cyril,/bin/bash
+
+    NF NR可以拿來作condition用
+    $1 $2....也可以拿來作condition用，搭配變數regular express match算符 ~
+
+    $ cat datafile
+    # This is the data file from experiment
+    99      98 3.5
+    300     298 4.9
+    498     493 5.9
+    # Failed data
+    122     123
+    699     698 7.6
+    900     748 9.0
+    1200    703 9.6
+    1500    651 10.4
+    1698    627 10.8
+
+    $ awk 'NF == 3 && $1 ~ /[0-9]+/{print $3,$1,$2}' datafile
+    3.5 99 98
+    4.9 300 298
+    5.9 498 493
+    7.6 699 698
+    9.0 900 748
+    9.6 1200 703
+    10.4 1500 651
+    10.8 1698 627
+    \end{verbatim}
+
+    \subsection{awk變數與shell變數}
+    awk 與 sed都是幫助shell programming的好工具，因此要跟shell變數溝通，
+    通式中的 var=value，var就是awk變數，value就是shell變數的值。
+    {\small
+    \begin{verbatim}
+    # fs_mounted $dev $mnt_pt $fs_type
+    # This is shell script version of fs_mounted, check if the file system is 
+    # mounted.
+    fs_mounted()
+    {
+        _BINGO=
+        [ $# -eq 3 ] || return $ERRNO_EINVAL
+        _BINGO="`$AWK
+          '{if (\$1 == _DEVICE && \$2 == _MNT_PT && \$3 == _FS_TYPE) print \$1}'
+          _DEVICE=$1 _MNT_PT=$2 _FS_TYPE=$3 $MNTTAB`"
+        [ "$_BINGO" ] || return -1
+        return 0;
+    }
+    \end{verbatim}}
+    當然也可以用shell單quote, double quote的"'"'"'的技巧來傳變數進去awk。
+    \\\\
+    shell script的執行與shell command中的awk對於一些保留字元處理跟sed一樣
+    要小心點。還有sed的regular express中, + ? ( )需要在前面用反斜線escape，
+    在awk裏面卻不用，所以shell, bash, sed, awk, perl, python都不太一樣，
+    在單行使用時，要小心測試一下。
+    \\\\
+    這個例子裡面注意\$1 \$2 \$3，在AWK ' '單引號裡面的是awk的\$1\$2\$3，在
+    外面\_DEVICE=\$1...是shell的 \$1 \$2 \$3。\_DEVICE \_MNT\_PT 等是awk的
+    變數。所以awk的\verb=$1 $2 $3=有\verb=\=這個escape在前面。也就是說shell
+    不處理它們並把這些送給awk處理。這在同時使用兩種script中常常要注意，例如
+    php包javascript, php內用perl，perl包shell,....等等。
+    \\\\
+    gawk 也有 -v 選項設定awk 變數值。例如gnu awk 有個特別的IGNORECASE = 1時
+    ，搜尋會不分大小寫，例如以逗號為區隔不分大小寫找出第八欄位是openssl
+    \begin{verbatim}
+awk -F , -v "IGNORECASE=1" '$8 ~ /openssl/ { print $1,$2; }' myfile
+    \end{verbatim}
+
+    \subsection{陣列Array與split函數}
+    所有awk的array都是associate array,也就是hash，也就是帶有名字id的陣列。
+    這個名字id就是hash的key。一般我們用1, 2 ,3 ...來當作陣列的id註標，在
+    awk裡面允許我們用名稱來當id index來搜尋陣列。不過awk很聰明如果看到是數
+    字型的index也可以像在C裡面用的一樣。
+    \\\\
+    注意!陣列從\verb=array[1]=開始，不是從\verb=array[0]=開始，跟c不一樣。
+    我們可以指定\verb=x[1], x[2]...=的陣列照1,2,3 ...排列順序，
+    但associate array的排列不是我們可以控制的。注意associate array的注標要用
+    引號括起來，請看for loop的用法。
+    \\\\
+    可以用split(string, array, [sep])來得到一個陣列，sep沒有給就用FS的值當做
+    這個string的欄位分隔，一個欄位就是一個陣列元素。
+    \begin{verbatim}
+    $ cat split.awk
+    #! /bin/awk
+    BEGIN{FS=":"}
+    /cyril/{
+        print $0
+        split($0, afield)
+        for (i = 0; i < NF; ++i) { 
+            print i","afield[i]
+        }
+        
+        delete afield[2]
+
+        for (i = 0; i <= NF; ++i) {
+            print i","afield[i]
+        }
+    }
+
+    $ awk -f split.awk /etc/passwd
+    lcyril:x:100:1::/export/lcyril:/usr/bin/bash
+    0,
+    1,lcyril
+    2,x
+    3,100
+    4,1
+    5,
+    6,/export/lcyril
+    7,/usr/bin/bash
+    0,
+    1,lcyril
+    2,
+    3,100
+    4,1
+    5,
+    6,/export/lcyril
+    7,/usr/bin/bash
+    \end{verbatim}
+    
+    \section{基本控制語法}
+    除了欄位的變數與特定用法外，awk比sed強的在於更接近程式語言的控制方法。
+    awk的語法很像c，說實在awk蠻簡單的，有c的基礎很容易就會了，當然也可以先學
+    awk再學c。
+    \subsection{數學與邏輯算符}
+    C的一般數學
+    \begin{verbatim}
+    + - * / % ++ -- ^ **(這是fortran的指數)
+    \end{verbatim}
+    C的一般指定
+    \begin{verbatim}
+    = += -= *= /= %= ^= **=
+    \end{verbatim}
+    C的一般邏輯
+    \begin{verbatim}
+    ! == < > <= >= != && ||
+    ?: (c的cond ? result1 : result2 如果cond成立返回result1不然返回result2)
+    \end{verbatim}
+    condition的邏輯算符裡面有個比較特別的就是pattern match算符 \verb=~, !~= ，
+    將來perl中很有用的類似算符\verb=~==。主要是regular express通常match的是
+    一行行作為內定的比對，如果想要對某個特定變數做re match時，就要用到這個算
+    符。
+    \begin{verbatim}
+    如果x是個阿拉伯數字
+    if (x ~ /^[0-9]+/) {
+         x += y
+    }
+
+    \end{verbatim}
+
+    \subsection{if}
+    沒什麼了不起就是c而已
+    \begin{verbatim}
+    if (condition) {
+    } else if (condition) {
+    } else {
+    }
+
+    \end{verbatim}
+    注意else if跟c語法一樣
+
+    \subsection{for loop}
+    這邊的for有兩個，是c與bourne shell的綜合，perl也是一樣，不過perl用了
+    c shell的語法。
+    \begin{verbatim}
+    for (i = 0; i < 10; i++) {
+    }
+    for x in xarray {
+    }
+    \end{verbatim}
+    請看例子
+    \begin{verbatim}
+    $ cat gyoza.awk
+    #! /bin/awk  heehee
+    BEGIN {
+    x[1]="I"
+    x[2]="am"
+    x[3]="a"
+    x[4]="gyoza"
+    y["I"]="I"
+    y["am"]="am"
+    y["a"]="a"
+    y["gyoza"]="gyoza"
+    for (i = 1; i < 5; i++) {
+         print x[i]
+    }
+    for item in x {
+         print item, x[item]
+    }
+    for item in y {
+         print item, y[item]
+    }
+    }
+
+    後面的gyoza.awk沒有用啦  我只是跑這個BEGIN而已
+    $ awk -f gyoza.awk gyoza.awk
+    I
+    am
+    a
+    gyoza
+    2 am
+    3 a
+    4 gyoza
+    1 I
+    gyoza gyoza
+    am am
+    I I
+    a a
+    \end{verbatim}
+
+    \subsection{while}
+    沒什麼了不起就是c而已
+    \begin{verbatim}
+    while (condition) {
+        statment
+    }
+
+    do {
+        statment
+    } while (condition)
+
+    \end{verbatim}
+    for loop與while loop都跟c一樣，可以用break離開，continue不做這loop換到下個
+    loop。
+
+    \section{function}
+    跟c不太一樣的，這是一種script，不用甚麼type要宣告，也沒有什麼
+    pass by value, pass by address，變數是global的。
+    \begin{verbatim}
+    # 通式
+    function fun(arg1, arg2) {
+            arg1 = arg2
+            xxxx
+    }
+
+    排序的例子
+    $ cat sort.awk
+    # sorting function
+    function sort(Array, elements, temp, i,j)
+        for (i = 2; i<= elements; ++i) {
+            for(j = i; array[j - 1] > array[j]; --j) {
+                temp = array[j]
+                array[j] = array[j - 1]
+                array[j - 1] = temp
+            }
+        }
+        return 
+    }
+    # main routine, 一行一行來
+    {
+    for (i = 2; i <= NF; ++i) {
+         grades[i - 1] = $i
+    }
+    sort(grades, NF-1)
+    printf("%s: ", $1)
+    for (j = 1; j <= NF - 1; ++j) {
+        printf("%d ", grades[j])
+    }
+    printf("\n")
+    }
+
+    $ cat grade.txt
+    西西  100 60 75 23
+    米米  100 98 99 89
+
+    $ awk -f sort.awk grade.txt
+    西西: 23 60 75 100 
+    米米: 89 98 99 100
+
+    \end{verbatim}
+    不過排序可以用sort這個command比較簡單，sort有一個選項-u，可以把資料
+    裡面一樣的篩選掉，duplicate的會只剩一個，這也很方便。
+    
+    \section{其他函數}
+    \subsection{字串處理-match與代換}
+    字串上處理不像sed有s///這種代換，得用上一些內建函數。
+    \begin{itemize}
+    \item 傳回符合regex的在string的位置\\
+    match(string, regex)
+    \item 傳回子字串: 傳回在第m個字元往後數n個字元的子字串，n沒給就到底\\
+    substr(string, m, [,n])
+    \end{itemize}
+    代換: 代換的幾個函數有的傳回值很特別
+    \begin{itemize}
+    \item 把string2裡面符合regex的第一個字串換成string1。成功傳回1。\\
+    sub(regex, string1, string2)
+    \item 把string2裡面符合regex的字串globally的全部代換成string1，
+    等於sed的s///g。傳回整數表示代換數目。\\
+    gsub(regex, string1, string2)
+    \item 傳回一個字串為string2裡面符合regex的第n個字串換成string1，
+    等於sed的s///nth\_match。但是string2沒有被改變。\\
+    gensub(regex, string1, nth\_match, string2)
+    \end{itemize}
+    string2沒給通通是\$0，nth\_match可以用g或G表示globally(全部)。請看例子
+
+    \begin{verbatim}
+    $ cat match.awk
+    #! /bin/awk
+    BEGIN{FS=":"}
+    /cyril/{
+    print $0
+    print match($0, /cyril/)
+    print substr($0, match($0, /cyril/), length("cyril"))
+    print gensub(/cyril/, "mark", 2)
+    print $0
+    sub(/^.*cyril/, "mark")
+    print $0
+    }
+
+    $ awk -f match.awk /etc/passwd
+    lcyril:x:100:1::/export/lcyril:/usr/bin/bash
+    2
+    cyril
+    lcyril:x:100:1::/export/lmark:/usr/bin/bash
+    lcyril:x:100:1::/export/lcyril:/usr/bin/bash
+    mark:/usr/bin/bash
+    \end{verbatim}
+    這個例子用了length()這個函數，regex不用引號，有string的地方要用
+    double quote括起來，用gensub不會改變string2的值，
+    而且請看第三個print \$0，這邊還是有greedy的效應在，所以只剩下後面一截。
+
+    \subsection{輸入輸出處理print(f)}
+    輸出上來說print是很簡單的用法，不過有更好的format輸出，就像c裡的printf
+    或者fortran一樣，不過script語言對於字串與數字的定義跟處理是會隨著不同
+    語言有所不同這是很傷腦筋的。在awk裡面也是一樣，不同的awk會不太一樣，這
+    要小心點。這也是所謂type strong語言跟type 不strong語言的差別。
+    \begin{verbatim}
+    printf()
+
+    用法跟c函數一樣
+    {printf("The sum on line %s is %d.\n", NR, $1+$2)}
+    %s    表示一個字串
+    %d    表示一個整數
+    %n.mf 表示一個n個整數m個小數的浮點數
+    %05d  表示為5位數整數，不滿五位數，則用0填滿
+    \end{verbatim}
+    但是在使用上有個很大疑問是\$1\$2這些field變數是字串還是數字，
+    1234是字串還是數字，加括號的"1234"是字串還是數字呢。16進制的
+    abcdef與"abcdef"又怎麼區別呢，還有由於awk變數是不需要init的，
+    所以在code裡面忽然出現的abcdef是否代表了一個awk的變數呢，
+    \begin{verbatim}
+    seq 5 | awk 'BEGIN{var=5}{printf("%0"var"d\n", $1); }'
+    \end{verbatim}
+    gawk在後來做了區別，但是跟傳統的有了不一樣。
+    \begin{verbatim}
+    mawk
+    echo ef | mawk '{ printf("%04d\n", "0x"$1) }'
+
+    gawk
+    echo ef | gawk --non-decimal-data '{ printf("%04d\n", "0x"$1) }'
+    或者用上gawk特殊function strtonum
+    echo ef | gawk '{printf("%04d\n", strtonum("0x$1"));}'
+    \end{verbatim}
+    這表示field 1是個hex轉成decimal後，不足10個digit的前面補上leading 0。
+    在C的literal裡，0x在前面可以表示是一個16進制數字，可是原本的awk沒有這樣。
+    而且你也不知道說0x或者x是否是個awk變數，複雜的資料結構對於這種script
+    是很麻煩的。所以下面情況結果是差很大的
+    \begin{verbatim}
+    echo ef | mawk '{ printf("%04d\n", 0xef) }'
+    echo ef | mawk '{ printf("%04d\n", "0xef") }'
+    echo ef | mawk '{ printf("%04d\n", "0x"$1) }'
+    echo ef | mawk '{ printf("%04d\n", "0x$1") }'
+    echo ef | mawk '{ printf("%04d\n", 0x$1) }'
+    echo ef | mawk '{ printf("%04d\n", 0x"$1") }'
+
+    echo ef | gawk '{ printf("%04d\n", 0xef) }'
+    echo ef | gawk '{ printf("%04d\n", "0xef") }'
+    echo ef | gawk '{ printf("%04d\n", "0x"$1) }'
+    echo ef | gawk '{ printf("%04d\n", "0x$1") }'
+    echo ef | gawk '{ printf("%04d\n", 0x$1) }'
+    echo ef | gawk '{ printf("%04d\n", 0x"$1") }'
+    \end{verbatim}
+
+    \subsection{亂數rand()}
+    產生介於0 到 1之間的亂數
+    \begin{verbatim}
+    BEGIN {
+    srand(systime())
+    random_num = rand()
+    print random_num
+    }
+    \end{verbatim}
+    systime()傳回從1970, 1, 1到現在的秒數 srand()產生一個虛擬的亂數陣列以供
+    rand()使用
+    \subsection{系統system()}
+    這個很像Unix的system()這個函數
+    \begin{verbatim}
+    BEGIN {if (system("ls -l")) != 0) {
+               print "command failed"
+           }
+    }
+    \end{verbatim}
+    其他的像數學函數等等就不加以介紹了
+
