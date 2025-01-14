@@ -770,34 +770,48 @@ h1 = dict(h0)
           def __init__(self, *args):
               xxxxx
               Parent.__init__(self, arg0, arg1)
+          def method1(self, *args):
+              ...
+          def method2(self, *args):
+              ...
        \end{verbatim}
-       來定義一個class Son繼承自Parent，其中\_\_init\_\_=是初始化 function，
-       其中Parent.\_\_init\_\_(self)為呼叫爸爸的init的方法。python 有新的 class
-       叫 object，所有 class 只要宣告時是class xxx(object):這樣的話，就是新型態
-       class，這樣的子 class 呼叫爸爸的 init 的方法改用 super([type, [object]])，
+       來定義一個class Son繼承自Parent，其中\verb=__init__=是初始化 function，
+       其中 Parent.\verb=__init__=(self) 為呼叫爸爸的 init 的方法，所有在
+       class block 下定義的 function 為 method，跟所有物件程式一樣，第一參數
+       傳回為本身物件。 python 有新的 class 叫 object，所有 class 只要宣告時是
+       \begin{verbatim}
+       class Xxxx(object):
+       \end{verbatim}
+       這樣的話，就是新型態 class，這樣的子 class 呼叫爸爸的 init 的方法改用
+       super([type, [object]])，
        他是回傳一個相對後面 object 的 type 的爸爸 class，所以呼叫要用
-       super(Son, self).\_\_init\_\_(arg0,arg1)。 python 並不會自動對應參數
+       super(Son, self).\verb=__init__(arg0,arg1)=。 python 並不會自動對應參數
        並呼叫父 class 的 init ，必須自己額外用上述方法，使用 Parent 或 super 
        呼叫都可以。 python 3.x 後用 super 的方法不用那麼囉唆了，用
-       super().\_\_init\_\_(arg0,arg1) 就可以。
+       super().\verb=__init__(arg0,arg1)= 就可以。
        \\\\
        python 的繼承可以多個 class, class Son(Parent0, Parent1):
        搜尋相關 variable,methods 的順序是從左到右依次往上。
   \item [多型] \hfill \\
     polymorphism, 有幾種如 overriding, overloading 與 subtype(dynamic binging)
     \begin{itemize}
-      \item 當子 class 跟父 class 的同名函式一模一樣時，稱為overridding，整個蓋掉。
-      \item 當子 class 跟父 class 的函式同名但傳的參數不同時，稱為overloading，此
-            時根據傳進來的參數型別或者個數自動使用相對應的呼叫。有名的如
-            compare()，傳進去是 integer 跟 string，會自動用相對應的比較方法。
-            這也叫 overloading。python 也沒有 overloading，只可以用判斷傳進的參數
-            型態來作不同執行。但也就是說一個 class 下只能有一個函數名稱。
-      \item subtype是需要有繼承的 class 才行的，也就是當呼叫時某函式時，傳進去
-        雖是同一種父型別，這跟 overridding 有點像，c++ 的 virtual function 跟
-        polymorphism 是不提供原始碼給人編譯時，只提供更高階 abstraction 的 class
-        參數的API，就能自動呼叫到該有的同名函式呼叫，這在c++內為 dynamic binding
-        。binding 是說一個 method 連結上一個 object 稱為 binding，在執行期才決定
-        object 的 type 稱為 dynaminc binding，請看例子：
+      \item 當子 class 跟父 class 的同名函式一模一樣時，稱為overridding，整個
+        蓋掉。
+      \item 當子 class 跟父 class 的函式同名但傳的參數不同時，稱為overloading
+        ，此時根據傳進來的參數型別或者個數自動使用相對應的呼叫。有名的如
+        compare()，傳進去是 integer 跟 string，會自動用相對應的比較方法。
+        python 也沒有 overloading，只可以用判斷傳進的參數型態來作不同執行。但
+        也就是說一個 class 下只能有一個函數名稱。
+      \item subtype 是需要有繼承的 class 才行的，也就是當呼叫時某函式時，傳進去
+        雖是同一種父型別，如此在編譯時期確保傳進來是合法物件，但最後執行時，會
+        找到正確相對應的子 class 的物件呼叫。 這跟 overridding 不同的是
+        overridding 是子 class 物件的 method 呼叫，找不到時，會去用 parent 的，
+        subtype 是呼叫 parent 的 method 呼叫，根據傳進 class 區分去找到子 class
+        的 method 呼叫。 C++ 的 virtual function 跟
+        polymorphism 是不提供原始碼給人編譯時，只提供更高階 abstraction 的
+        class 參數的API，就能自動呼叫到該有的同名函式呼叫，這在 C++ 內為
+        dynamic binding 。binding 是說一個 method 連結上一個 object 稱為
+        binding，在執行期才決定 object 的 type 稱為 dynaminc binding，請看例子：
         \begin{verbatim}
 class Animal:
     def __init__(self, name): # Constructor of the class
@@ -822,9 +836,9 @@ for animal in animals:
     print talk(animal)
         \end{verbatim}
     \end{itemize}
-    不過執行上面程式是錯的結果，主要是 python 不是那麼強型態的語言，所以不支
-    援 subtype，只要有 overriding 就夠了，這要在更強型態的 c++ 上才看得出來他
-    的用途。
+    不過執行上面程式是錯的結果，主要是 python 不是那麼強型態的語言，也不需要
+    編譯執行時期分開的，所以不支 援 subtype，只要有 overriding 就夠了，這要在
+    更強型態的 C++ 上才看得出來他的用途。
 \end{description}
   因此 python 只有 overridding 跟 使用 *args **kargs 方法的 overloading，無法
   在同一 class 下定義兩個同名的 methods。
@@ -837,10 +851,10 @@ for animal in animals:
   兩個字串相加要spriintf()。不過有時候想想為漂亮的語句，光在那邊搞這些資料型別
   就昏倒了。
   \\\\
-  嚴格說起來，python是沒有所謂整數字串型別的，python中，所
-  有東西都是物件，連10, 0.5等等全是物件。只是他們的算符有特別overloading
-  處理。所以在tuple(1,2,3) 中，無法改變t[0]的數值，但tuple ([1,1],[2,2],[3,3])
-  中， 卻可以改變t[0][0]的數值。
+  嚴格說起來，python 是沒有所謂整數字串型別的，python 中，所有東西都是物件，連
+  10, 0.5 等等全是物件。只是他們的算符有特別 overloading 處理。所以在
+  tuple(1,2,3) 中，無法改變t[0]的數值，但 tuple ([1,1],[2,2],[3,3]) 中， 卻可
+  以改變t[0][0]的數值。
 
   \subsection{reference}
   物件最重要的就是參照reference，就是在一個時空中，這物件能夠被使用者參考到，
@@ -853,11 +867,12 @@ for animal in animals:
   \end{itemize}
 
   \subsection{constructor與initializer}
-  python 的物件建立是用\verb=__new__(cls), __new__(cls)=將會建立一個 cls 的 instance
-  ，如果還回一個 cls 的 instance，則繼續呼叫\verb=__init__(self)=，如果沒有還回一個
-  cls 的 instance，\verb=__init__=將不會被呼叫。 特別需求在於建立一個父 class 的
-  instance，但使用自己的 initializer , super(currentclass, cls).\verb=__new__(cls[, ...])=
-  所以一般程式基本上用\verb=__init__= 就可以了。
+  python 的物件建立是用 \verb=__new__(cls)=, \verb=__new__(cls)= 將會建立一個
+  cls 的 instance ，如果還回一個 cls 的 instance，則繼續呼叫
+  \verb=__init__(self)=，如果沒有還回一個 cls 的 instance，\verb=__init__= 將
+  不會被呼叫。 特別需求在於建立一個父 class 的 instance，但使用自己的
+  initializer , super(currentclass, cls). \verb=__new__(cls[, ...])=
+  所以一般程式基本上用 \verb=__init__= 就可以了。
 
   \subsection{overloading}
   function overloading 也是物件導向的重要特色，也就是我們希望物件的運算能夠像
@@ -877,18 +892,28 @@ for animal in animals:
   但 python 的 overloading 是爸爸跟小孩的class 間而已，同一 class 內的 function
   是沒有 overloading 的，這很麻煩。
 
-  \subsection{class method與變數namespace}
-  每一個 class 都有一個\verb=__dict__= list，裡面就是 class 的變數，
-  在宣告時，其實在 class 這行後馬上跟著的變數宣告就是 class 變數。
-  當用 SomeClass.var1時，其實是SomeClass.\verb=__dict__.var1=，
-  而一個 instance 的變數其實會先去找 instance 上的，找不到最後才會去
-  找 Class 裡面的。 instance 上也有\verb=__dict__=，就是我們在
-  \verb=__init__=裡面用的self.x時，這是x是在instance的\verb=__dict__=。
-  member function 跟 member data 是無法區別的，也就是定義a.x跟a.x()是沒有意義的，
-  會只有a.x。在同一 namespace 中，變數名跟函數名不能相同。
-  另外還有個\verb=__all__=是另一個 list，只有在這裡面的才會 export 出去，這有點
-  算 perl 的 Export 或者C的 extern。如果沒有\verb=__all__=，則內定是所有前面
-  不帶\verb=_=的變數在使用 import 時會被帶進來。
+  \subsection{class method 與變數 namespace}
+  每一個 class 都有一個 \verb=__dict__= list，裡面就是 class 的變數，
+  在宣告時，其實在 class 這行後馬上跟著的變數宣告就是 class 變數，例如
+  \begin{verbatim}
+class SomeClass:
+    var1 = 0
+    var2 = []
+    def __init__(self, myvar):
+        ...
+  \end{verbatim}
+  這個 var1, var2 是 class scope 範圍的變數，是整個 class 共享的，有些變數例如
+  reference count 等等的有這樣的特性需求，就要用 class 變數。
+  \\\\
+  當用 SomeClass.var1時，其實是SomeClass.\verb=__dict__.var1=， 而一個 instance
+  的變數其實會先去找 instance 上的，找不到最後才會去找 Class 裡面的。 instance
+  上也有 \verb=__dict__=，就是我們在 \verb=__init__=裡面用的self.x時，這是 x 是
+  在 instance 的 \verb=__dict__=。 member function 跟 member data 是無法區別的，
+  也就是定義 a.x 跟 a.x() 是沒有意義的，會只有a.x。在同一 namespace 中，變數名
+  跟函數名不能相同。 另外還有個 \verb=__all__= 是另一個 list，只有在這裡面的才
+  會 export 出去，這有點算 perl 的 Export 或者C的 extern。如果沒有
+  \verb=__all__=，則內定是所有前面不帶 \verb=_= 的變數在使用 import 時會被帶
+  進來。
 
   \subsection{accessors}
   物件導向的程式有一個特點是 private/public member 的 get 與 set，這
@@ -1117,25 +1142,27 @@ class MyException(Exception):
     pass
 
 class Sample:
-def __enter__(self):
-    return self
-def __exit__(self, type, value, trace):
-    print type
-    print value
-    print trace
+    def __enter__(self):
+        return self
 
-def raise_exception(self):
-    raise MyException, "Something Wrong"
+    def __exit__(self, type, value, trace):
+        print type
+        print value
+        print trace
+
+    def raise_exception(self):
+        raise MyException, "Something Wrong"
 
 with Sample as s:
     s.raise_exception()
   \end{verbatim}
-  會看到如果member function出問題了，會自動跑去叫\verb=__exit__=，通常我們會在
-  裏面放cleanup的code。也就是整段class為一個context，enter為init code, exit
-  為cleanup code,無論context怎麼死的，都會執行cleanup。
+  會看到如果 member function 出問題了，會自動跑去叫 \verb=__exit__=，通常我們
+  會在裏面放 cleanup 的 code。也就是整段 class 為一個 context，enter 為 init
+  code, exit 為 cleanup code ，無論 context 怎麼死的，都會執行cleanup。
   \\\\
-  但以open為例子，我們只要function 不要class，至少with的時候我們想要小寫的
-  呼叫，我們可以用python標準庫裏面的 contextlib 並用yield做 iteration generator。
+  但以 open 為例子，我們只要 function 不要class，至少 with 的時候我們想要小寫的
+  呼叫，我們可以用 python 標準庫裏面的 contextlib 並用 yield 做 iteration
+  generator。
   \begin{verbatim}
 from contextlib import contextmanager
 @contextmanager
@@ -1151,8 +1178,8 @@ def tag(name):
 foo
 </h1>
   \end{verbatim}
-  所以用contextmanager作為 decorator ，則yield前放\verb=__enter__=的code，
-  之後放\verb=__exit__=的code，變得很簡單。
+  所以用 contextmanager 作為 decorator ，則 yield 前放 \verb=__enter__= 的code，
+  之後放 \verb=__exit__= 的code，變得很簡單。
 
   \subsection{class的內定變數與相對應的內定函數}
   在 python 中有很多有用的內定函式對物件操作，例如 isinstance(), type()...
