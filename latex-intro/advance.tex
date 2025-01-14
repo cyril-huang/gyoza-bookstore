@@ -1,245 +1,787 @@
 \chapter{進階使用}
-上面的基本介紹應該足夠知識了解粗淺的{\LaTeX} 系統，
-但還是有很多細微龜毛調整是我們要知道的，尤其前面我們完全不管
-一些粗細長寬等設定，只專注在文章邏輯結構，章節目錄等等。
-可是它的長相都是 {\LaTeX} 內定的，當我們想讓本文寬度更大些就要
-來改變內定設定。 最後要來知道 macro 是怎麼寫出來，將來我們要自己增加功能。
+上面的基本介紹應該足夠知識了解粗淺的{\LaTeX} 系統，但還是有很多細微龜毛調整是
+要知道的，尤其前面完全不管一些粗細長寬等設定，只專注在文章邏輯結構，章節目錄
+等等，可是它的長相都是 {\LaTeX} 內定的，當想讓本文寬度更大些就要來改變內定設
+定。
 \\\\
-要先了知的是整個版面的相關術語與知識，然後其實電子排版就是在一張虛擬畫布
-上，把物件擺來擺去，所以設定各物件空白的命令 macro 很重要。最後我們要能
-用原始命令增加自己的新命令。
+要先了知的是整個版面的相關術語與知識，然後其實電子排版就是在一張虛擬畫布上，
+把物件擺來擺去，所以設定各物件空白的命令 macro 很重要。
+\\\\
+最後要來知道 macro 是怎麼寫出來，將來我們要自己增加功能， 用 \TeX{} 原始命令
+與 \LaTeX{} 新macro 增加自己的新命令，並且希望能提供 package 使用。
 
 \section{參數設定}
 包括一些內定counter，點線面的設定。
-\subsection{幾何設定}
-排版對於字型的定義是很嚴格的，以下為一個字的定義
-\begin{center}
-\includegraphics[width=0.5\textwidth,keepaspectratio]{images/sphinx.png}
-\end{center}
-大寫字一律要站在 baseline，很多的對齊參考基準都是根據這些定義而來丈量的。
-\\\\
-設定直線或黑盒子，直線就是一塊細長的黑盒子
-\begin{center}
-\begin{tabular}{ccc}
-命令 & 效果 & 意義 \\
-\hline
-\verb=\rule[-1mm]{5mm}{3mm}= & \rule[-1mm]{5mm}{3mm} Sphinx & 
-   從baseline下1mm 升起5mm寬3mm厚的黑盒子\\
-\verb=\rule{5mm}{.1pt}= & \rule{5mm}{.1pt} Sphinx &
-   從baseline升起5mm寬.1pt厚的黑盒子\\
-\end{tabular}
-\end{center}
-設定文字盒子
-\begin{center}
-\begin{tabular}{cm{4cm}m{4cm}}
-命令 & 效果 & 意義 \\
-\hline
-\verb=\parbox{4cm}{paragraph 盒子}= &
-  \parbox{4cm}{paragraph 盒子如果文字長度太長，會自動折行，
-  跟 tabular 的 p 設定一樣。} & 段落盒子 \\
-\verb=\mbox{mbox}= & \mbox{mbox} & 無框盒子 \\
-\verb=\makebox[3cm][s]{make a box}= & \makebox[3cm][s]{make a box} & 寬3cm，文字spread盒子 \\
-\verb=\fbox{fbox}= & \fbox{fbox} & 有框盒子 \\
-\verb=\framebox[3cm][r]{frame a box}= & \framebox[3cm][r]{frame a box} & 寬3cm，文字從右邊寫起 \\
-\end{tabular}
-\end{center}
-設定某參數長度在 preamble 區使用 setlength，它會影響全部，例如
-\begin{verbatim}
+
+  \subsection{幾何設定}
+  排版對於字型的定義是很嚴格的，以下為一個字的定義
+  \begin{center}
+    \includegraphics[width=0.5\textwidth,keepaspectratio]{images/sphinx.png}
+  \end{center}
+  大寫字一律要站在 baseline，很多的對齊參考基準都是根據這些定義而來丈量的。
+  \\\\
+  設定直線或黑盒子，直線就是一塊細長的黑盒子
+  \begin{center}
+    \begin{tabular}{lll}
+      命令 & 效果 & 意義 \\
+      \hline
+      \verb=\rule[-1mm]{5mm}{3mm}= & \rule[-1mm]{5mm}{3mm} Sphinx & 
+      從 baseline 下1mm 升起 5mm 寬 3mm 厚的黑盒子\\
+      \verb={\color{red}\rule{5mm}{.1pt}}= &
+      {\color{red}\rule{5mm}{.1pt} Sphinx} &
+      從 baseline 升起 5mm 寬 .1pt 厚的紅盒子\\
+    \end{tabular}
+  \end{center}
+  設定文字盒子
+  \begin{center}
+    \begin{tabular}{p{5.5cm}m{4cm}m{4cm}}
+      命令 & 效果 & 意義 \\
+      \hline
+      \verb=\parbox{4cm}{=paragraph 盒子
+      如果文字長度太長，才會自動折行 \verb=}= &
+
+      \parbox{4cm}{paragraph 盒子
+      如果文字長度太長，才會自動折行} & 段落盒子 \\
+
+      \verb=\mbox{mbox}= & \mbox{mbox} & 無框盒子 \\
+
+      \verb=\makebox[3cm][s]{make a box}= &
+      \makebox[3cm][s]{make a box} & 寬 3cm，文字 spread 盒子 \\
+
+      \verb=\fbox{fbox}= & \fbox{fbox} & 有框盒子 \\
+
+      \verb=\framebox[3cm][r]{frame a box}= &
+      \framebox[3cm][r]{frame a box} & 寬3cm，文字從右邊寫起 \\
+    \end{tabular}
+  \end{center}
+  其中 parbox, makebox, framebox 才有對齊選項，也是文字物件對齊折行的主要底層
+  物件
+  \begin{verbatim}
+\parbox[<alignment>][<height>][<inner arrangement>]{<width>}{<text>}
+\makebox[<widht>][<alignment>]{<text>}
+  \end{verbatim}
+  inner arrangement 是高度的垂直對齊， 對齊除了過去 table 的水平對齊 l, c, r, 
+  垂直對齊 t, c, b 外，有個新的 s 能做到整行分佈對齊。 除了這些 box 命令外，
+  也可以使用 minipage 這個 environment，創造一小段 parbox 的效果。
+  \begin{verbatim}
+\begin{minipage}[b]{3cm}
+測試小盒子的 minipage 環境設定，使他超過三公分的大小看會怎樣！
+\end{minipage}
+  \end{verbatim}
+  \begin{minipage}[b]{3cm}
+測試小盒子的 minipage 環境設定，使他超過三公分的大小看會怎樣！
+  \end{minipage}
+  minipage 環境有很多選項，通式為
+  \begin{verbatim}
+\begin{minipage}[position][height][inner-pos]{width}
+  contents
+\end{minipage}
+  \end{verbatim}
+  position 一樣是 c, t, b 跟外面文字對齊 center, top, bottom，內定是 center
+  ，而 inner-pos 則是內部文字對齊，一樣是 c, t, b 跟 s，height 則是盒子高度
+  ，但通常不必設。 由於這是一個盒子，所以把 tabular, figure 放進盒子，可以用
+  來做文繞盒子的方式產生文繞圖表的效果。
+  \\\\
+  設定某參數長度在 preamble 區使用 setlength，它會影響全部，可以多使用 calc
+  package，可以在長度裡面直接做加減乘除，例如
+  \begin{verbatim}
 \documentclass{book}
+
+\usepackage{calc}
+
 \setlength{\hoffset}{0mm}
 \setlength{\oddsidemargin}{20mm-1in}
 \setlength{\paperwidth}{210mm}
 \setlength{\textwidth}{\paperwidth-40mm}
 \begin{document}
 ...
-\end{verbatim}
-{\LaTeX}設新長度名字方法，其中可以用一群文字來把
-新變數的寬度高度深度設成後面文字的寬度高度深度。
-\begin{verbatim}
+\end{document}
+  \end{verbatim}
+  {\LaTeX}設新長度名字方法，其中可以用一群文字來把
+  新變數的寬度高度深度設成後面文字的寬度高度深度。
+  \begin{verbatim}
 \newlength{\mylength}
 \setlength{\mylength}{100cm}
 \settowidth{\mylength}{大頭 大頭你好長}
 \settoheight{\mylength}{大雄 大雄你好高}
 \settodepth{\mylength}{大家 大家你好深}
-\end{verbatim}
-原本 {\TeX} 的方法
-\begin{verbatim}
+  \end{verbatim}
+  原本 {\TeX} 的方法
+  \begin{verbatim}
 \newdimen\mylength
 mylength=1.5pt
 \end{verbatim}
-印出長度用the 會印出。
+  印出長度用the 會印出。
+  \begin{center}
+    \begin{tabular}{ccc}
+      命令 & 效果 & 意義\\
+      \hline
+      \verb=\the\textwidth= & \the\textwidth & 文字區域寬度 \\
+      \verb=\the\paperwidth= & \the\paperwidth & 紙張真正寬度 \\
+      \verb=\the\paperheight= & \the\paperheight & 紙張真正高度 \\
+      \verb=\the\tabcolsep= & \the\tabcolsep & 表格內欄位間距離 \\
+    \end{tabular}
+  \end{center}
+  這裡面的單位除了簡單的公英制單位外
+  \begin{itemize}
+    \item pt 前面說過大約是0.35mm
+    \item em 這是目前使用字型M的寬度
+    \item ex 這是目前使用字型x的高度
+    \item mu math unit，大約是 1/18 的 em
+  \end{itemize}
+  在網路上看到有大學老師在教 Word， 不管怎樣，所需的表格對齊用 \LaTeX{} 只要用
+  tabular 加上上述設定就完成，例子如下
+  \begin{verbatim}
 \begin{center}
-\begin{tabular}{ccc}
-命令 & 效果 & 意義\\
-\hline
-\verb=\the\textwidth= & \the\textwidth & 文字區域寬度 \\
-\verb=\the\paperwidth= & \the\paperwidth & 紙張真正寬度 \\
-\verb=\the\paperheight= & \the\paperheight & 紙張真正高度 \\
-\verb=\the\tabcolsep= & \the\tabcolsep & 表格內欄位間距離 \\
+\begin{tabular}{
+    p{4em}@{ : }@{\rule{10em}{.1pt}}
+    @{\hspace{1em}}
+    p{4em}@{ : }@{\rule{10em}{.1pt}}
+  }
+  \makebox[4em][s]{甲方} & \makebox[4em][s]{乙方}\\
+  \makebox[4em][s]{電話} & \makebox[4em][s]{電話}\\
+  \makebox[4em][s]{代表人} & \makebox[4em][s]{代表人}\\
+  \makebox[4em][s]{聯絡地址} & \makebox[4em][s]{聯絡地址}\\
 \end{tabular}
 \end{center}
-這裡面的單位除了簡單的公英制單位外
-\begin{itemize}
-\item pt 前面說過大約是0.35mm
-\item em 這是目前使用字型M的寬度
-\item ex 這是目前使用字型x的高度
-\end{itemize}
+  \end{verbatim}
+  \begin{center}
+  \begin{tabular}{
+      p{4em}@{ : }@{\rule{10em}{.1pt}}
+      @{\hspace{1em}}
+      p{4em}@{ : }@{\rule{10em}{.1pt}}
+    }
+    \makebox[4em][s]{甲方} & \makebox[4em][s]{乙方}\\
+    \makebox[4em][s]{電話} & \makebox[4em][s]{電話}\\
+    \makebox[4em][s]{代表人} & \makebox[4em][s]{代表人}\\
+    \makebox[4em][s]{聯絡地址} & \makebox[4em][s]{聯絡地址}\\
+  \end{tabular}
+  \end{center}
+  也就是說用 array, tabular, parbox, minipage 等手段交互運用，可以創造出很
+  多對齊的方式。
 
-\subsection{版面設定}
-layout 是整個版面的定義，長寬高各種術語與設定。
-先用 layout package 的 \verb=\layout{}= 印出來如下
-\clearpage
-\layout
-一頁是奇數，一頁是偶數，這個要用 geometry package 來設定。
-\begin{verbatim}
+  \subsection{版面設定}
+  在 documentclass 一開始，通常會設定一個紙張大小， a4, letter, b5 ... 等等一些
+  預定的紙張大小標準， layout 是整個版面的定義，長寬高各種術語與設定。 可用
+  layout package 的 \verb=\layout{}= 印出來目前設定如下
+  \clearpage
+  \layout{}
+  一頁是奇數，一頁是偶數，layout package 主要設定目前的版面而已，要完整重新定義
+  版面紙張大小等設定， 可用
+  \href{https://texdoc.org/serve/geometry.pdf/0}{geometry} package 來設定，裡面
+  一樣定義了。 例如
+  \begin{verbatim}
 \usepackage[a4paper]{geometry}
-
-\usepackage[
-  paperwidth=5.5in, 
-  paperheight=8.5in]
-{geometry}
-\end{verbatim}
-還有一些簡單的設定
-\begin{verbatim}
+  \end{verbatim}
+  簡單的設定四個距離
+  \begin{verbatim}
 \usepackage[
   top=1in,
   bottom=1.25in,
   left=1.25in,
   right=1.25in]
 {geometry}
-
+  \end{verbatim}
+  或者快速設定四邊 margin
+  \begin{verbatim}
 \usepackage[margin=1in]{geometry}
-\end{verbatim}
-表示設定四周紙張到文字的距離，用margin=2cm 是比較快速設定四周距離。
+  \end{verbatim}
+  表示設定四周紙張到文字的距離，用 margin=2cm 是比較快速設定四周距離。
+  如果要重新設定自訂紙張大小
+  \begin{verbatim}
+\documentclass{article}
+\usepackage[
+  paperheight=10.75in,
+  paperwidth=8.25in,
+  margin=1in,
+  heightrounded,showframe
+]{geometry}
 
-\subsection{\LaTeX 空白設定}
-基本小空白設定
-\begin{itemize}
-\item \verb=~= 多出一個小空白
-\item \verb=\hspace{1cm}= 向右多出1cm空白，負數向左。
-\item \verb=\vspace{1cm}= 向下空出1cm空白，負數向上。
-\item \verb=\quad \qquad= 向右空出1em 與 2em 的空白。
-\end{itemize}
-行間的空白， 要注意的是 big, med, small 這些 skip 在隔開文字時，只有在空白
-一行段落後面才是對的。 因為它們是垂直的，所以只能是垂直物件間的距離。
-\begin{itemize}
-\item \verb=\bigskip= 產生 12pt 的垂直空白。
-\item \verb=\medskip= 產生 6pt 的垂直空白。
-\item \verb=\smallskip= 產生 3pt 的垂直空白。
-\end{itemize}
-多空白的產生
-\begin{itemize}
-\item \verb=\stretch{1.5}= 產生 1.5 倍原有的空白，例如\verb=\hspace{\stretch{3}}=
-\item \verb=\linespread{1.5}= 產生原本 1.5 倍的行距空白。
-\item \verb=\hfill= 如果這段文字寬度不夠充滿整行，就從 hfill 開始填空白使得
-這段文字充滿一行，這跟前面說的用 makebox 的 spread 不一樣，只是單純分開文字。
-\item \verb=\vfill= 類似 hfill，但 vfill 兩邊的字填上空白直到佔滿整頁。
-\end{itemize} 
-paragraph 段落對齊設定，這就是在 一般 word 等軟體看到的三種對齊，
-如果文字不夠一行, 這會自動補上本文寬度的前後空白。例如
+\begin{document}
+....
+\end{document}
+  \end{verbatim}
+
+  \subsection{空白對齊設定}
+  內定空白
+  \begin{itemize}
+    \item 字元與字元，字與字間距是由字的大小動態調整的，default 通常很好不用設定
+      了。
+    \item 行與行 \verb=\baselineskip= \the\baselineskip，\verb=lineskip=
+      \the\lineskip 。
+    \item paragraph 與 paragraph \verb=\parskip= \the\parskip。
+    \item list 與 list \verb=\itemsep= \the\itemsep。
+    \item table row 與 row 是根據 table 大小自動調整的 \verb=\arraystretch=
+      ratio 1, column 與 column 是 \verb=\tabcolsep= \the\tabcolsep。
+  \end{itemize}
+  設定用\verb=\setlength=，例如\verb=\setlength\tabcolsep{10pt}=，基本小空白設定
+  \begin{itemize}
+    \item \verb=~= 多出字與字間小空白
+    \item \verb=\\[1cm]= 換行時使用 1cm 空白。
+    \item \verb=\hspace{1cm}= 向右多出1cm空白，負數向左。
+    \item \verb=\vspace{1cm}= 向下空出1cm空白，負數向上。
+    \item \verb=\quad \qquad= 向右空出1em 與 2em 的空白。
+    \item \verb=\,= 字元與字元間產生 3/18 \verb=\quad=
+  \end{itemize}
+  行間的空白， 要注意的是 big, med, small 這些 skip 在隔開文字時，只有在空白
+  一行段落後面才是對的。 因為它們是垂直的，所以只能是垂直物件間的距離。
+  \begin{itemize}
+    \item \verb=\bigskip= 產生 12pt 的垂直空白。
+    \item \verb=\medskip= 產生 6pt 的垂直空白。
+    \item \verb=\smallskip= 產生 3pt 的垂直空白。
+  \end{itemize}
+  多空白的產生
+  \begin{itemize}
+    \item \verb=\stretch{1.5}= 產生 1.5 倍原有的空白，例如
+      \verb=\hspace{\stretch{3}}=
+    \item \verb=\arraystretch{1.5}= 這在 table 時見過，是設定 row 與 row 間空
+      白。
+    \item \verb=\linespread{1.5}= 產生原本 1.5 倍的行距空白。
+    \item \verb=\hfill= 如果這段文字寬度不夠充滿整行，就從 hfill 開始填空白使
+      得這段文字充滿一行，這跟前面說的用 makebox 的 spread 不一樣，只是單純分
+      開文字。
+    \item \verb=\vfill= 類似 hfill，但 vfill 兩邊的字填上空白直到佔滿整頁。
+  \end{itemize} 
+  \LaTeX{} 的空白其實不是那麼死的，而是有很多計算的，叫做 \emph{glue}，表示一種
+  介於不同 box 中的 flexible space， \TeX{} 其實是所有東西都是 box，除了之前說的
+  parbox，連字元 都是 box 物件， glue 其實是所有物件黏在紙張上動態位置空白的計算
+  ， 例如最基本的行距，用 \verb=\the\parskip= 會發現他回傳 3 個值，
+  \begin{itemize}
+    \item fixed 固定一個開始值
+    \item plus 根據大小動態長大比例時，自動增加 size
+    \item minus 根據大小動態縮小比例時，自動縮減的 size
+  \end{itemize}
+  所以真正空白大小是 fixed amount plus amount to stretch minus amount to
+  shrink， fixed amount 是所有 glue 物件都需要的，plus (stretch) 與 minus
+  (shrink) 則是 optional，所以 \verb=\baselineskip= 只有一個 fixed 值。
+  \\\\
+  有興趣可以看 \href{https://en.wikibooks.org/wiki/LaTeX/Boxes}{box} 與複雜
+  的計算
+  \href{https://www.overleaf.com/learn/latex/Articles/How_to_change_paragraph_spacing_in_LaTeX#A_few_notes_on_glue}{overleaf 對於 glue 解說}，
+  也有其他 setspace 與 parskip package 做更多的 space 簡單空白控制。
+
+    \subsubsection{空白與對齊}
+    雖說根本基底對齊單位是 box，每個 box 就是個小物件，根據一些計算排列整齊，
+    只是 box 更高對於人類的物件分類使用像 chapter, section, table, array 等等
+    文件元素，通常文章中最常見的除了使用 tabular 可對齊，還有 paragraph 段落對
+    齊設定， 這就是在 一般 word 等軟體看到的三種本文對齊，paragraph box pbox
+    也才會自動折行， 如果文字不夠一行, 這會自動補上本文寬度的前後空白。例如
+    \begin{verbatim}
 \begin{flushright}
 哈哈 MS Word: 我可以對齊右邊耶
 \end{flushright}
-\begin{center}
-\begin{tabular}{ccc}
-對齊 & 環境命令  & 基本命令\\
-\hline
-左對齊 & flushleft & \verb=\raggedright= \\
-右對齊 & flushright & \verb=\raggedleft= \\
-中對齊 & center & \verb=\centering= \\
-\end{tabular}
-\end{center}
-段落空白
-\begin{itemize}
-\item \verb=\parindent= 段落縮排時的空白。
-\item \verb=\parskip= 每個段落間距離。
-\item \verb=\indent= 恢復縮排 indent
-\item \verb=\noindent= 不要縮排 indent
-\end{itemize}
-整頁空白，有時在大文件時或者有些 floating 物件讓頁面看起來排的不好
-\begin{itemize}
-\item \verb=\newpage= 結束這一頁，另起新頁。
-\item \verb=\pagebreak[num]= 在這命令之後  break 這一頁。num 是 0-4 的 priorty 。
-\item \verb=\clearpage= 結束這一頁，而且任何在這頁前的 float 物件印出。
-之後的新 float 物件都重新計算，從新頁開始，
-這個對付一些跑來跑去的大物件很有效。前面兩個對大圖表都沒有重計算影響，必須用
-這個才行。
-\end{itemize}
+    \end{verbatim}
+    \begin{flushright}
+    哈哈 MS Word: 我可以對齊右邊耶
+    \end{flushright}
+    使用以下環境或命令
+    \begin{center}
+      \begin{tabular}{ccc}
+        對齊 & 環境命令  & 基本命令\\
+        \hline
+        左對齊 & flushleft & \verb=\raggedright= \\
+        右對齊 & flushright & \verb=\raggedleft= \\
+        中對齊 & center & \verb=\centering= \\
+      \end{tabular}
+    \end{center}
+    段落空白
+    \begin{itemize}
+      \item \verb=\parindent= 段落縮排時的空白。
+      \item \verb=\parskip= 每個段落間距離。
+      \item \verb=\indent= 恢復縮排 indent
+      \item \verb=\noindent= 不要縮排 indent
+    \end{itemize}
+    整頁空白，有時在大文件時或者有些 floating 物件讓頁面看起來排的不好
+    \begin{itemize}
+      \item \verb=\newpage= 結束這一頁，另起新頁。
+      \item \verb=\pagebreak[num]= 在這命令之後  break 這一頁。num 是 0-4 的
+        priorty 。
+      \item \verb=\clearpage= 結束這一頁，而且任何在這頁前的 float 物件印出。
+        之後的新 float 物件都重新計算，從新頁開始，
+        這個對付一些跑來跑去的大物件很有效。前面兩個對大圖表都沒有重計算影響，
+        必須用這個才行。
+    \end{itemize}
 
-\subsection{設定 counter}
-排版中還有一些數字常常要加總，頁數，圖表數目，參照數目等等。
-\begin{itemize}
-\item \verb=\newcounter{mycounter}[section]= 命名一個 mycounter ，然後每次
+  \subsection{counter 設定}
+  排版中還有一些數字常常要加總，頁數，圖表數目，參照數目等等。
+  \begin{itemize}
+    \item \verb=\newcounter{mycounter}[section]= 命名一個 mycounter ，然後每次
       section counter 增加時，就會變成0
-\item \verb=\setcounter{mycounter}{7}= 設 mycounter 7
-\item \verb=\addtocounter{mycounter}{8}= mycounter 加8
-\item \verb=\stepcounter{mycounter}= mycounter 加 1
+    \item \verb=\setcounter{mycounter}{7}= 設 mycounter 7
+    \item \verb=\addtocounter{mycounter}{8}= mycounter 加8
+    \item \verb=\stepcounter{mycounter}= mycounter 加 1
+  \end{itemize}
+  counter 取值
+  \begin{center}
+    \begin{tabular}{ccc}
+      命令 & 效果 & 意義 \\
+      \hline
+      \verb=\thesection= & \thesection & section counter 值\\
+      \verb=\thepage= & \thepage &  page counter 值\\
+      \verb=\value{section}= & x & value 回傳不是字串，不能印 \\
+      \verb=\arabic{chapter}= & \arabic{chapter} &
+        印出 chapter counter 的阿拉伯符號\\
+      \verb=\roman{page}= & \roman{page} & 印出 page counter 的羅馬符號\\
+    \end{tabular}
+  \end{center}
+
+\section{寫新 macro}
+在前面設定新名字長度時，就發現有兩種， 可以使用 \LaTeX{} 提供的工具，也能使用
+\TeX{} 最基本原始的命令再新定命令 macro ，兩者在新 macro 上也常常混用，一般也
+看不出來，寫法上有些注意事項
+\begin{itemize}
+  \item 有的語法中不能換行，中間必須不能空白
+  \item 可以使用 \verb=%= 在行尾，表示接續下行
 \end{itemize}
-counter 取值
-\begin{center}
-\begin{tabular}{ccc}
-命令 & 效果 & 意義 \\
-\hline
-\verb=\thesection= & \thesection & section counter 值\\
-\verb=\thepage= & \thepage &  page counter 值\\
-\verb=\value{section}= & x & value 回傳不是字串，不能印 \\
-\verb=\arabic{chapter}= & \arabic{chapter} &  印出 chapter counter 的阿拉伯符號\\
-\verb=\roman{page}= & \roman{page} & 印出 page counter 的羅馬符號\\
-\end{tabular}
-\end{center}
 
-\section{寫新macro}
-\subsection{new}
-使用 newcommand 來定義新函數。參數用 \#1 \#2 \#3 ...這樣
-\begin{verbatim}
+  \subsection{\LaTeX{} 方法}
+  包括了
+    \subsubsection{newcommand/renewcommand/providecommnd}
+    \LaTeX{} 使用 newcommand 來定義新函數。參數用 \#1 \#2 \#3 ...這樣
+    \begin{verbatim}
 \newcommand {\name} [參數數目][default] { this is new command with #1 #2 ...}
-\end{verbatim}
-參數數目就是包含選擇性與必要性的參數數目總和，
-default 就是內定值，就是之前用命令時，選擇性的命令，可給可不給。所以給一個例子：
-\begin{flushleft}
-\begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
-命令 & 
-\begin{verbatim}
-\newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
-\bighead{\color{blue}人家}\newline\bighead{大雄}{小叮噹}
-\end{verbatim}  \\
-\hline \\[0.2cm]
-效果 &
-\newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
-\bighead{\color{blue}人家}\newline\bighead[大雄]{小叮噹} \\[0.2cm]
-\hline \\[0.2cm]
-&
-由上面可以知道，它只是很像 C 的 macro ，字串完全代換而已，然後看得出來
-使用\{\} 像是 shell, perl 可以解決很多事情。
-\end{tabular}
-\end{flushleft}
-而新環境，在 default 後面有兩個中括號，before 裡面是會先執行的東西，
-然後就是夾在 before end 中間的東西，最後執行 end 裡面的東西。
-\begin{verbatim}
-\newenvironment{name}[num][default]{before}{after}
-\end{verbatim}
-例子是
-\begin{flushleft}
-\begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
-命令 & 
-\begin{verbatim}
-\newenvironment{mybox}
-{\rule{1ex}{1ex}\hspace{\stretch{1}}}
-{\hspace{\stretch{1}}\rule{1ex}{1ex}}
-\begin{mybox}我的新盒子\end{mybox}
-\end{verbatim}  \\
-\hline \\[0.2cm]
-效果 &
-\newenvironment{mybox}
-{\rule{1ex}{1ex}\hspace{\stretch{1}}}
-{\hspace{\stretch{1}}\rule{1ex}{1ex}}
-\begin{mybox}我的新盒子\end{mybox}
-\end{tabular}
-\end{flushleft}
-一般程式都會有判斷，迴圈語法，\TeX{} 自然也提供，
-hooks 是撞到一個條件時，去呼叫之前特別定義的函數。
+    \end{verbatim}
+    參數數目就是包含選擇性與必要性的參數數目總和， default 就是內定值，就是之
+    前用命令時，選擇性的命令，可給可不給， 一個例子：
+    \begin{flushleft}
+      \begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
+      命令 & 
+      \begin{verbatim}
+      \newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
+      \bighead{\color{blue}人家}\newline\bighead{大雄}{小叮噹}
+      \end{verbatim}  \\
+      \hline \\[0.2cm]
+      效果 &
+      \newcommand{\bighead}[2][大頭]{{#1}{#1}下雨不愁，{#2}有傘你有{#1}}
+      \bighead{\color{blue}人家}\newline\bighead[大雄]{小叮噹} \\[0.2cm]
+      \hline \\[0.2cm]
+      &
+      由上面可以知道，它只是很像 C 的 macro ，字串完全代換而已，然後看得出來
+      使用\{\} 像是 shell, perl 可以解決很多事情。
+      \end{tabular}
+    \end{flushleft}
+    想要更改原有命令，則用 renewcommand 重新定義，使用通式跟 newcommand 一樣
+    \begin{verbatim}
+\renewcommand\emph[1]{%
+  {\my@emphstyle #1}
+}
+    \end{verbatim}
+    也有 providecommand，差別是 providecommand 發現已經有同樣 command 定義了
+    ，只是單純的不理會，不會出現 error 死掉。
 
-% TODO plain tex and customized macro
-%\subsection{plain \TeX{}}
-%\subsection{custom macro}
-\clearpage
+    \subsubsection{newenvironment/renewenvironment}
+    而新環境， num 跟 newcommand 一樣是參數數目，default 也一樣是內定值，
+    \#1 \#2 ... 也是參數使用， 在 default 後面有兩個中括號，before 裡面是會先
+    執行的東西， 然後就是夾在 begin end 中間的東西，最後執行 after 裡面的東西。
+    \begin{verbatim}
+\newenvironment{name}[num][default]{before}{after}
+    \end{verbatim}
+    例子是
+    \begin{flushleft}
+      \begin{tabular}{m{0.1\textwidth}|m{0.7\textwidth}}
+      命令 & 
+      \begin{verbatim}
+\newenvironment{mybox}
+{\rule{1ex}{1ex}\hspace{\stretch{1}}}
+{\hspace{\stretch{1}}\rule{1ex}{1ex}}
+\begin{mybox}我的新盒子\end{mybox}
+      \end{verbatim}  \\
+      \hline \\[0.2cm]
+      效果 &
+      \newenvironment{mybox}
+      {\rule{1ex}{1ex}\hspace{\stretch{1}}}
+      {\hspace{\stretch{1}}\rule{1ex}{1ex}}
+      \begin{mybox}我的新盒子\end{mybox}
+      \end{tabular}
+    \end{flushleft}
+
+    \subsubsection{makeatletter/makeatother}
+    在看 \LaTeX{} 文件時，會發現文件內常直接把如何實做命令的程式碼寫出，而且
+    很多命令名字內有 @ 這個字元，這種命令表示所有不應該公開的 internal macros
+    命名的 \LaTeX{} 特有規定。
+    \\\\
+    當底層 \TeX{} 讀取字元時，它會指定每個字元一個 categroy code 稱為 catcode
+    ，例如 backslash \verb=\= 的 catcode 是 0，任意的英文字母是 11，如果一段
+    字串含有 catcode 0 的話，那麼後面必須是 catcode 11 的字元，這是程式邏輯的
+    規定。
+    \\\\
+    \LaTeX{} 模仿這種字元規定，本來 @ 在 \TeX{} 是 11，但 \LaTeX{} 的 @ 內定變
+    成是 catcode 12，因此只要命令內有 @，就是內部 API， 例如設定 documentclass
+    的紙張大小程式碼
+    \begin{verbatim}
+\if@compatibility\else
+ \DeclareOption{a4paper}
+ {\setlength\paperheight {297mm}%
+ \setlength\paperwidth {210mm}}
+ .....
+    \end{verbatim}
+    \href{https://texdoc.org/serve/macro2e/0}{\LaTeX{}2e 提供的內部 macro 工具}
+    有 \verb=\if@compatibility\else= 這個 @compatibility 就是 \LaTeX{} 內部的
+    自訂的不公開 macro，其實應該是 \verb=\compatibility=，只是 \verb=\= 變成
+    @。
+    \\\\
+    由於內定變成 12，所以當有自訂 @ 命令時，要先轉回 11，然後做完自訂 macro，
+    需要再轉回 12 ， makeatletter makeatother 中間應該要定義一個新命令，新命令
+    裡面要有 @ 字元，且照規矩是內部使用而已
+    \begin{verbatim}
+\makeatletter
+  ... definition of commands with @ in their name ..
+\makeatother
+    \end{verbatim}
+    而且不要用在 .sty .cls 檔中，而是用在 .tex 檔的 preamble 區。
+
+    \subsubsection{hooks}
+    hooks 是撞到一個條件時，去呼叫之前特別定義的函數，\LaTeX{} 提供有
+    \begin{itemize}
+      \item \verb=\AtBeginDocument{macro}= 在碰到 \verb=\begin{document}= 時
+        執行 macro。
+      \item \verb=\AtEndDocument{macro}= 同理碰到 \verb=\end{document}= 時，執
+        行 macro。
+      \item \verb=\AtEndOfPackage{macro}= 在 usepackage 後。
+      \item \verb=\AtEndOfClass{macro}= 在 documentclass 後。
+    \end{itemize}
+
+    \subsubsection{控制語法}
+    \LaTeX{} 有提供一個 ifthen package 使用，可以用來執行大小比較等運算
+    \begin{verbatim}
+\usepackage{ifthen}
+
+\ifthenelse{condition}{A}{B}
+\ifthenelse{\value{num}>3\AND\(1<0 \OR \value{num}=10\)}{True.}{False.}
+\end{verbatim}
+    loop 迴圈，使用 loop, repeat， \verb=\loop= 是 \TeX{} plain API，只是
+    \LaTeX{} 多定義了 \verb=\repeat=，用法是
+    \begin{verbatim}
+    \end{verbatim}
+    \begin{verbatim}
+\count255 = 0
+\loop
+  [\number\count255 =\char\number\count255]
+  \ifnum\count255 < 127
+    \advance\count255 by 1
+\repeat
+    \end{verbatim}
+    \verb=\ifnum= 是 \TeX{} 提供的，所以其實兩者在使用上會互相使用就是。
+
+  \subsection{plain \TeX{}}
+  用 pascal 程式寫死在 \TeX{} 程式的命令稱為 primitive macro，基於原始 macro，
+  Kunth 先生提供更上一層的 plain 命令 macro，要先了解一些 \TeX{} 的想法術語
+  \begin{itemize}
+    \item token\\
+      任何的box, 字元，command sequence, group ...
+    \item command sequence, command, primitive\\
+      用反斜線開始的字串為 command sequence，能展開的 command sequence 或重新
+      定義的為 command，primitive 是寫死在原 pascal 的 \TeX{} 命令，他不是後
+      來創造的 plain \TeX{} API。
+    \item register\\
+      程式處理變數宣告與定義，有六種
+      \begin{itemize}
+        \item box
+        \item count
+        \item dimen
+        \item muskip
+        \item skip
+        \item toks
+      \end{itemize}
+      可以直接使用 \verb=\box100= 表示一個 box register，最多可使用 0\~{}255
+      宣告，而有些不成文的建議規定是
+      \begin{itemize}
+        \item 雙數像 \verb=\count22= 用在 local 變數，單數 \verb=\count25= 用在
+          全域變數。
+        \item 暫時使用的變數，應該用 255 像 \verb=\count255=, \verb=\dimen255=
+          ...。
+        \item 0 \~{} 9 在 plain \TeX{} 下是保留的。
+      \end{itemize}
+    \item box\\
+      最基本通用物件，除了認知的 paragraph, 圖形，表格等等，連個字元都是 box，
+      一個 box 有 height, width, baseline, depth, reference point 定義，如下
+      \setlength{\unitlength}{1cm}
+      \begin{figure}[h]
+        \begin{center}
+        \begin{picture}(5,5)
+          \put(0,0){\framebox(4,1.8)[b]{width}}
+          \put(0,1.8){\framebox(4,3)[b]{baseline}}
+          % text
+          \put(-3,1.8){reference point}
+          \put(5,3){height}
+          \put(5,0.9){depth}
+          % vertical line
+          \put(5.5,3.5){\vector(0,1){1.3}}
+          \put(5.5,2.6){\vector(0,-1){0.8}}
+          \put(5.5,1.2){\vector(0,1){0.6}}
+          \put(5.5,0.6){\vector(0,-1){0.6}}
+          % horonzantal 
+          \put(-0.5,1.8){\vector(1,0){0.3}}
+          \put(1.4,0.1){\vector(-1,0){1.4}}
+          \put(2.6,0.1){\vector(1,0){1.4}}
+          % dot
+          \put(0,1.8){\circle*{0.1}}
+        \end{picture}
+        \end{center}
+        \caption{box 的細部定義}
+      \end{figure}
+      這即使在 paragraph 圖形表格一樣有這些定義。
+    \item glue\\
+      將 box 黏在紙上需要根據前後左右的物件特性計算的空白尺寸。
+  \end{itemize}
+  \TeX{} 是語言也有特殊字元，就是那些有特殊意義，正常不會印出的字元，為了區別
+  不同特殊字元， 這在以前，只是單純認為是個程式語言特殊脫逃字元，但在 \TeX{}
+  會給每個字元一個 category code 定義稱為 catcode
+  \begin{center}
+  \begin{tabular}{rrr}
+    catcode & 用途 & 字元集合 \\
+    \hline
+    0 & 脫逃字元與命令開始 & \verb=\= \\
+    1 & grouping 的開始 & \verb={= \\
+    2 & grouping 的結束 & \verb=}= \\
+    3 & 數學 inline 模式 & \verb=$= \\
+    4 & tabular 內的欄位對齊 & \verb=&= \\
+    5 & 表示一行結束 EOL, carriage return  & \verb=^^M= (ASCII 13 return) \\
+    6 & 用在 macro 的參數表示 & \verb=#= \\
+    7 & 上標 & \verb=^ 與 ^^K= \\
+    8 & 下標 & \verb=_= 與 \verb=^^A= \\
+    9 & null 字元 & \verb=^^@= (ASCII 0 null) \\
+    10 & 空白字元與 tab 字元 & ␣ (ASCII 32) 與 \verb=^^I= (ASCII 9 tab) \\
+    11 & 任一 A..Z 字元 & A...Z and a...z \\
+    12 & 其他字元， 沒有在其他 catcode 分類字元 & 在 \LaTeX{} 中有設定 @。 \\
+    13 & active 字元 & \verb=~ 與^^L= (ASCII 12 form feed) \\
+    14 & 註解字元 & \verb=%= \\
+    15 & 不合法字元 & \verb=^^?= (ASCII 127 delete)\\
+  \end{tabular}
+  \end{center}
+  其中 active 字元是一個單一字元在其他命令還沒執行前，就被展開的 macro，這有點
+  像 shell script 的 expr，或寫 C 程式 macro 的先行展開意思。
+  \\\\
+  定義 catcode 與用 active 字元代換例子
+  \begin{verbatim}
+\catcode`| = 13
+\def|{\TeX}
+  \end{verbatim}
+  先定義 | 變成 catcode 13，然後定義 | 會代換成 \verb={\TeX}= 字串，則在文章中
+  \begin{verbatim}
+This is | example
+  \end{verbatim}
+  就會變成
+  \begin{verbatim}
+This is {\TeX} example
+  \end{verbatim}
+  所以上述的 \LaTeX{} @ 命令也是一樣做法，只是變成 catcode 11 而已，所以其實
+  \LaTeX{} 的 makeat... macro 實際定義是
+  \begin{verbatim}
+\def\makeatletter{\catcode`@ = 11}
+\def\makeatother{\catcode`@ = 12}
+  \end{verbatim}
+  這在 GNU Texinfo，或有些 pdf 轉換工具其實是用這類似方法請 \LaTeX{} 代勞的轉
+  換。
+
+    \subsubsection{資料型別}
+    設 register 值，可直接用 = 設定數值
+    \begin{verbatim}
+\count0=100
+    \end{verbatim}
+    因為系統有些已經拿來使用的 register 0 \~{} 9，還有為了避免跟已被使用的衝突，
+    但最好是用 \verb=\newbox=, \verb=\newcount=, \verb=\newdimen=,
+    \verb=\newmuskip=, \verb=\newskip=, \verb=\newtoks= 動態使用 register。
+    \\\\
+    對於 register 取值可以
+    \begin{itemize}
+      \item \verb=\the= 後面接數值 register
+      \item \verb=\number= 後面接 counter register
+      \item \verb=\box= 後面接 box register
+    \end{itemize}
+    印出 register 值。而用 \verb=\char`<char>= 跟用 \verb=\catcode`= 一樣，
+    後面跟著字元，就可以定義字元。使用
+    \begin{itemize}
+      \item \verb=\advance <register> by <number>= 做加減
+      \item \verb=\multiply <register> by <number>= 做乘法
+      \item \verb=\divide <register> by <number>= 做除法
+    \end{itemize}
+
+    \subsubsection{def 與 let}
+    副程式定義，這像一般的 macro 定義
+    \begin{verbatim}
+    \def <command> <parameter-text>{<replacement-text>}
+
+    \def \NAS {National Academy of Science}
+    \def \foo [#1]#2{The first argument is ``#1'', the second one is ``#2''}
+    \end{verbatim}
+    定義參數 \#1, \#2 ... 最多有 9 個 \#9，然後第一個參數要用中括號，參數跟
+    大括號中間不能有空白。 跟 \LaTeX{} 的 \verb=\newcommand= 比起來，
+    newcommand 會幫忙檢查。
+    \\\\
+    \verb=\let= 能 copy 舊命令變成新命令，例如 endgraf 等於 par
+    \begin{verbatim}
+\let<new-command>[[<spaces>]=]<original-command>
+
+\let\endgraf=\par
+    \end{verbatim}
+    與 renewcommand 相比是他只有改變名字，創造別名而已，沒有參數改變，當使用
+    \begin{verbatim}
+\renewcommand{\foo}{\bar\foo}
+    \end{verbatim}
+    是會造成無窮 loop 的，因此必須用
+    \begin{verbatim}
+\let\newfoo\foo
+\renewcommand{\foo}{\bar\newfoo}
+    \end{verbatim}
+    edef 能展開別的 macro 但不執行，成為新定義
+    \begin{verbatim}
+\edef<macroname><argumentslist>{<expanded content>}
+    \end{verbatim}
+    long def 才能使用跨 paragraph 的命令，像 \verb=\par=，或者 line break
+    \verb=\\=，這些在之前都不能用在內文，例如
+    \begin{verbatim}
+\long\def\dummy#1{#1}
+\dummy{First paragraph\par Second paragraph}
+    \end{verbatim}
+    使用 grouping 能創造一個像 C 的 local scope，如果要全域設定則要使用
+    \begin{itemize}
+      \item \verb=\global\def= 或 \verb=\gdef=
+      \item \verb=\global\edef= 或 \verb=xdef=
+    \end{itemize}
+
+    \subsubsection{macro 展開}
+    當使用 macro 時，如果後面有 argument，那會假設 argument 是在 [ ] 括號內
+    ，這樣 argument 只能是變數，不能是 macro
+    \begin{verbatim}
+    \def\a[#1]{A's argument was `#1'}
+    \def\arg{[FOO]}
+    \a\arg
+    \end{verbatim}
+    這樣是行不通的，因為 a 後面必須是中括號的變數，不能是 macro，所以
+    expandafter 是個將兩個 macro 先展開後面的再展開全部 macro 的方法
+    \begin{verbatim}
+    \expandafter{token1}{token2}
+    \end{verbatim}
+    等於
+    \begin{verbatim}
+{token1}{token2 expansion}
+    \end{verbatim}
+    跟 edef 差別是 edef 會完全 expand，noexpand 會抑制 expand。
+
+    \subsubsection{控制語法}
+    一般程式都會有判斷，迴圈語法，\TeX{} 自然也提供
+    \begin{itemize}
+      \item \verb=\if=
+      \item \verb=\ifcase=
+      \item \verb=\ifcat=
+      \item \verb=\ifdim=
+      \item \verb=\ifeof=
+      \item \verb=\iffalse=
+      \item \verb=\ifhbox=
+      \item \verb=\ifhmode=
+      \item \verb=\ifinner=
+      \item \verb=\ifmmode=
+      \item \verb=\ifnum=
+      \item \verb=\ifodd=
+      \item \verb=\iftrue=
+      \item \verb=\ifvbox=
+      \item \verb=\ifvmode=
+      \item \verb=\ifvoid=
+      \item \verb=\ifx=
+      \item \verb=\else=
+      \item \verb=\fi=
+    \end{itemize}
+    例子
+    \begin{verbatim}
+\ifnum\value{num}>n {A} \else {B}\fi
+\ifodd\value{num} {A}\else {B}\fi
+    \end{verbatim}
+
+  \subsection{\LaTeX{} package 提供者}
+  要寫作 \LaTeX{} package，並需提供 dtx 檔案，將 \TeX{} source code 與 文件
+  放在一起的檔案，文件跟其他文件系統一樣，在 comment 裡面，會伴隨著一個 ins 檔
+  ，install 檔，用 tex/latex/pdflatex 命令工具生成 sty 檔與文件檔 pdf。
+  \\\\
+  在 texlive 的系統下，尋找 classlist.dtx，裡面寫的格式與命令可以做為練習用，
+  例如定義一個 custome package 有三個選項，sans, roman 跟 neverindent
+  \begin{verbatim}
+\NeedsTeXFormat{LaTeX2e}[1994/06/01]
+\ProvidesPackage{custom}[2013/01/13 Custom Package]
+\RequirePackage{lmodern}
+
+%% 'sans serif' option
+\DeclareOption{sans}{
+  \renewcommand{\familydefault}{\sfdefault}
+}
+%% 'roman' option
+\DeclareOption{roman}{
+  \renewcommand{\familydefault}{\rmdefault}
+}
+
+%% Global indentation option
+\newif\if@neverindent\@neverindentfalse
+\DeclareOption{neverindent}{
+  \@neverindenttrue
+}
+
+...
+\ExecuteOptions{roman}
+\ProcessOptions\relax
+....
+
+
+\endinput
+  \end{verbatim}
+  放到
+  \begin{verbatim}
+$TEXMFHOME/tex/latex/custom/custom.sty
+  \end{verbatim}
+  並執行
+  \begin{verbatim}
+$ texhash
+  \end{verbatim}
+  其中
+  \begin{itemize}
+    \item \verb=\NeedsTeXFormat{LaTeX2e}[1994/06/01]= 定義 LaTeX 的版本需求
+    \item \verb=\ProvidePackage= 定義 package 名稱
+    \item \verb=\RequirePackage= 是 dependancy
+    \item \verb=\DeclareOption= 定義 package 的選項。
+    \item \verb=\ExecuteOption= 是內定選項
+    \item \verb=\ProcessOptions\relax= 表示停止選項處理
+    \item \verb=\endinput= 結束 package
+  \end{itemize}
+  提供 documentclass 也是類似
+  \begin{verbatim}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{myclass}[2011/12/23 My Class]
+
+%% Article options
+\DeclareOption{10pt}{
+  \PassOptionsToClass{\CurrentOption}{article}
+}
+
+%% Custom package options
+\DeclareOption{sans}{
+  \PassOptionsToPackage{\CurrentOption}{custom}
+}
+\DeclareOption{neverindent}{
+  \PassOptionsToPackage{\CurrentOption}{custom}
+}
+
+%% Fallback
+\DeclareOption*{
+  \ClassWarning{myclass}{Unknown option '\CurrentOption'}
+}
+
+%% Execute default options
+\ExecuteOptions{10pt}
+
+%% Process given options
+\ProcessOptions\relax
+
+%% Load base
+\LoadClass[a4paper]{article}
+
+%% Load additional packages and commands.
+\RequirePackage{custom}
+
+...
+\endinput
+  \end{verbatim}
+  \begin{itemize}
+    \item \verb=\ProvidesClass= 取代 \verb=\ProvidePackage=。
+    \item \verb=\DeclareOption*{}= 是如果沒有定義的 option 就到這邊執行。
+    \item \verb=\ClassWarning= 是定義 class warning 時，會出現的 warning 字串。
+    \item \verb=\LoadClass= 是載入需要的 parent class。
+  \end{itemize}

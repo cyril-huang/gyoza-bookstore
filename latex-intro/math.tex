@@ -17,10 +17,12 @@ mode 例子 & 呈現 & 說明\\
 
 \section{注意事項}
 \begin{itemize}
-\item 由於應用情況不同，所以佔據空間大小排版對齊會不同。
-\item 用環境會自動編號 label 。counter 是 equation。
-\item 在 tabular 裡面使用 equation mode 時， 由於它是一塊物件，
-      只能用 paragraph mode, \verb|p{3cm}| 這樣，是用 parbox 做到容納物件的。
+  \item 由於應用情況不同，所以佔據空間大小排版對齊會不同，用中括號等於是
+    equation mode 沒有 label，也等於用 \verb=\begin{equation*}=。
+  \item 用環境會自動編號 label ，counter 是 equation。
+  \item 在 tabular 裡面使用 equation mode 時， 由於它是一塊物件， 只能用
+    paragraph mode, \verb|p{3cm}| 這樣，是用 parbox 做到容納物件的。
+  \item 對齊就用 array 環境，或者其他 package 提供相對容易使用的環境。
 \end{itemize}
 關於編號 label ，基本的還有 \AmS-\LaTeX 的 amsmath 提供了 
 \verb| \eqref{mark} \tag{5} \multitag{6}| 連原本 euqation 環境的編號，都可以
@@ -37,7 +39,8 @@ E=mc^2 \label{eq:einstein} \tag{\ding{37}}
 從 \eqref{eq:einstein}\ldots 看來，這是隻光速電話
 
 \section{簡單數學}
-剩下的就是小抄 cheetsheet 與一些排版微調。網路上有很多人把常用的
+剩下的就是小抄 cheetsheet 與一些排版微調。網路上有很多人把常用的都做了整理，
+例如
   \begin{itemize}
     \item 上標
       \begin{verbatim}
@@ -69,17 +72,6 @@ E=mc^2 \label{eq:einstein} \tag{\ding{37}}
 \sum_{k=1}^{N} k^2
       \end{verbatim}
       $\sum_{k=1}^{N} k^2$
-    \item 矩陣
-      \begin{verbatim}
-\begin{Bmatrix}
-x & y \\
-z & v
-\end{Bmatrix}
-      \end{verbatim}
-      $\begin{Bmatrix}
-      x & y \\
-      z & v
-      \end{Bmatrix}$
     \item 極限
       \begin{verbatim}
 \lim_{n \to \infty}x_n
@@ -96,10 +88,196 @@ z & v
       \end{verbatim}
       $\theta$
   \end{itemize}
-都做了整理，主要就是根據命令格式， 通用 \{\} 包住一個想要的表示範圍，
-其他就自行 google 就有了。
+主要就是根據命令格式， 通用 \{\} 包住一個想要的表示範圍，另外不同mode 會產生
+長相不太同的符號，例如 $\sum_{i=0}^{n}$，在 inline 與 equation mode
+\begin{equation*}
+  \sum_{i=0}^{n}
+\end{equation*}
+會不同，想要在 inline mode 也是大隻長相， $\displaystyle\sum_{i=0}^{n}$，用
+displaystyle
+\begin{verbatim}
+$\displaystyle\sum_{i=0}^{n}$
+\end{verbatim}
+如果不想每次都打 displaystyle，在 preamble 處用 \verb=\everymath{\displaystyle}=
+，就自動全部用大隻長相， 其他就自行 google 就有了。
 \\\\
+除了基本的小抄外，排版中重要的好看關鍵就是對齊，數學式子中，有很多對齊，如果
+用傳統的 tabular, array, box ... 也能做到。
+\begin{verbatim}
+\[
+  \begin{array}{rl}
+    \displaystyle\sum_{n=3}^{5}\frac{1}{n(n+1)}
+          &= \displaystyle\sum_{n=3}^{5}\frac{1}{n} - \frac{1}{n+1}\\
+          &= \frac{1}{3} - \frac{1}{4} + \frac{1}{4} - \frac{1}{5} + \dots \\
+          &= \frac{1}{3} - \frac{1}{6}
+  \end{align}
+\]
+\end{verbatim}
+\begin{equation*}
+  \begin{array}{rl}
+    \displaystyle\sum_{n=3}^{5}\frac{1}{n(n+1)}
+          &= \displaystyle\sum_{n=3}^{5}\frac{1}{n} - \frac{1}{n+1}\\
+          &= \frac{1}{3} - \frac{1}{4} + \frac{1}{4} - \frac{1}{5} + \dots \\
+          &= \frac{1}{3} - \frac{1}{6}
+  \end{array}
+\end{equation*}
+與
+\begin{verbatim}
+  \begin{array}{*5c}
+      a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+      a_{21} & a_{22} & a_{23} && a_{2n} \\
+      a_{31} & a_{32} & a_{33} && a_{3n} 
+  \end{array}
+\end{verbatim}
+\[
+  \begin{array}{*5c}
+      a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+      a_{21} & a_{22} & a_{23} && a_{2n} \\
+      a_{31} & a_{32} & a_{33} && a_{3n} 
+  \end{array}
+\]
+特別的 matrix 矩陣符號可以用 \verb=\left= 與 \verb=\right= 產生。
+\begin{verbatim}
+\begin{equation*}
+  A_{m \times n} =
+  \left[
+    \begin{array}{*5c}
+      a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+      a_{21} & a_{22} & a_{23} && a_{2n} \\
+      a_{31} & a_{32} & a_{33} && a_{3n} \\
+      \vdots & 
+      &
+      & \ddots & \vdots \\
+      a_{m1} & a_{m2} & a_{m3} & \cdots & a_{mn}
+    \end{array}
+  \right]
+\end{equation*}
+\end{verbatim}
+\begin{equation*}
+  A_{m \times n} =
+  \left [
+    \begin{array}{*5c}
+      a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+      a_{21} & a_{22} & a_{23} && a_{2n} \\
+      a_{31} & a_{32} & a_{33} && a_{3n} \\
+      \vdots & 
+      &
+      & \ddots & \vdots \\
+      a_{m1} & a_{m2} & a_{m3} & \cdots & a_{mn}
+    \end{array}
+  \right]
+\end{equation*}
+binomial coefficient 二項式係數，用在像排列組合統計上
+\begin{verbatim}
+\[
+  \frac{n!}{k!(n-k)!} = 
+  \left(
+    \begin{array}{c}
+      n \\ k
+    \end{array}
+  \right)
+\]
+\end{verbatim}
+\[
+  \frac{n!}{k!(n-k)!} = 
+  \left(
+    \begin{array}{c}
+      n \\ k
+    \end{array}
+  \right)
+\]
+cases 條件，由於 \verb=\left= \verb=\right= 是一定要成對，所以故意在 right
+用小數點
+\begin{verbatim}
+\[
+  f(x)=
+  \left\{
+  \begin{array}{cl}
+    \frac{x^2-x}{x},& \text{if } x\geq 1\\
+    0,              & \text{otherwise}
+  \end{array}
+  \right.
+\]
+\end{verbatim}
+\[
+  f(x)=
+  \left\{
+  \begin{array}{cl}
+    \frac{x^2-x}{x},& \text{if } x\geq 1\\
+    0,              & \text{otherwise}
+  \end{array}
+  \right.
+\]
+\verb=\left= 與 \verb=\right= 也是用在某個大 group 的數學式，例如
+\begin{verbatim}
+\[
+  \left[p + a\left(\frac{n}{V}\right)^2\right](V-nb) = nRT
+\]
+\end{verbatim}
+\[
+  \left[p + a\left(\frac{n}{V}\right)^2\right](V-nb) = nRT
+\]
+
+\section{\AmS-\LaTeX}
 \href{https://www.ams.org/arc/tex/amsmath/amsldoc.pdf}{美國數學協會\AmS-\LaTeX}
-的數學式子 macro 提供一些比標準 macro 還好的功能。有些學術單位或者出版商是有他
-們的個別要求或者更進一步的加強，所以要看投稿單位與要求做設定。\LaTeX 的好處之一就是
-套上出版商或投稿單位的設定後，同樣文章內容不變，版型就改變，一稿多投很方便。
+的數學式子 macro 提供一些比標準 macro 還好的功能，有些符號畫出的長相也比較好看
+。 \AmS-\LaTeX 數學中有 matrix, align, split 環境等功能可以用在數學對齊，也很像
+tabular, array 一樣用 \verb=&= 來做對齊。 例如用 bmatrix 環境做矩陣，不需要用
+\verb=\left= 與 \verb=\righ=。例如
+\begin{verbatim}
+\usepackage{amsmath}
+
+\begin{equation*}
+A_{m \times n} =
+\begin{bmatrix}
+a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+a_{21} & a_{22} & a_{23} && a_{2n} \\
+a_{31} & a_{32} & a_{33} && a_{3n} \\
+\vdots &
+&
+& \ddots & \vdots \\
+a_{m1} & a_{m2} & a_{m3} & \cdots & a_{mn}
+\end{bmatrix}
+\end{equation*}
+\end{verbatim}
+\begin{equation*}
+A_{m \times n} =
+\begin{bmatrix}
+a_{11} & a_{12} & a_{13} & \cdots & a_{1n} \\
+a_{21} & a_{22} & a_{23} && a_{2n} \\
+a_{31} & a_{32} & a_{33} && a_{3n} \\
+\vdots &
+&
+& \ddots & \vdots \\
+a_{m1} & a_{m2} & a_{m3} & \cdots & a_{mn}
+\end{bmatrix}
+\end{equation*}
+用 binom 做二項係數
+\begin{verbatim}
+\frac{n!}{k!(n-k)!} = \binom{n}{k}
+\end{verbatim}
+\[
+  \frac{n!}{k!(n-k)!} = \binom{n}{k}
+\]
+case 型態，因為在基本數學用 \verb=\left= 一定要跟著個 \verb=\right=
+，有點彆扭，所以可以用 cases
+\begin{verbatim}
+\[
+  f(x)=
+  \begin{cases}
+    \frac{x^2-x}{x},& \text{if } x\geq 1\\
+    0,              & \text{otherwise}
+  \end{cases}
+\]
+\end{verbatim}
+\[
+  f(x)=
+  \begin{cases}
+    \frac{x^2-x}{x},& \text{if } x\geq 1\\
+    0,              & \text{otherwise}
+  \end{cases}
+\]
+
+有些學術單位或者出版商是有他們的個別要求或者更進一步的加強，所以要看投稿單位
+與要求做設定。 \LaTeX 的好處之一就是套上出版商或投稿單位的設定後，同樣文章內
+容不變，版型就改變，一稿多投很方便。

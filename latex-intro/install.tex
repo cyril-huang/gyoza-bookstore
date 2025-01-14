@@ -13,15 +13,15 @@
 
 \section{從 Linux 上安裝}
 網路上看很多人說安裝很難，對於 Linux 來說就一行命令就裝完了，真不知道難在哪裡
-，真正難在怎麼裝的剛剛好你要的就好。
+，真正難在怎麼裝的剛剛好所需要的就好。
 \\\\
-debian/ubuntu
+debian/ubuntu/mint
 \begin{verbatim}
 # apt install texlive-lang-chinese texlive-xetex
 \end{verbatim}
-redhat/centos/alma/rocky/fedora
+redhat/centos/alma/rocky/fedora 可用 dnf 或 yum
 \begin{verbatim}
-# yum install texlive-collection-langchinese
+# dnf install texlive-collection-langchinese
 \end{verbatim}
 如果是 CentOS stream, Alma, Rocky 的 distro ，則在AppStream/ repository 下。
 \\\\
@@ -55,13 +55,14 @@ lualatex  luatex  plain  xelatex  xetex
 \begin{verbatim}
 /usr/share/doc/texlive-doc
 \end{verbatim}
-macro 的用法可以在下面找到。使用 distribution 收集的文件閱讀工具 texdoc 來搜尋與閱讀
+macro 的用法可以在下面找到，或者在上面 find . -name "*.pdf"。使用 distribution
+收集的文件閱讀工具 texdoc 來搜尋與閱讀
 \begin{verbatim}
 $ texdoc -l luatexja
 $ texdoc -s ams
 \end{verbatim}
-不過很多想看的都沒有找到，可能沒有裝 package，所以可能直接 google texdoc amsmath,
-texdoc listings 等等的直接幫你找到 CTAN 的文章比較快。新的 
+不過很多想看的都沒有找到，可能沒有裝 package，所以可能直接 google texdoc
+amsmath, texdoc listings 等等的直接幫你找到 CTAN 的文章比較快。新的 
 \href{https://texdoc.org}{texdoc 網站}也有搜尋整個 tex 文件的能力。
 
 \section{中文使用}
@@ -97,8 +98,8 @@ $ fc-list :lang=zh-tw
 \end{scriptsize}
 其中第二欄位的名字就是拿來設定字型用的，有逗號表示多種別名。
 \\\\
-使用古老的 pdftex 引擎也能處理 unicode ，
-但選擇能直接處理 unicode ttf/otf 的 lualatex 或 xelatex 引擎與工具。
+使用古老的 pdftex 引擎因為是 8 bits，所以也能稍微處理 unicode，
+但選擇能直接處理 unicode ttf/otf 的 lualatex 或 xelatex 引擎與工具比較好。
 \\\\
 lualatex 範例:
 
@@ -148,6 +149,17 @@ xelatex 範例:
 
 \end{document}
 \end{verbatim}
+基本 \LaTeX{} 文件就像寫程式一樣有模板要遵守
+\begin{itemize}
+  \item 從 documentclass 設定開始，目前所有 class 與設定文件可以在
+    \href{https://ctan.org/topic/class}{https://ctan.org/topic/class} 找到，
+    最常用的就是 book, report (報告), article (不能有 chapter),
+    beamer (powerpoint 簡報)等等，也有給老師出考題用的 exam class，不同
+    class 有不同內定命令。
+  \item usepackage 引入像程式庫的所需 package。
+  \item documentclass 到 begin document 前稱為 preamble 區，裡面的設定為全域
+    設定影響整個文件， 之後到 end document 結束為本文區。
+\end{itemize}
 lualatex 中文社群決定不開發新的 package ，沿用日本的 luatexja 就好，因為
 漢字處理兩者是一樣的，即使 CJKV 這四個漢字圈的韓國越南大概也不用漢字了。
 \\\\
@@ -264,10 +276,11 @@ rpm 形式的反而比 deb 的複雜很多。就先不管它了
 
 \subsection{最小安裝 - 從CTAN}
 如果沒有 root 權限，或不想裝 Linux 系統 package ，那麼就自己從 CTAN 抓 texlive
-來，只是這我裝起來也要1G，也蠻大的。
+來，只是這我裝起來也要1G，他會把所有文件包括 pdf 檔都裝起來，所以也蠻大的。
 \begin{enumerate}
 \item \href {http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz}{CTAN 下載}
 \item 執行 ./install-tl
+\item 這會需要 wget 下載
 \item 調整選項，按 S 選 c ，small scheme, 這個會裝 xetex 引擎。
 \item 繼續調整其他，按 D 像是 TEXDIR TEXMFHOME 目錄。
 \item 裝完後，要多增加 PATH, MANPATH, INFOPATH，就可以用了。
@@ -334,20 +347,12 @@ $HOME/.local/share/fonts
 或者舊的
 $HOME/.fonts 下
 \end{verbatim}
-然後用
-\begin{verbatim}
-$ mkfontscale
-$ mkfontdir
-$ fc-list
-\end{verbatim}
-製作向量字型 index 。
-\\\\
 下載中文字型，不過這很多在系統 package 上也是有啦，現在主要用 google
 Adobe 合作的 opensource 思源字體，Noto 字體，不過用系統裝的跟下載的名字
-有時會不同，不知為啥，我用 debian 系統package裝的是
-Noto Sans CJK TC 但自己下載的變成 Noto Sans TC，所以這個名字要自己根據
-fc-list 看到得來。不過台灣官方的全字庫跟教育部標準應該蒐集字是最齊全的，有些
-冷門字，或許他們才有。
+有時會不同，可能 OS distro 套件包裝者自己真的重新編譯字型，用 debian 系統
+package裝的是 Noto Sans CJK TC 但自己下載的變成 Noto Sans TC，所以這個名字要
+自己根據 fc-list 看到得來。不過台灣官方的全字庫跟教育部標準應該蒐集字是最齊全
+的，有些冷門字，或許他們才有。
 \begin{enumerate}
 \item \href{https://data.gov.tw/dataset/5961}{數位發展部的全字庫宋體與楷書}
 \item \href{https://language.moe.gov.tw/result.aspx?classify_sn=23&subclassify_sn=436}{教育部國字標準字體-宋楷隸}
