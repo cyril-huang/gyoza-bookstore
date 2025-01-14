@@ -72,17 +72,17 @@
 \end{verbatim}
 
 \begin{itemize}
-\item 主要用 section, subsetion, frame 做層次的分門別類，
-\item 在 section, subsection 內跟一般 \LaTeX 的用法一樣就可，
-      也可以插圖表等等。它們的內容就會一直呈現出來像紙張大小變小的頁面。
-\item frame 內定就只會出現一頁，如果長度太長，下面內容會被砍掉。
-\item tableofcontents 也變成一張 frame 成為總綱，會自動編 section subsection。
-\item frame 下也是很多用法一樣，只是內定是單張，所以像 verbatim 使用會不一樣，
-      要注意。
-\item 對齊選項 t, c, b 表示 top, center, bottom 對齊。內定是 center。
-      可用在 documentclass 或單張 frame
-\item bug: section 下用 verbatim, listings 會跑出一大段中間空白。
-      解決方法就是盡量都放進一個 frame 中，不要用 section 寫東西，這也是對的。
+  \item 主要用 section, subsetion, frame 做層次的分門別類，
+  \item 在 section, subsection 內跟一般 \LaTeX 的用法一樣就可，
+    也可以插圖表等等。它們的內容就會一直呈現出來像紙張大小變小的頁面。
+  \item frame 內定就只會出現一頁，如果長度太長，下面內容會被砍掉。
+  \item tableofcontents 也變成一張 frame 成為總綱，會自動編 section subsection。
+  \item frame 下也是很多用法一樣，只是內定是單張，所以像 verbatim 使用會不一樣，
+    要注意。
+  \item 對齊選項 t, c, b 表示 top, center, bottom 對齊。內定是 center。
+    可用在 documentclass 或單張 frame
+  \item bug: section 下用 verbatim, listings 會跑出一大段中間空白。
+    解決方法就是盡量都放進一個 frame 中，不要用 section 寫東西，這也是對的。
 \end{itemize}
 
 \begin{frame}[fragile] \frametitle{frame 特殊選項}

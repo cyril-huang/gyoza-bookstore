@@ -80,7 +80,7 @@ Cisco AP
 ，軟體管理強大，能夠一次上幾百幾千台的管理。需要一個特別的 Controller 當作
 管理主機。有三個 mode
 
-* autonomous  類似一般家用型，自己是 AP 也帶有簡單設定。
+* autonomous  類似一般家用型，自己是單一 AP 帶有簡單設定。無法管理多台。
 * lightweight 只能單純做 AP ，需要 Controller 才有用。
 * controller  能變身成同時有 AP 與強大 controller。
 
@@ -100,22 +100,65 @@ Controller/AP and AP/AP 間為 CAPWAP protocol 定義在 RFC 5246 5247
 based 管理的，也就是他們 controller 都在 amazon, azure 上，然後要每年繳保護費
 才能用硬體。這只能用 openwrt 把他們轉成可以用，但有的型號有保護還不能轉。
 
-用 controller 的壞處，基本就是太多設定不是一般人可以了解完成的。
+用 controller 的壞處，基本就是太多設定不是一般人可以了解完成的。其實很多人以
+為自己程度很好，但只是會一些基本設定而已。
 
 * 太複雜太多的設定
 * 安全性設定非常複雜
 
 controller 也有單一機器的型號，也有虛擬機。
 
+其實家用與商用說穿了就跟 desktop 與 server 電腦一樣，設計目的是不同的，
+server 商用的設計都是在服務很多人穩定， desktop 家用都在服務少數人爽，所以
+家用的功率，速度都是在單一機器中衝最快，以 AP 來說，家用品牌就是單一機器的
+power/amplification 都要盡量最大化，但商用反而服務 density 要最大，broadcast
+機子要更多，單一機器能 cover 的範圍反而小，cover 範圍要靠很多台 AP 來完成。
+商用機器都是要穩定，不會死掉，容錯高，安全性強， 一般個人其實是沒有感覺的，
+這都要大範圍大尺度的應用，問題才會跑出來。
+
+商用 AP 多是要鑲在天花板上的 ceiling mounted，這樣才能比較沒有死角的服務
+很多人。為了搶中小企業生意，有的會出那種精簡版的3 pack, 5 pack 一組的產品，
+這種就是把 controller 也事先放進一個 AP 裡面，其他就只是單純 AP ，然後很多
+內定設定設好，只給使用者簡單的初始安裝就好。
+
+所有機器都要管理軟體的，但Asus, TP-Link 內的軟體是沒有 CAPWAP 跨機器的，
+只是 controller 通常指的是有 CAPWAP 跨機器管理多台的管理軟體，因此 controller
+說穿了也只是一台 Linux 上的軟體而已，能跑在任何地方。現在其實有的晶片製造公司
+開始提供整套商用 AP 管理軟體 solution，是基於 openWRT 上的。
+
+在所有與美國公司差別就在於大型商用的產品設計測試與穩定差別，這是台灣公司做不
+到的。從記憶體ECC，XEON CPU，ATA/SCSI，到網路的商用產品都是一樣道理，只是一
+般人使用是沒有感受到的，一定是管理上千上萬百萬才有感。商用品牌除了 Cisco 外，
+應該就是 Aruba (HP), Mist (Juniper), Ruckus, aerohive(Extreme), Ubiquiti 等
+公司。根據一些討論
+
+* Cisco 不錯但價錢貴，難設定，新的 license model, cloud based 的某些型號更是
+  死要錢。
+* Aruba, Mist, Ruckus 評價也不錯。但 Aruba 被 HP 併購後，也開始學壞用些死要錢
+  的方法。
+* Extreme network 的 solution 是目前 2022 年 MLB NFL 球場的使用方案。
+* Ubiquiti 還是用在中小企業就好，但我在有些機場有看過 UI 產品。
+* 最新 update 是 Juniper 已經被 HPE 併吞了，還有 Cisco WIFI 7 以上 AP 看來都需
+  要貴森森的 DNA license，也就是不好玩了。
+
 models
 ------
 
-目前看來只有 AIREOS AP 跟 ISR switch/router 內建 AP 兩系列，其他像 business
-AP 系列屬於簡單型，不需要 controller 的。有的太老屬於 802.11n 以前的。
+目前看來只有 AIREOS AP 跟 ISR switch/router 內建 AP 兩系列，其他 business
+AP (CBW, cisco business wireless) 系列 controller 是 built-in 在一個機
+子的，但把 GUI 能設定的東西拿掉很多，所以買的時候，如果是買3 pack的，其實裡面
+只有一台有 controller，其實 CBW 只是Aironet 的設定簡化版，跟 Aironet 是一樣的
+機器，不同型號而已(router/switch 也常這樣，換個殼改個設定就是不同 model，不同
+價錢)。有的太老屬於 802.11n 以前的就不介紹。
+
+Aruba 中的 Instant On 產品線就是精簡版容易安裝，很多公司的 controller 在安裝
+上就叫 master AP 而已。Aruba 或有些公司的精簡產品線好處是，他沒有很強烈的
+controller 感受，隨便上去有的還會自動變成 master AP mode。不過如果是商場，球場
+這種幾萬人使用的，controller 基本上是要另外一台機器不能放在機子裡面的。
 
 AIREOS 型號最後以 C 結尾，表示內定 firmware 可作 controller，ISR 最後以 W
 結尾表示裡面有 AP。兩者內定如果沒有 controller 其實都可以去 software.cisco.com
-下載軟體轉成 controller/AP 兩用。其實就只是 Linux 裡面跑 cgroup container，
+下載軟體轉成 controller/AP 兩用。其實就只是 Linux 裡面跑 ns/cgroup container，
 裡面有兩個系統在跑而已。如果是單純 lightweight AP 就只有一個 Linux 在跑。
 
 硬體能力上，有的
@@ -137,6 +180,8 @@ AIREOS 型號
 * 1800 ~ 4800 -> 802.11acw2, can be lightweight/controller (ME)
 * 9100 ~ 9130 -> 802.11ax, can be lightweight/controller (EWC)
 * 9136 ~ 916x -> 802.11ax, only lightweight, need 9800&smart license
+* 917x        -> 802.11be, WIFI 7，但已經沒有 EWC image 可下載。說是可以
+                 9800 virtual WLC 管理，但不知道是否一定要訂閱 DNA license
 
 ISR router with AP model # end with W 型號
 
@@ -238,7 +283,7 @@ ISR , 小型商用 router/switch
 
 * dual 5G models: 只有 2800,3800,4800,9120,9130 可以變身有 2 個 5g mode.
 * 在二手貨市場中，我以為 3800 是最有 C/P  值的。20美金，可以有 5.2G 速度。
-  買三隻比一堆貴森森的家用 Wifi6 AP 強大很多。
+  買三隻比一堆貴森森的家用 WIFI 6/7/8 AP 強大很多。
 * ISR 中的 150w 是 switch 支援 POE 時的電源供應器，這比較貴要特別買的。
 
 firmware/system software
@@ -250,11 +295,13 @@ based 在 IOS-XE，是 兩個不同 Linux distribution 上。EWC 的命令因為
 based，比較是傳統人們認知的 IOS 命令，config t, show run, show ip int br
 等等。
 
-AIREOS 的版本號為 8.x.x, IOS-XE 的版本號為 17.x.x
+AIREOS 的版本號為 8.x.x, IOS-XE 的版本號為 17.x.x 只是其實新的 ME 也在 IOS-XE
+上了。所以會有兩者互相 compaitible 版本號。
 
 裡面其實是個在 arm 上跑 uboot 的 Linux，當 AP 同時有 AP 與 controller
-能力時，他其實是跑在 cgroup container 上而已，有兩個系統與兩個 IP，
-所以要小心， IP 不能重複打架。
+能力時，他其實是跑在 ns/cgroup container 上而已，有兩個系統與兩個 IP，
+所以要小心， IP 不能重複打架。而 autonomous mode 的機器跟家用一樣，
+只有一個 IP。
 
 software.cisco.com 裡面的下載檔案範例
 
@@ -271,29 +318,94 @@ C9800 是最新 Wifi 6 802.11ax 機型用的。
 請看官網說明 zip 檔使用
 https://www.cisco.com/c/en/us/td/docs/wireless/controller/technotes/8-2/b_Mobility_Express_Deployment_guide/b_Mobility_Express_Deployment_guide_chapter_01010.html
 
-AP 轉換則在 login admin 後用
+AP 開機後有可能
+
+* 原本就在 AP mode，內定是 Cisco/Cisco/Cisco
+* 被人家改成 Controller mode 了，這時會一直執行到 WLC 的 prompt 出來，如果是
+  第一次啟動 Controller mode，會執行 init script 問要不要做 configuration。
 
 ::
 
   轉 ME AP
   AP# ap-type mobile-express tftp://192.168.1.250/AIR-AP1815-K9-ME-8-10-185-0.tar
+
+  轉 EWC AP
+  AP# ap-type ewc-ap /reload tftp://192.168.1.250/ap1g6 tftp://192.168.1.250/C9800-AP-iosxe-wlc.bin,
+
   轉回 lightweight AP
   ME# apciscoshell
+  EWC# wireless ewc-ap ap shell username admin
   AP# ap-type capwap
 
-舊版升級 AP 也用
+admin 這個 username 是 controller 第一次設定時給的管理者帳號。
+
+舊版升級 AP 用
 
 ::
 
   AP# ap-type mobile-express tftp://192.168.1.250/ap3g2-k9w7-tar.153-3.JPQ.tar
 
-有些可以用另外一種命令
+可以用另外一種命令升級 AP，這就是直接把 zip 檔解開裡面的 apXgX 檔
 
 ::
 
-  AP# archive download-sw /overwrite /reload tftp:[[//location]/directory]/image-name
+  AP# archive download-sw /overwrite /reload tftp:[[//location]/directory]/ap1g6
 
-不管怎樣, apXgX 是適用不同 AP 型號，解開 zip 檔後可看到所有支援型號。
+不管怎樣, apXgX 是適用不同 AP 型號，解開 zip 檔後可看到所有支援型號。新的下載
+目前在 ME 2800, 3800, 4800 的 8.x 版本中只剩下 .tar 是 ME 的升級，.tar 檔變成
+2800, 3800, 4800 都一樣大小， .zip 裡面是所有 AP 的 image 包括
+
+::
+
+  $ cat apname_decoder.inc
+
+  /*AP Models and their Associated Image Names*/
+  AP1850(ap1g4)
+  AP1830(ap1g4)
+  AP4800(ap3g3)
+  AP3800(ap3g3)
+  AP2800(ap3g3)
+  AP1560(ap3g3)
+  IW6300(ap3g3)
+  ESW6300(ap3g3)
+  AP1815i(ap1g5)
+  AP1815w(ap1g5)
+  AP1815m(ap1g5)
+  AP1540(ap1g5)
+  AP1840(ap1g5)
+
+而在 9xxx 的 17.x 只剩下 .zip 檔，解開後有個 .bin 檔 C9800-AP-iosxe-wlc.bin,
+.bin 檔是用來變成 EWC controller 的
+
+::
+
+  # ap-type ewc-ap tftp://192.168.1.25/ap1g7 tftp://192.168.1.25/C9800-AP-iosxe-wlc.bin
+
+有個 readme 檔是
+
+::
+
+  CW_BEGIN
+  FAMILY: C9800-AP
+  IMAGE: C9800-AP-universalk9.17.15.04d.SPA.bin
+  DESCRIPTION: Cisco IOS Software, IOS-XE Software
+  VERSION: 17.15.04d
+  FULL_VERSION: 17.15.04d.0.311.1766136977..IOSXE
+  CW_END
+  AP IMAGES AND MODELS:
+  ap3g3 : AP380x, AP280x, AP156x, AP480x
+  ap1g4 : AP181x, AP183x, AP185x
+  ap1g5 : AP1815, AP154x, AP184x
+  ap1g6 : C9117
+  ap1g7 : C9115, C9120
+  ap1g6a : C9124, C9130
+  ap1g8 : C9105, WP-WIFI6, ISR-AP1101AX
+
+所以可以把 zip 檔解開升級 AP 直接下載那個 apXgX 檔就可以
+
+::
+
+  # archive download-sw /overwrite /reload tftp://10.0.0.137/8.10.196/ap1g7
 
 官網說明支援版本
 check https://www.cisco.com/c/en/us/td/docs/wireless/compatibility/matrix/compatibility-matrix.html#ctr-ap_support
@@ -302,7 +414,8 @@ check https://www.cisco.com/c/en/us/td/docs/wireless/compatibility/matrix/compat
 -------------
 
 如果拿到舊的，被人用過的，可以按 reset mode 按鈕 20 秒以上就會回到內定。30
-秒以上會清除所有組態檔。
+秒以上會清除所有組態檔，但原本是在 AP 就在 AP，原本是 controller 就一直在
+controller 不會回到 AP 了。
 
 硬體上通常有三個 port
 

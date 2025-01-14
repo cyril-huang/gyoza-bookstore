@@ -44,24 +44,27 @@
   這沒辦法快，只能慢慢才知道。
 
   \section{vim}
-    本來在學校是用emacs的，後來到公司後，大家都用vi，還是傳統的vi，我很快就
-    改用vi，到現在已經完全變vim了，vim的好處就是兩隻手永遠都在asdfjkl;上面。
-    \begin{verbatim}
-一。從命令到編輯模式
-a	：將游標放到目前游標後一個字元，開始文字編輯模式。append
-i	：將游標放在目前游標位置，開始文字編輯模式。insert
-o	：將游標放到下一行起始位置，開始文字編輯模式。open new line
-比較常用就是i,a,o,I,A,O了，將來多試幾次就好了，就很熟悉了。
-
-二從編輯到命令
-ESC	:沒事多按逃脫鍵，有益身體健康。
-
-三命令模式中的其他命令
-在命令模式中的按鍵就很多了，這些需要好好熟練一下了。
-在vi命令模式裡面，有的按鍵按完後他還是在命令模式，有的改個字元或copy/paste後
-又回到命令模式，有的就一去不回頭變成文字編輯模式了。
-有些按鍵會把你原本想改的內容做特殊的定位，例如要改個word，也會把你帶離命令模式
-
+    本來在學校是用 emacs 的，後來到公司後，大家都用 vi，還是傳統的 vi，我很快就
+    改用 vi，到現在已經完全變 vim 了，vim 的好處就是兩隻手永遠都在 asdfjkl;
+    上面。
+    \begin{enumerate}
+      \item 從命令到編輯模式
+        \begin{itemize}
+          \item a 將游標放到目前游標後一個字元，開始文字編輯模式。append
+          \item i 將游標放在目前游標位置，開始文字編輯模式。insert
+          \item o 將游標放到下一行起始位置，開始文字編輯模式。open new line
+        \end{itemize}
+      比較常用就是i,a,o,I,A,O了，將來多試幾次就好了，就很熟悉了。
+      \item 從編輯到命令模式\\
+        ESC 沒事多按逃脫鍵，有益身體健康。
+      \item 命令模式中的其他命令\\
+        在命令模式中的按鍵就很多了，這些需要好好熟練一下了， 在 vi 命令模式裡
+        面，有的按鍵按完後他還是在命令模式，有的改個字元或 copy/paste 後又回到
+        命令模式，有的就一去不回頭變成文字編輯模式了。 有些按鍵會把原本想改的
+        內容做特殊的定位，例如要改個 word，也會帶離命令模式
+    \end{enumerate}
+    如下命令按鍵
+\begin{verbatim}
 檔案
 :q		離開vi
 :e xxxx		編輯xxxx
@@ -204,9 +207,9 @@ zC
       \\\\
       幾個重要命令：
       \begin{itemize}
-        \item ta myvar 跳到myvar這個tag
-        \item ts myvar 列出有所有myvar tag的檔案。
-        \item pop 跳回去原來地方。
+        \item :ta myvar 跳到myvar這個tag
+        \item :ts myvar 列出有所有myvar tag的檔案。
+        \item :pop 跳回去原來地方。
       \end{itemize}
       幾個重要快速鍵：
       \begin{itemize}
@@ -223,18 +226,34 @@ zC
       \end{itemize}
 
       \subsubsection{external command}
-      例如使用:!ls來使用ls命令。使用:make 來做 make 。當用 make 時，cn
-      與 cl 是列出錯誤訊息並跳到發生錯誤行的命令。
+      例如使用:!ls來使用ls命令。使用:make 來做 make 。當用 make 時，vim 會
+      把結果放進一個叫 quickfix 的窗窗，把所有錯誤訊息丟進一個 quickfix list
+      ，cl 是列出所有 quickfix list，cn 與 cp 跳到發生錯誤行的命令。
 
       \subsubsection{autocomplete}
       ctrl-n 可以 autocomplete, autofill 自動補全打一半的字，不過這只是根據
       現有檔案內有的字串，要像一般 IDE 那樣，必須裝特別 vim plugin 才行。
 
       \subsubsection{vimdiff}
-        同時編輯兩個檔案並用顏色標出兩者不同處，這通常是用來解
-        branch merge後conflicts時所用。使用\verb=[c ]c=跳到下一個兩邊不一樣
-        的地方。解完後，顏色不同的地方會自動消失，我跟同事使用時，同事非常
-        驚豔，想說怎麼這麼好用，完全是他們不會用而已。
+      同時編輯兩個檔案並用顏色標出兩者不同處，這通常是用來解
+      branch merge 後 conflicts 時所用。使用 [c 與 ]c 跳到下一個兩邊不一樣
+      的地方。解完後，顏色不同的地方會自動消失，我跟同事使用時，同事非常
+      驚豔，想說怎麼這麼好用，完全是他們不會用而已。
+
+      \subsubsection{jump}
+      之前用 ctrl-], cn, [c, ]c ... 有很多方便的跳躍，這在 vim 裡面有個
+      jump list，用 :jumps 命令可以抓出之前所有跳躍地方。跳躍包括了
+      \begin{itemize}
+        \item 簡單的移動，w e 0 \{... 等等。
+        \item 所有 :jumps 列出的用 ctrl-i, ctrl-o。
+        \item 所有 :changes 列出修改過的地方，用 g, 與 g;。
+        \item u undo, ctrl-r redo
+        \item :make 所引發的 quickfix list 窗中的 cl, cn, cp。
+        \item vimdiff 時，一堆 diff 的地方，用 [c 與 ]c。
+        \item 搜尋程式 symbol 的地方, gd, gD, ctrl-], g ctrl-], ctrl-t。
+        \item 用 / ? * 的搜尋，與後續的 n N。
+      \end{itemize}
+
       \subsubsection{.vimrc}
       vim有豐富的內部變數設定，也有條件式的script可以使用與設定變數，像之前
       的syntax on這個就是命令之一，只是冒號: 都不用打了。所以可以把這些設定
@@ -527,13 +546,12 @@ M-*		:回去剛剛按尋找TAG的起始處。
         \item \href{https://github.com/neovim/neovim/blob/master/INSTALL.md}{下載 neovim}
         \item 安裝 lazyvim plugin
         \begin{verbatim}
-git clone https://github.com/LazyVim/starter \$HOME/.config/nvim
+git clone https://github.com/LazyVim/starter $HOME/.config/nvim
         \end{verbatim}
         \item 要花俏的外觀要裝
           \begin{itemize}
             \item \href{https://www.nerdfonts.com/}{nerd font} 這是 lazyvim
-              會用到字型。選 JetBrain，在 linux 中放到 \$HOME/.fonts 並且
-              mkfontscale
+              會用到字型。選 JetBrain，在 linux 中 ttf 檔放到 \$HOME/.fonts。
             \item \href{https://sw.kovidgoyal.net/kitty/}{kitty terminal}，
               這是 optional 的 terminal，因為 gnome-termianl, xfce4-terminal
               都可以顯示漂亮的 nerd font。
