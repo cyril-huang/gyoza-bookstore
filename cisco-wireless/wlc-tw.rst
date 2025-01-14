@@ -1300,6 +1300,93 @@ console 亂七八糟的字元
 
 另外AP 模式是有個 config boot 命令可以改 baudrate，其實就是去改 uboot 變數
 
+console 好像無法輸入
+--------------------
+
+console 好像按 ESC 跳不進去 uboot，或無法輸入字元，可能用了 serial RS232
+console 線，改用 USB console 線，或 USB 轉接 serial 的接頭就可以了。
+
+2800/3800 的 ethport init 錯誤，網路起不來
+------------------------------------------
+
+2802 3802 上發生，居然是製造時上錯 firmware 版本，所以有的新品居然
+會一直拿不到 IP。 用 capwap ap ip 命令 static ip 無法被設定。出現
+
+::
+
+  Capwap process not ready yet. Try after few moments.
+
+
+在 uboot 會看到他其實有2個 ethport，所以感覺有好的 ethport，
+查 installation user guide 會發現其實 AUX port 也是一個 eth port ，所以我們
+試看看從 AUX 連到外面，ㄟ，可以耶，這很奇怪，因為文件上文字部份說 AUX 是用來連
+modem 的，但 installation guide 裡卻又把他說也是個 ethernet port。
+uboot 下達 dhcp 會連 eth port 都 init 失敗，正常應該是會拿到 IP
+
+::
+
+  u-boot>> dhcp
+  mvEgigaInit: egiga1 mvNetaPortEnable failed (error)
+  mvEgigaInit: egiga1 failed
+  Uncompressing AQ phy firmware...
+  AQ_API_WriteBootLoadImage, with filesize=288770, load_addr=3f9f9ce0
+
+  0th port: Mailbox CRC-16 (0x0) does not match calculated CRC-16 (0xF6B)
+  resultCode: 100
+  resultCodes[0]: 213
+  Invalid return code
+  failed to init eth AQ PHY (error)
+  failed to init eth AQ PHY (error)
+  mvEgigaInit: egiga2 failed
+
+  u-boot>> sg
+  PHY 0 :
+  ---------
+  mvEthPhyRegRead: Err. Illegal PHY device address -1
+
+  PHY 1 :
+  ---------
+  Auto negotiation: Enabled
+  Speed: 1000 Mbps
+  Duplex: Half
+  Link: down
+
+  PHY 2 :
+  ---------
+  Auto negotiation: Enabled
+  Speed: 1000 Mbps
+  Duplex: Full
+  Link: up
+
+  PHY 3 :
+  ---------
+  mvEthPhyRegRead: Err. Illegal PHY device address -1
+
+這很奇怪，把 AUX port 接上網路，他就通了，而且 console log 上會看到 AUX port
+變成 wired0。但無論如何都無法 ping 出去，這只能 RMA 叫 support 了，但通常我們
+不是正常買的就沒辦法叫貴森森的 Cisco support 了，這 AP 就變磚頭沒用了。
+
+upgrade 出錯
+------------
+
+archive download-sw /reload 後，出現
+
+::
+
+  Error: '/etc/capwap-upgrade.sh PREDOWNLOAD' failure.
+
+這是因為 AP 曾經被 controller 控制過，因此不允許自己 upgrade 到別的版本，被
+controller 控制的 AP 有很多命令會失效，也會多出很多只能從 controller 下達的
+新命令，這要特別注意，所以要 upgrade ，只能從那個 controller 進行 upgrade。
+
+使用
+
+::
+
+  capwap ap erase all
+
+會清除掉所有 configuration，或者按著 mode button 超過 30 秒。
+
 無窮 reboot
 -----------
 
@@ -1346,6 +1433,12 @@ bundle-ap1g8-wp-wifi6-single-17_9_4_27.img ，ap1g8 是給 9105 等 AP 用的，
   造成 UDP 的 tftp 不穩。
 - 總之，不要用 AP, uboot 的 IP，也盡量用真實網路設備或許就沒問題。boardinit
   是最後救命神丸，但 image 只有內部員工有。
+- 這個最後在 2024 年中，有新的 update
+
+  * https://www.cisco.com/c/en/us/support/docs/field-notices/741/fn74109.html
+  * https://www.cisco.com/c/en/us/support/docs/wireless/wireless-lan-controller-software/221869-safely-upgrade-access-points-avoiding-i.html
+  * https://www.cisco.com/c/en/us/support/docs/wireless/catalyst-9800-series-wireless-controllers/220443-how-to-avoid-boot-loop-due-to-corrupted.html
+
 
 vWLC 開機起不來
 ---------------
@@ -1366,6 +1459,9 @@ vWLC 網路不通
 ----------------------------
 
 - dhcp 沒有設好，default gateway 要能反解 ARP。
+- dhcp server 設了 dhcp option 43，在 Cisco 的 capwap 使用 dhcp option 43 做
+  WLC discovery，所以確定 dhcp server 設定上 option 43 沒有被佔用。 如果 dhcp
+  server 亂設，會讓 ap 無法 join。
 - ME 或 EWC 要設定 TFTP server Adminitration -> Software Management，讓 AP 能
   變成跟 controller 同版本。
 - 第一次 AP join 只能使用 MIC certificate，controller 亂設成不准使用 MIC。
@@ -1560,7 +1656,8 @@ server 時，卻一定用 802.1q frame。 因為我設 WLC 的 IP 從來就都�
 uboot 命令
 ----------
 
-就是開機後，注意螢幕，趕快按 ESC 就會跳進 uboot，基本命令
+就是開機後，注意螢幕，趕快按 ESC 就會跳進 uboot，如果跳不進去，或是發現
+好像無法在 console 上輸入，則可改用 usb 的 console 線，基本命令
 
 ::
 

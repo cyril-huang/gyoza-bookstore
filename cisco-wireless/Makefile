@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-doc             := ap-tw wlc-tw
+doc             := 3700 uboot ap-tw wlc-tw
 TARGET          := $(addsuffix .html,$(doc)) $(addsuffix .pdf,$(doc))
 TW_SUNG         := $(shell fc-list :lang=zh-tw | sed -n 's/.*ttf: *\(TW.*Sung\).*/\1/p' | sed 's|\\||g')
 MOE_SUNG        := $(shell fc-list | sed -n 's/.*ttf: *\([^,]\+\),教育部.*宋體.*/\1/p')
