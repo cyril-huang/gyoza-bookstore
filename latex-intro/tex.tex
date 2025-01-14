@@ -1,144 +1,151 @@
 \chapter{{\TeX} 與 {\LaTeX} 介紹}
 李果正先生的
 \href{https://github.com/TeXtw/LaTeX123/releases/download/v1.0/latex123.pdf}
-{大家來學 \LaTeX}
+{大家來學 \LaTeX{}}
 是很好的起點文章，當然所謂專業排版一些吹毛求疵的要求，空間距離的美感等等都要
 再更進一步的了解才做得到。跟當年有些不同的是
 \begin{itemize}
-\item Unicode 已經普遍了，不像當年還在 Big5 轉換 Unicode 的時期。
-\item 不同字型標準的支援更完整了。點陣字，type 1, ttf, open type 等都可以用。
-\item double bytes 的支援一般性已經很成熟， 雖然還是有個別漂亮的支援%
-macro 可以選擇，但內定標準的中日韓越東亞字處理已經很可以。
+  \item Unicode 已經普遍了，不像當年還在 Big5 轉換 Unicode 的時期。
+  \item 不同字型標準的支援更完整了。點陣字，type 1, ttf, open type 等都可以用。
+  \item double bytes 的支援一般性已經很成熟， 雖然還是有個別漂亮的支援 macro
+    可以選擇，但內定標準的中日韓越東亞字處理已經很可以。
 \end{itemize}
-因此忘了以前那些奇怪的東西吧，現在就用標準工具就可以了。
-另外其他作業系統平台的 \TeX 使用，我是沒有什麼經驗的，我既然有 Linux 了，所有資
-源 packages 我都能在 Linux/vim 上完成，我就沒必要去玩其他的了，畢竟我的目的是
-整理我所學，用我的語言彙整一遍以達教學相長，並留下自己參考的紀錄，所以我的文章
-也都不是很嚴謹，很多規定排版也都很隨意沒有嚴格遵守。
+因此可以忘了以前那些奇怪的東西，現在就用標準工具就可以了。
+\\\\
+另外其他作業系統平台的 \TeX{} 使用，我是沒有什麼經驗的，既然有 Linux 了，所有
+資源 packages 都能在 Linux/vim 上完成，就沒必要去玩其他的了，畢竟目的是整理所
+學，用我的語言彙整一遍以達教學相長，並留下自己參考的紀錄，所以文章也都不是很
+嚴謹，很多規定排版也都很隨意沒有嚴格遵守。
+
 \section{基本術語回顧}
-總結一下， \TeX 是
+總結一下， \TeX{} 是
 \begin{itemize}
-\item 一種程式語言，用來表達文字排版 (text formating, typesetting) 的各種可能。
-例如對齊，字型，時間，counter (可用來算頁數等等) 等等。因為它是程式語言，
-所以有 if else 這些語法，
-又或者例如 \verb=\def= ，用來定義新函數的命令。 把它想成某種 script 也可以，
-而引擎就是在解讀 \TeX 這種 script 的程式。因此它也必須像編譯或像 python, perl
-一樣的處理 tex 檔案。
-\item 是 stanford 的 computer science 老師 Donald Knuth 發表的程式。這起源於
-  最早鼎鼎大名的Knuth教授不滿意他的數學示子被書商排的很醜，最早的排版都是使用
-  傳統排字機(typsetting machine)，但是他的書第一版跟第二版相隔了8年，打字機已
-  經不一樣了，印出的品質不滿意下， 乾脆就自己開發了這個數位幕後排版語言。
-  TeX 最早也只能輸出在固定品牌 xerox 的排字機上，後來就輸出成一個 dvi 檔格式
-  ，從這個抽象排版的中介格式能再透過 driver 轉換世界其他的印表機，排字機，pdf
-  ,ps, html, rft ... 等不同輸出。因此轉換過程中產出很多檔案，例如
-  \begin{itemize}
-    \item dvi device indepedent 的抽象檔，xdvi (extend dvi)。
-    \item toc table of contents 目錄
-    \item log 程式執行發生的狀況，錯誤時找原因的檔。
-    \item idx index 索引檔。
-    \item aux auxiliary 檔是包含所有參照資訊，在書中像很多圖，書後面索引等。
-    \item lof list of figure 所有圖形資訊。
-    \item olt list of table 所有表格資訊。
-    \item ...
-  \end{itemize}
-  所有的程式與中介都是抽象再抽象的分類與涵蓋，不管你寫 C ,perl, python, \TeX{}
-  ，舉例就是小時學的生物分類，界門綱目科屬種，動物，植物，胎生，卵生...的分類，
-  每一種分類都會爭標準，例如圖書館分類學中，有杜威分類，美國國會分類等，
-  排版寫文章一樣有分類，只是一般人或小孩子不知道規矩與歸納整理的分類，因此會產
-  生上述檔案，dvi 只是一種中介分類標準，如果微軟的 doc 開放格式給大家知道，那
-  他也可以來爭中介標準讓大家從這個標準下產生其他的輸出格式。 不過很多檔案先不
-  用管他。
-\item 版本號碼是 3.141592653....
-\item 最根本的 primitive \TeX 總共有 325 control sequences，也可叫它 macro 或者
- command。使用
-\begin{verbatim}
+  \item 一種程式語言，用來表達文字排版 (text formating, typesetting) 的各種可
+    能，例如對齊，字型，時間，counter (可用來算頁數等等) 等等。因為它是程式語
+    言， 所以有 if else 這些語法， 又或者例如 \verb=\def= ，用來定義新函數的
+    命令。 把它想成某種 script 程式也可以， 而引擎就是在解讀 \TeX{} 這種 script
+    的程式。因此它也必須像編譯或像 python, perl script 一樣的處理 tex scrtip 
+    檔案。
+  \item 是 stanford 的 computer science 老師 Donald Knuth 發表的程式。這起源於
+    最早鼎鼎大名的Knuth教授不滿意他的數學示子被書商排的很醜，最早的排版都是使用
+    傳統排字機(typsetting machine)，但是他的書第一版跟第二版相隔了8 年，打字機
+    已經不一樣了，印出的品質不滿意下， 乾脆就自己開發了這個數位幕後排版語言。
+    \TeX{} 最早也只能輸出在固定品牌 Xerox 的排字機上，後來就輸出成一個 dvi 檔
+    格式，從這個抽象排版的中介格式能再透過 driver 轉換世界其他的印表機，排字機
+    ，pdf ,ps, html, rft ... 等不同輸出。因此轉換過程中產出很多檔案，例如
+    \begin{itemize}
+      \item dvi device indepedent 的抽象檔，xdvi (extend dvi)。
+      \item toc table of contents 目錄
+      \item log 程式執行發生的狀況，錯誤時找原因的檔。
+      \item idx index 索引檔。
+      \item aux auxiliary 檔是包含所有參照資訊，在書中像很多圖，書後面索引等。
+      \item lof list of figure 所有圖形資訊。
+      \item olt list of table 所有表格資訊。
+      \item ...
+    \end{itemize}
+    所有的程式與中介都是抽象再抽象的分類與涵蓋，不管你寫 C ,perl, python,
+    \TeX{} ，舉例就是小時學的生物分類，界門綱目科屬種，動物，植物，胎生，卵生
+    ... 的分類，每一種分類都會爭標準，例如圖書館分類學中，有杜威分類，美國國會
+    分類等， 排版寫文章一樣有分類，只是一般人或小孩子不知道規矩與歸納整理的分
+    類，因此會產生上述檔案，dvi 只是一種中介分類標準，如果微軟的 doc 開放格式
+    給大家知道，那也可以來爭中介標準讓大家從這個標準下產生其他的輸出格式。
+  \item 版本號碼是 3.141592653....
+  \item 最根本的 primitive \TeX{} 總共有 325 control sequences，也可叫它
+    macro 或者 command。使用
+    \begin{verbatim}
 \command[optional parameter]{mandatory parameter}
-\end{verbatim}
-這樣形式。
-\item literate programming 與 WEB 語言: 編譯程式其實是用 Pascal 寫的，但 Knuth
-先生不滿意程式寫作語法而自創 WEB 程式系統，literate programming 意思就是像
-寫作文那樣的寫出程式，而要達到這樣的語意分析，就會在程式語言解讀上動手腳，
-舉例像物件導向程式中， 1 + 1 = 2, "string 1" + "string 2"，為了能讓
-數字相加跟字串相加有相同意義，就要在編譯程式解釋這些語意上加上很多判斷邏輯，
-這增加的是寫編譯器的人的負擔，但盡量減少使用者的痛苦，尤其是什麼都不懂的初學者，
-literate programming 比這更大膽的想法就是用人類自然語言就能寫出程式。WEB 還是
-用 Pascal 的，只是像使用 script 解譯器，巨集等更多語意的解讀。在很多地方會看到
-web 的工具，不要跟現在什麼 html web programming 搞混了。其實一堆的程式語言產生
-很多部份就是在爭辯哪個語意比較好，這就是為什麼說真正要寫好程式還是
-必須從 C 來學，才有真正了解系統與解決問題能力。搞這些就跟咬文嚼字一樣爭論不休。
+    \end{verbatim}
+    這樣形式。
+  \item literate programming 與 WEB 語言: 編譯程式其實是用 Pascal 寫的，但
+    Knuth 先生不滿意程式寫作語法而自創 WEB 程式系統，literate programming 意
+    思就是像寫作文那樣的寫出程式，而要達到這樣的語意分析，就會在程式語言解讀
+    上動手腳， 舉例像物件導向程式中， 1 + 1 = 2, "string 1" + "string 1" =
+    "string 2"，為了能讓數字相加跟字串相加有相同意義，就要在編譯程式解釋這些
+    語意上加上很多判斷邏輯， 這增加的是寫編譯器的人的負擔，但盡量減少使用者
+    的痛苦，尤其是什麼都不懂的初學者， literate programming 比這更大膽的想法
+    就是用人類自然語言就能寫出程式。WEB 還是用 Pascal 的，只是像使用 script
+    解譯器，巨集等更多語意的解讀。在很多地方會看到 web 的工具，不要跟現在
+    html web programming 搞混了。很多一堆的程式語言產生很大部份在爭辯哪個語
+    意比較好，這就是為什麼說真正要寫好程式還是必須從 C 來學，才有真正了解系
+    統與解決問題能力，搞這些就跟咬文嚼字一樣爭論不休。
 \end{itemize}
 其他術語
 \begin{description}
-\item [Macro] 或者有人叫 {\TeX} command 類似子函數呼叫的巨集。也就是基於一些
-基本的 \TeX 工具呼叫又更高的功能呼叫。
-像 C 的函數厙，printf 並不是 C 的基本功能，它只是基於 write() 的螢幕高功能呼叫。
-在最早 Knuth 老師也有 release 他自己的 macro ，叫 plain \TeX 大約有 600 個新命令。
-\item [package] 眾多 macro 集合的檔案就是 package，把它想成類似 C 的 library 檔。
-例如美國數學協會用來寫數學式子，或者論文形式 2 columns 的排版效果。package 檔
-以 .sty 為副檔名。
-\item [engine] 所謂的引擎就是某種輸入經由變換，產出另一種輸出。像汽油燒一燒，
-轉成車子動能輸出。 根據 \TeX 語言規則做輸入分析，輸出轉換的軟體就是 \TeX 引擎。
-引擎有 HONDA，TOYOTA，同樣 \TeX 引擎也有多種實做。或者類似 C 編譯器，C 語言引擎
-能解讀 C 檔案的語法，轉成某種作業系統的執行檔，有 ms visual c, gnu c, 以前有
-borland c。目前{\TeX} 引擎實做有
+  \item [Macro] 或者有人叫 {\TeX} command 類似子函數呼叫的巨集。也就是基於一些
+    基本的 \TeX{} 工具呼叫又更高的功能呼叫。 像 C 的函數厙，printf 並不是 C 的
+    基本功能，它只是基於 write() 的螢幕高功能呼叫。 寫死在原本 Pascal 裡面的
+    macro 功能稱 primitive macro，在最早 Knuth 老師也有 release 他自己的 macro
+    ，叫 plain \TeX{} macro 大約有 600 個新命令。
+  \item [package] 眾多 macro 集合的檔案就是 package，把它想成類似 C 的 library
+    檔，例如美國數學協會用來寫數學式子，或者論文形式 2 columns 的排版效果。
+    package 檔 以 .sty 為副檔名。
+  \item [engine] 所謂的引擎就是某種輸入經由變換，產出另一種輸出，像汽油燒一燒，
+    轉成車子動能輸出。 根據 \TeX{} 語言規則做輸入分析，輸出轉換的軟體就是
+    \TeX{} 引擎。 引擎有 HONDA，TOYOTA，同樣 \TeX{} 引擎也有多種實做。或者類似
+    C 編譯器，C 語言引擎能解讀 C 檔案的語法，轉成某種作業系統的執行檔，有 MS
+    Visual C, GNU C, Borland C ... 。目前{\TeX} 引擎實做有
   \begin{itemize}
-  \item plain \TeX 最早由 Knuth 發表的引擎程式。輸入處理 7 bits，輸出原本
-  只能輸出到特定打字機格式，但後來有加上所謂 dvi 格式(device independent)，
-  再由 dvi 再轉出可能的各種打字機或者 postscript, pdf, opendoc 等等不同格式。
-  \item pdftex 後來大部分人使用的程式，但只能處理 8 bit，它跟 plain \TeX 最大
-        差別在於它能直接輸出 pdf 檔，很多範例使用的 shell 命令 pdflatex 就是
-        這引擎下的一個工具。
-  \item luatex 除了能直接使用 unicode 輸入，最重要是可以使用 LUA 這個程式語言
-	進一步處理的引擎。由於 \TeX
-        當初在發展時就想到世界上不可能完全一樣邏輯處理不同語言，所以很多分類抽象化
-	高階處理最後都是用 callback, hooking 呼叫，例如字型處理時，有這麼多
-        種字型，ttf, opentype, bitmap 等，真正處理一定是呼叫相對應的函數，這些
-        函數不是寫死的，而是動態可以設定將來呼叫 3rd party 的新函數來處理。
-        \href{https://en.wikipedia.org/wiki/Lua_(programming_language)}{lua 語言}
-        是類似一般 script 的語言。不過很多人也用它再去叫 python, perl，來當做
-        處理的 hooking。也就是它下放新函數處理給一般使用者，不再侷限只是當初寫
-        引擎的程式師而已。
-  \item xetex 新的能直接處理 unicode 輸入的 tex 檔案引擎。輸出直接產生新的
-        xdvi (extend dvi 格式) 與 pdf 格式。
-  %stopzone
+    \item plain \TeX{} 最早由 Knuth 發表的引擎程式。輸入處理 7 bits，輸出原本
+      只能輸出到特定打字機格式，但後來有加上所謂 dvi 格式(device independent)，
+      再由 dvi 再轉出可能的各種打字機或者 postscript, pdf, opendoc 等等不同格
+      式。
+    \item pdftex 後來大部分人使用的程式，但只能處理 8 bit，它跟 plain \TeX{}
+      最大差別在於它能直接輸出 pdf 檔，很多範例使用的 shell 命令 pdflatex 就是
+      這引擎下的一個工具。
+    \item luatex 除了能直接使用 unicode 輸入，最重要是可以使用 LUA 這個程式語言
+      進一步處理的引擎。由於 \TeX{} 當初在發展時就想到世界上不可能完全一樣邏輯
+      處理不同語言，所以很多分類抽象化高階處理最後都是用 callback, hooking 呼
+      叫，例如字型處理時，有這麼多種字型，ttf, opentype, bitmap 等，真正處理一
+      定是呼叫相對應的函數，這些函數不是寫死的，而是動態可以設定將來呼叫 3rd
+      party 的新函數來處理。
+      \\\\
+      \href{https://en.wikipedia.org/wiki/Lua_(programming_language)}{lua 語言}
+      是類似一般 script 的語言。不過很多人也用它再去叫 python, perl，來當做
+      處理的 hooking。也就是它下放新函數處理給一般使用者，不再侷限只是當初寫
+      引擎的程式師而已。
+    \item xetex 新的能直接處理 unicode 輸入的 tex 檔案引擎。輸出直接產生新的
+      xdvi (extend dvi 格式) 與 pdf 格式。%stopzone
   \end{itemize}
-\item [distribution] 跟 Linux 一樣意思，整個系統很龐大，macro 眾多，
-這麼多 macro package 有相依性， 要怎樣參照，
-怎樣收集，怎樣改版，升級，發布等等，目前很大的 {\TeX} distro 為 texlive。收集了
-很多功能的 package ，很多的 sty 檔，還有各種工具程式，包括文件閱讀等等，這些檔
-案寫作也有一定規矩還有檔案分佈也有 {\TeX} 組織所建議的 TeX Directory Structure.
-\item [TUG] \href{http://tug.org}{{\TeX} users group} ，
-是目前最大的 community ，主要發展討論還有標準的探討建立。
-\item [CTAN] \href{http://www.ctan.org}{The Comprehensive TeX Archive Network}, 
-是所有收集想到的 macro 工具，引擎等等網站。
+  \item [distribution] 跟 Linux 一樣意思，整個系統很龐大，macro 眾多， 這麼多
+    macro package 有相依性， 要怎樣參照， 怎樣收集，怎樣改版，升級，發布等等，
+    目前很大的 {\TeX} distro 為 texlive。收集了很多功能的 package ，很多的 sty
+    檔，還有各種工具程式，包括文件閱讀等等，這些檔案寫作也有一定規矩還有檔案分
+    佈也有 {\TeX} 組織所建議的 \TeX{} Directory Structure.
+  \item [TUG] \href{http://tug.org}{{\TeX} users group} ，
+    是目前最大的 community ，主要發展討論還有標準的探討建立。
+  \item [CTAN] \href{http://www.ctan.org}
+    {The Comprehensive \TeX{} Archive Network}, 
+    是所有收集想到的 macro 工具，引擎等等網站。
 \end{description}
 過去中文環境或各國大學也都有出自己的 macro 收集，有些 macro 是為了解決亞洲語言
-不是 8 bits 的問題等等，因此形成非常混亂的名詞，一堆 xxxTeX，
-但說穿了，他們都只是 macro 的創造者與收集者，過去真正引擎還是 pdftex 用最多。
-當然也有商用的引擎與 macro 收集(我猜還是很多是改 opensource 過來的)。
-就把它想成一堆不同的 Linux 發行版本。
+不是 8 bits 的問題等等，因此形成非常混亂的名詞，一堆 xxxTeX， 但說穿了，他們都
+只是 macro 的創造者與收集者，過去真正引擎還是 pdftex 用最多。 當然也有商用的引
+擎與 macro 收集(我猜還是很多是改 opensource 過來的)，就把它想成一堆不同的
+Linux 發行版本。
 \\\\
 基本上可以用 
-\href{https://en.wikibooks.org/wiki/TeX}{primitive \TeX}，
-plain \TeX 跟一些 macro 就能完成排版的。可以參考
-\href{https://ctan.math.utah.edu/ctan/tex-archive/info/impatient/book.pdf}{{\TeX} for the impatient}
+\href{https://en.wikibooks.org/wiki/TeX}{primitive \TeX}， plain \TeX{} 跟一些
+macro 就能完成排版的。可以參考
+\href{https://ctan.math.utah.edu/ctan/tex-archive/info/impatient/book.pdf}
+{{\TeX} for the impatient}
 ，這大概有400頁的英文，先不要看，等將來有需要再回頭看怎麼寫自己 macro。
 \\\\
-而 \LaTeX
+而 \LaTeX{}
 \begin{itemize}
-\item 是專門用來寫作文章的 macro ，基於基本的 \TeX 與 macro 創造出的新 macro。
- 例如 \verb=\chapter=, \verb=\section=，\verb=\begin{itemize} \item ... = 
- 等用於文章邏輯結構的巨集命令。
-\item 特別的 environment ，使用 \verb=\begin{xxx} ... \end{xxx}=
-\item 命令形式有三種，standard command, group switch, environment，
-並且提供後來的 macro 使用開發新 macro 。
-\item 除了 \LaTeX 外，另外有一組寫文章的叫 ConTeXt 的 macro ，也在 TUG 的維護。
-\item 目前版本為 \LaTeX 2e 在 1994 取代 \LaTeX 2.09。\LaTeX 3 在醞釀中。
+  \item 是專門用來寫作文章的 macro ，基於基本的 \TeX 與 macro 創造出的新 macro。
+     例如 \verb=\chapter=, \verb=\section=，\verb=\begin{itemize} \item ... = 
+     等用於文章邏輯結構的巨集命令。
+  \item 特別的 environment ，使用 \verb=\begin{xxx} ... \end{xxx}=
+  \item 命令形式有三種，standard command, group switch, environment，
+  並且提供後來的 macro 使用開發新 macro 。
+  \item 除了 \LaTeX{} 外，另外有一組寫文章的叫 ConTeXt 的 macro ，也在 TUG 的
+    維護。
+  \item 目前版本為 \LaTeX{} 2e 在 1994 取代 \LaTeX{} 2.09。\LaTeX{} 3 在醞釀中。
 \end{itemize}
-\TeX 的原本命令中，也能做出像列舉 list ，原封不動的 verbatim 等元素，也有
-所謂的 group 與可命名的 group 稱為 environment，environment 是表示這命令
-的設定作用在另一群相關的命令。 而且是可以一個 environment 裡面包另一個 
-environment nest 下去的， 但都要寫一堆複雜東西才得到效果，舉例像 \LaTeX 列舉
+原本 \TeX{} 的命令中，也能做出像列舉 list ，原封不動的 verbatim 等元素，也有所
+謂的 group 與可命名的 group 稱為 environment，environment 是表示這命令的設定
+作用在另一群相關的命令， 而且是可以一個 environment 裡面包另一個 environment
+nest 下去的， 但都要寫一堆複雜東西才得到效果，舉例像 \LaTeX{} 列舉
 \begin{verbatim}
 \begin{itemize}
 \item item 1
@@ -150,66 +157,79 @@ environment nest 下去的， 但都要寫一堆複雜東西才得到效果，�
 \end{itemize}
 \end{verbatim}
 itemize 是一個環境的名字，然後裡面有 \verb=\item= 這個命令，作用直到 end 結束
-，而 item 這個命令也只在 itemize 這環境中有意義。但以往光用 \TeX 時不是這麼簡單。
-\LaTeX 提供更 general 的 這樣 environment 語法，在後面寫 macro 中，
+，而 item 這個命令也只在 itemize 這環境中有意義。但以往光用 \TeX{} 時不是這
+麼簡單。 \LaTeX{} 提供更 general 的 這樣 environment 語法，在後面寫 macro 中，
 給後來者用這種方法加上新的 environment 的好方法。
 \\\\
 一般命令形式有三種形式
 \begin{itemize}
-\item standard \verb=\cmd[可選擇參數]{一定要給的參數}=，命令會影響整個後面文章。
-\item group (switch) \verb={\cmd }=，包在括號裡面的樣子。命令只作用在括號中。
-\item environment \verb=\begin{env} ... \end{env}=，用 begin, end 包起來。
+  \item standard \verb=\cmd[可選擇參數]{一定要給的參數}=，命令會影響整個後面文
+    章。
+  \item group (switch) \verb={\cmd }=，包在括號裡面的樣子，命令只作用在括號中。
+  \item environment 使用
+    \begin{verbatim}
+\begin{env}
+  ...
+\end{env}
+    \end{verbatim}，用 begin, end 包起來。
 \end{itemize}
-例子
+group 例子
 \begin{verbatim}
-{\fontsize{50}{60} \selectfont \LaTeX}
+{\fontsize{50}{60} \selectfont \LaTeX{}}
+\end{verbatim}
+{\fontsize{50}{60} \selectfont \LaTeX{}}
+\\\\
+environment 例子
+\begin{verbatim}
 \begin{center}
-\begin{Huge}
-Huge and Centralized Text !!
-\end{Huge}
-\begin{itemize}
-\item item 1 is inside itemize environment
-\end{itemize}
+  \begin{Huge}
+    Huge and Centralized Text !!
+  \end{Huge}
+  \begin{itemize}
+    \item item 1 is inside itemize environment
+  \end{itemize}
 \end{center}
 \end{verbatim}
-最後命令與括號中如果有星星 * ，表示他有特別處理。每種命令有不同意義，要根據
-文件說明才知道。例如
+最後命令與括號中如果有星星 * ，表示他有特別處理。每種命令有不同意義，要根據文
+件說明才知道。例如
 \begin{verbatim}
 \section*{no section numbering}
-\end{verbatim}表示這個 section 不會參與編號，在目錄上就看不出 1.1.3 \dots
-這樣編號。而像 
+\end{verbatim}
+表示這個 section 不會參與編號，在目錄上就看不出 1.1.3 \dots 這樣編號。而像
 \verb=\begin{tabular*}= 表示這個表格寬度會自動使用到整個頁面寬度。
 \begin{verbatim}
 \includegraphics*{my.eps}
-\end{verbatim}表示會裁切掉圖片超出大小的部份。
+\end{verbatim}
+表示會裁切掉圖片超出大小的部份。
 
 \section{字型}
-字型檔跟圖檔一樣，也有很多種標準，用來描述字型的方法有很多種，
-但能任意放大縮小不會變醜變形還是要從數學來，數學方法中
-主要是用曲線控制點方程式貝茲曲線 Bézier curves,
+字型檔跟圖檔一樣，也有很多種標準，用來描述字型的方法有很多種， 但能任意放大縮
+小不會變醜變形還是要從數學來，數學方法中 主要是用曲線控制點方程式貝茲曲線
+Bézier curves,
 \begin{description}
-\item [bitmap] 最笨的一點一點畫點方法的字型檔。
-\item [\MF{}] Knuth 先生當年創立的向量字型描述。看到 xxxmf 的就是關於字型。
-\MF{} 也是一種程式語言，由於背後數學曲線函數在那，所以也可拿來畫圖，
-雖然後來 METAPOST and Asymptote 是比較推薦的畫數學圖形工具。
-\item [postscript type 1] 由 adobe 公司在1985年制定的字型描述規格，副檔名是 pfb。
-  這也是傳統 pdftex 引擎的使用字型。
-\item [true type ttf] 由蘋果公司稍早制定的字型描述規格。檔名可以是 ttf 或者 ttc
-，truetype collection。
-\item [open type otf] 由microsoft adobe 在 2000 年左右制定的 truetype 後繼規格。
-\item [TeX font metric] tfm 是一種字型檔案格式，跟其他向量字檔 pfb, ttf, ttc
-等不同，ttf, ttc 這些檔有圖形資料，叫 outline 字檔，font metric
-只提供寬度，高度，深度等需要丈量的資訊，並不提供實際的圖形，實際的 glyphs
-是存在 outline 的。metric font 是排版一定需要的，不然無法計算距離空白等等，adobe
-的排版 font metric 格式叫 afm 。Windows 的叫 pfm。因此會有工具
-從字型檔擷取出 font metric，然後會有一個 map 檔來 map manufacturer name 跟
-font name 在兩者間關係。一種字型可能是好多個 outline 檔組成，所以 map 檔內容
-就是很多 tfm 檔跟 pfb 的對應。
-\item [font definition] fd 檔，這裡面是 font 的文字定義檔，一個字型，有名字
-有編碼，有分類等等，由於 \TeX 能處理多種字型，所以必須把不同字型的資訊做
-統整統一的抽象化。 fd 檔是 \TeX 程式存取的資訊檔。 舊的引擎設定字型名，必須
-從這個 fd 檔來。一個 .fd 檔列出了一個 encode 一個 family 所有可能的 fonts
-，例如 ot1ptm.fd 紀錄了所有屬於ptm (Times Roman) 與 OT1 編碼的字型。
+  \item [bitmap] 最笨的一點一點畫點方法的字型檔。
+  \item [\MF{}] Knuth 先生當年創立的向量字型描述。看到 xxxmf 的就是關於字型。
+    \MF{} 也是一種程式語言，由於背後數學曲線函數在那，所以也可拿來畫圖，
+    雖然後來 METAPOST and Asymptote 是比較推薦的畫數學圖形工具。
+  \item [postscript type 1] 由 adobe 公司在1985年制定的字型描述規格，副檔名是
+    pfb。 這也是傳統 pdftex 引擎的使用字型。
+  \item [true type ttf] 由蘋果公司稍早制定的字型描述規格。檔名可以是 ttf 或者
+    ttc ，truetype collection。
+  \item [open type otf] 由microsoft adobe 在 2000 年左右制定的 truetype 後繼規
+    格。
+  \item [\TeX{} font metric] tfm 是一種字型檔案格式，跟其他向量字檔 pfb, ttf,
+    ttc 等不同，ttf, ttc 這些檔有圖形資料，叫 outline 字檔，font metric 只提供
+    寬度 ，高度，深度等需要丈量的資訊，並不提供實際的圖形，實際的 glyphs 是存在
+    outline 的 ttf ... 檔案。metric font 是排版一定需要的，不然無法計算距離空
+    白等等，adobe 的排版 font metric 格式叫 afm 。Windows 的叫 pfm。因此會有工
+    具 從字型檔擷取出 font metric，然後會有一個 map 檔來 map manufacturer name
+    跟 font name 在兩者間關係。一種字型可能是好多個 outline 檔組成，所以 map
+    檔內容 就是很多 tfm 檔跟 pfb 的對應。
+  \item [font definition] fd 檔，這裡面是 font 的文字定義檔，一個字型，有名字
+    有編碼，有分類等等，由於 \TeX{} 能處理多種字型，所以必須把不同字型的資訊做
+    統整統一的抽象化。 fd 檔是 \TeX{} 程式存取的資訊檔。 舊的引擎設定字型名，
+    必須從這個 fd 檔來。一個 .fd 檔列出了一個 encode 一個 family 所有可能的
+    fonts ，例如 ot1ptm.fd 紀錄了所有屬於ptm (Times Roman) 與 OT1 編碼的字型。
 \end{description}
 type 1 跟 truetype 在當年算是競爭對手，只是當年 Microsoft 在 Windows 選擇了
 Truetype ，type 1 其實用 cubic Bézier curves, 用了四個控制點來畫曲線，truetype
@@ -218,51 +238,51 @@ Truetype ，type 1 其實用 cubic Bézier curves, 用了四個控制點來畫�
 opentype 檔案裡面其實是可以包含 type 1 ,truetype 的資訊的，所以 opentype
 裡面如果其實是 type 1 或 truetype 字型， 那麼優缺點跟原本的是一樣的。
 \\\\
-引擎中 luatex, xetex 都能處理以上字型，並且處理程式會自己找一些內定
-目錄跟視窗系統，不管 是 Microsoft, X (包含蘋果跟類Unix系統)的字型使用。
+引擎中 luatex, xetex 都能處理以上字型，並且處理程式會用系統程式庫自己找到內定
+目錄跟視窗系統，不管是 Microsoft, X (包含蘋果跟類Unix系統) 的字型使用。
 \\\\
 但是 pdftex 有兩件事是比較落伍的
 \begin{enumerate}
-\item 需要在處理前，所有的 tfm 檔與 map 檔都建造完成，不像新的 luatex
-與 xetex 是能一邊抓到字型檔，一邊建造 tfm, map 檔，因此 pdflatex 的字型引用
-很奇怪，必須是 fd 檔裡面設定的字型名。
-\item 它一次每個 tfm 只能處理 256 個 glyphs 外型，由於中文字很多，所以
-要多建立不同 tfm 檔，所以在 fonts/type1 下看到中文字型的 pfb 檔很多個。
+  \item 需要在處理前，所有的 tfm 檔與 map 檔都建造完成，不像新的 luatex 與
+    xetex 是能一邊抓到字型檔，一邊建造 tfm, map 檔，因此 pdflatex 的字型引用
+    很奇怪，必須是 fd 檔裡面設定的字型名。
+  \item 它一次每個 tfm 只能處理 256 個 glyphs 外型，由於中文字很多，所以要多
+    建立不同 tfm 檔，所以在 fonts/type1 下看到中文字型的 pfb 檔很多個。
 \end{enumerate}
 如果沒有建立好 tfm 檔，則 pdflatex 是無法使用這個字型的，也因此能用的字
 比較受限，除非自己很懂，用工具創造出 distro 外的新字型。
 \\\\
 字型跟設定有關的attribute，這些資訊也是抽象化的資料型態。
 \begin{description}
-\item [encode] 就是這字型編碼，最早由於電腦資源寶貴，很多標準都是考慮英
-文字母而已，因此最早的 \MF{} 字型編碼是 7bits 的 OT1 編碼，這是 Knuth
- 先生的發明， 這也導致原本的 \TeX 引擎其實是只能處理 7bits 的，當然
-現在盡可能都不用了。
-\item [family] 或叫 typeface, 有三大種 roman, sans serif, teletype(typewriter typeface)
-\item [series] medium , bold 粗體
-\item [shape] italic 義大利斜體， slant 斜體, small caps (sc)
-\item [size] 就是大小，要注意的應該是大小所用單位。
+  \item [encode] 就是這字型編碼，最早由於電腦資源寶貴，很多標準都是考慮英文字
+    母而已，因此最早的 \MF{} 字型編碼是 7bits 的 OT1 編碼，這是 Knuth 先生的發
+    明， 這也導致原本的 \TeX 引擎其實是只能處理 7bits 的，當然現在盡可能都不用
+    了。
+  \item [family] 或叫 typeface, 有三大種 roman, sans serif, teletype (
+    typewriter typeface)
+  \item [series] medium , bold 粗體
+  \item [shape] italic 義大利斜體， slant 斜體, small caps (sc)
+  \item [size] 就是大小，要注意的應該是大小所用單位。
 \end{description}
 字型 family (typeface) 有成千上萬例如 Times, Courier, Helvetica ...，但會
-落在三大分類， serif, Sans serif 跟 monospaced ，{\LaTeX} 用 roman (rm),
+落在三大分類， Serif, Sans serif 跟 Monospaced ，{\LaTeX} 用 roman (rm),
 sans serif (sf), 還有 teletype (tt) 來分別表示。看到 serif 就是羅馬字，
-sans serif 特點是筆畫厚度均勻，
-而 tt 就是字與字間隔固定的字型，用在以往打字機與現代 terminal。
+sans serif 特點是筆畫厚度均勻， 而 tt 就是字與字間隔固定的字型，用在以往打字機
+與現代 terminal。
 \\\\
-\LaTeX 內定是用一個叫 Computer Modern 的字型，是 Knuth 老師設計的，也包含上面
-三種分類。看到 cmxxxx 什麼的就是關於它的字型。
-\LaTeX 內文設定用 Roman(serif) 字，羅馬字規定在很多排版術語中都是內定字，
-或者電腦圖形界面的內定使用字型，網頁版面內定字型等等。
+\LaTeX{} 內定是用一個叫 Computer Modern 的字型，是 Knuth 老師設計的，也包含上面
+三種分類。看到 cmxxxx 什麼的就是關於它的字型。 \LaTeX{} 內文設定用 Roman(serif)
+字，羅馬字規定在很多排版術語中都是內定字， 或者電腦圖形界面的內定使用字型，網
+頁版面內定字型等等。
 \\\\
-中文的宋體、黑體、仿宋體和楷體為漢字印刷的主要四種字體，歷史上宋體是
-中國明代木版印刷中出現的字體，原形為宋代模仿楷書基本筆劃，但由於木板很硬，
-結果變成不是楷書的直劃新字體。傳進日本稱為明朝體，由日本傳回台灣叫明體，
-中國大陸一直叫宋體\footnote{康熙時，官方規定叫做宋體} ，
-台灣則兩者都有人稱呼。明體為正統排版內文使用，為
-roman (serif)，在 google noto 字型，或者 adobe 的字型中，分別為
+中文的宋體、黑體、仿宋體和楷體為漢字印刷的主要四種字體，歷史上宋體是中國明代木
+版印刷中出現的字體，原形為宋代模仿楷書基本筆劃，但由於木板很硬， 結果變成不是
+楷書的直劃新字體。傳進日本稱為明朝體，由日本傳回台灣叫明體， 中國大陸一直叫宋
+體 \footnote{康熙時，官方規定叫做宋體} ， 台灣則兩者都有人稱呼。明體為正統排版
+內文使用，為 roman (serif)，在 google noto 字型，或者 adobe 的字型中，分別為
 宋體(rm/serif) 黑體(sf/sans serif)。
 \\\\
-NFSS New Font Selection Scheme 是在 \LaTeX 2e 版本出現的選字，
-plain \TeX 並無法同時選用斜體與粗體，當用\verb=\bf\it= 時，只得到斜體
-當用\verb=\it\bf=時只得到粗體，為了解決這問題，\LaTeX 2e 提出了
-新的選字 macro 。
+NFSS New Font Selection Scheme 是在 \LaTeX{} 2e 版本出現的選字工具， plain
+\TeX{} 並無法同時選用斜體與粗體，當用\verb=\bf\it= 時，只得到斜體當用
+\verb=\it\bf=時只得到粗體，為了解決這問題，\LaTeX{} 2e 提出了新的選字 macro，
+還有後來的 fontspec package 使用。

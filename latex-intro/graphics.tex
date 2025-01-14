@@ -1,6 +1,7 @@
 \chapter{\LaTeX{} 畫圖}
-畫圖雖然有 ipe, inkscape 等工具，不過直接在紙上畫會更精準一點，所以
-使用 macro 畫圖雖然痛苦但也精準有趣，只不過要多記一些東西。
+畫圖雖然有 ipe, inkscape, gnuplot 等工具，然後使用 \verb=\includegraphics=，不
+過直接在紙上畫會更精準一點，所以使用 macro 直接畫圖雖然痛苦但也精準有趣，只不
+過要多記一些東西。
 
 \section{picture}
 picture 是最基本的畫圖 package，主要用 
@@ -88,8 +89,8 @@ circle* 表示是個填滿黑色的實心圓。
 \section{pgfplots}
 簡單的 pgfplots 使用 pgfplots package 跟 pgfplotsset 來設定真實大小， 是
 很好畫 x-y 圖的工具。 pgfplots 是基於 tikz 的 plot 系統，能夠快速畫出座標
-系統，能做 symbolic 運算畫圖， 也能引進實驗數據，畫出 X-Y 圖。
-內定 texlive 是沒有裝，要自己 tlmgr install pgfplots，
+系統，能做 symbolic 運算畫圖， 也能引進實驗數據，畫出 X-Y 圖，等於是 \LaTeX{}
+版的 gnuplot。 內定 texlive 是沒有裝，要自己 tlmgr install pgfplots，
 \begin{verbatim}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18,width=10cm}
