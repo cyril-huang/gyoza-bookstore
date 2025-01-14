@@ -4,9 +4,13 @@
     畫畫包在kernel外面然後在包一層AP，我比較不贊同這種畫法啦，
     對於我來說shell也只是另外一種application程式而已，其實它跟gimp, netscape
     等等是一樣的東西，只是會被login叫出來。所以他是可以替換的一種應用程式。
-    用C program來想，這樣子還可以幫你了解環境變數。
+    用 C program來想，這樣子還可以幫你了解環境變數。
     \begin{center}
-    \includegraphics[width=10cm,height=13cm]{images/shell.png}
+      \includegraphics[width=10cm,height=13cm]{images/shell.png}
+    \end{center}
+    比較正確的畫法，應該是這樣
+    \begin{center}
+      \includegraphics[width=0.4\textwidth]{images/unix-system.png}
     \end{center}
     寫一隻shell其實非常簡單，主要是捉到user打的命令後，用fork跑出另一process
     （記住unix like是多人多工的然後在要這個child process用exec去執行這個

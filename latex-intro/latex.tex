@@ -10,12 +10,14 @@
 \documentclass[a4paper,10pt,twoside]{book}
 
 \usepackage{xeCJK}
+\usepackage{longtable}
 \usepackage{fontspec}
 \usepackage{wrapfig}
 \usepackage{fancyhdr}
 \usepackage{listings}
 \usepackage{hyperref}
-\usepackage{graphicx}
+\usepackage[xetex]{graphicx}
+\usepackage{caption}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{array}
 \usepackage{makeidx}
@@ -27,8 +29,10 @@
 \usepackage{metalogo}
 \usepackage{pgfplots}
 \usepackage{tikz}
-
 \usepackage[margin=2cm]{geometry}
+\setlength{\marginparwidth}{1.5cm}
+\usepackage{todonotes}
+\usepackage{float}
 
 \parindent=0pt
 \pgfplotsset{compat=1.18,width=10cm}
@@ -41,7 +45,9 @@
   backref,
   unicode=true,
   bookmarks=true,
+  pdftitle=\LaTeX{}基本使用,
   pdfauthor=Cyril Huang,
+  pdfkeywords=tex latex,
   colorlinks=true,
   breaklinks=true,
   hyperfigures=true,

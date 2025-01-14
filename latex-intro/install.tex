@@ -4,7 +4,7 @@
 有了上面的一些基本觀念，就可以安裝了， 過去有的 distribution 有
 \begin{itemize}
  \item teTeX, 古老的 distro ，現在已經被 TeX Live 取代了，就把它想成 slackware 吧。
- \item TeX Live 目前最大的 \TeX distribution。所以我們就裝這個吧。
+ \item TeX Live 目前最大的 \TeX distribution，所以就裝這個吧。
  \item MacTeX 蘋果用的。
  \item MiKTeX MS-Windows 用的。
 \end{itemize}
@@ -13,15 +13,15 @@
 
 \section{從 Linux 上安裝}
 網路上看很多人說安裝很難，對於 Linux 來說就一行命令就裝完了，真不知道難在哪裡
-，真正難在怎麼裝的剛剛好你要的就好。
+，真正難在怎麼裝的剛剛好所需要的就好。
 \\\\
-debian/ubuntu
+debian/ubuntu/mint
 \begin{verbatim}
 # apt install texlive-lang-chinese texlive-xetex
 \end{verbatim}
-redhat/centos/alma/rocky/fedora
+redhat/centos/alma/rocky/fedora 可用 dnf 或 yum
 \begin{verbatim}
-# yum install texlive-collection-langchinese
+# dnf install texlive-collection-langchinese
 \end{verbatim}
 如果是 CentOS stream, Alma, Rocky 的 distro ，則在AppStream/ repository 下。
 \\\\
@@ -55,17 +55,18 @@ lualatex  luatex  plain  xelatex  xetex
 \begin{verbatim}
 /usr/share/doc/texlive-doc
 \end{verbatim}
-macro 的用法可以在下面找到。使用 distribution 收集的文件閱讀工具 texdoc 來搜尋與閱讀
+macro 的用法可以在下面找到，或者在上面 find . -name "*.pdf"。使用 distribution
+收集的文件閱讀工具 texdoc 來搜尋與閱讀
 \begin{verbatim}
 $ texdoc -l luatexja
 $ texdoc -s ams
 \end{verbatim}
-不過很多想看的都沒有找到，可能沒有裝 package，所以可能直接 google texdoc amsmath,
-texdoc listings 等等的直接幫你找到 CTAN 的文章比較快。新的 
+不過很多想看的都沒有找到，可能沒有裝 package，所以可能直接 google texdoc
+amsmath, texdoc listings 等等的直接幫你找到 CTAN 的文章比較快。新的 
 \href{https://texdoc.org}{texdoc 網站}也有搜尋整個 tex 文件的能力。
 
 \section{中文使用}
-先來看看我們有什麼字型可以用。fc-list 命令第二欄位就是字型名稱，
+先來看看有什麼字型可以用。fc-list 命令第二欄位就是字型名稱，
 可以在 \LaTeX{} 設定中使用的。
 \begin{verbatim}
 $ fc-list 
@@ -97,8 +98,8 @@ $ fc-list :lang=zh-tw
 \end{scriptsize}
 其中第二欄位的名字就是拿來設定字型用的，有逗號表示多種別名。
 \\\\
-使用古老的 pdftex 引擎也能處理 unicode ，
-但選擇能直接處理 unicode ttf/otf 的 lualatex 或 xelatex 引擎與工具。
+使用古老的 pdftex 引擎因為是 8 bits，所以也能稍微處理 unicode，
+但選擇能直接處理 unicode ttf/otf 的 lualatex 或 xelatex 引擎與工具比較好。
 \\\\
 lualatex 範例:
 
@@ -148,6 +149,19 @@ xelatex 範例:
 
 \end{document}
 \end{verbatim}
+基本 \LaTeX{} 文件就像寫程式一樣有模板要遵守
+\begin{itemize}
+  \item 從 documentclass 設定開始，目前所有 class 與設定文件可以在
+    \href{https://ctan.org/topic/class}{https://ctan.org/topic/class} 找到，
+    最常用的就是 book, report (報告), article (不能有 chapter),
+    beamer (powerpoint 簡報)等等，也有給老師出考題用的 exam class，不同 class
+    有不同內定命令，class 檔為 cls 副檔名，例如 book 就是 book.cls ，所以引入
+    名稱須以 cls 檔名為主。
+  \item usepackage 引入像程式庫的所需 package，這個是 sty 檔主檔名，另外也能
+    用純 \TeX{} 命令 \verb=\input= 引入 tex 檔做為程式庫。
+  \item documentclass 到 begin document 前稱為 preamble 區，裡面的設定為全域
+    設定影響整個文件， 之後到 end document 結束為本文區。
+\end{itemize}
 lualatex 中文社群決定不開發新的 package ，沿用日本的 luatexja 就好，因為
 漢字處理兩者是一樣的，即使 CJKV 這四個漢字圈的韓國越南大概也不用漢字了。
 \\\\
@@ -169,13 +183,12 @@ $ lualtex test.tex
 所以也不再做這些輸出，有興趣的就自己玩其他的工具。
 \\\\
 有的例子會用 \verb=\usepackage{CJK}= 套件，這個套件是舊的 pdftex 使用的，
-所以它的目錄編排方式好像還是以前 teTeX 的 /usr/share/texmf/tex 而不是
-/usr/share/texlive/texmf-dist， 它也有 UTF8 編碼， 如果真有 Big5, 
-GB, JIS 編碼舊文件要處理，也可以用這套件，只是 pdftex 它字型使用
-必須是相關 tfm/map 已經建立，所以若是建立不完全則無法使用。
-而設定名字必須是從 fd 檔裡面找到真正字型名稱用在 CJK package 裡面。
-我就是從 /usr/share/texlive 跟 /usr/share/texmf 下面搜尋 fd 檔，
-然後去看名稱，因此用 pdflatex 除非自己懂造新字型的，不然是很受限
+它在 debian 的系統目錄編排方式好像還是以前的 /usr/share/texmf/tex 而不是
+/usr/share/texlive/texmf-dist， 它也有 UTF8 編碼， 如果真有 Big5, GB, JIS 編
+碼舊文件要處理，也可以用這套件，只是 pdftex 它字型使用必須是相關 tfm/map 已
+經建立，所以若是建立不完全則無法使用。 而設定名字必須是從 fd 檔裡面找到真正字
+型名稱用在 CJK package 裡面。 從 /usr/share/texlive 跟 /usr/share/texmf 下面
+搜尋 fd 檔，然後去看名稱，因此用 pdflatex 除非自己懂造新字型的，不然是很受限
 於 distro 給你的字型。
 \\\\
 pdflatex 範例
@@ -198,12 +211,12 @@ pdflatex 範例
 \begin{verbatim}
 $ pdflatex test.tex
 \end{verbatim}
-這個 bkai 名字是 fd 檔案裡面的，這是 Big 5 楷書，只是用 pdflatex 引擎，
-可以轉換 Big 5 到 UTF8。 最後編譯如果出錯，都會有個 xxx.log 檔，裡面會有
+這個 bkai 名字是 fd 檔案裡面的，這是 Big 5 楷書，只是用 pdflatex 引擎，texlive
+裡面有轉換 Big 5 到 UTF8 的定義。最後編譯如果出錯，都會有 xxx.log 檔，裡面會有
 整個編譯總結，錯誤訊息都在裡面。
 
 \section{進階安裝}
-其實像我安裝 Linux 時，我都是裝我需要的東西就好，有些大 package 的安裝，
+其實像安裝 Linux 時，可以是裝所需要的東西就好，有些大 package 的安裝，
 裝了一大堆亂七八糟的東西，但要做到只安裝有需要的，就必須對整個系統有粗淺的了
 解才有可能。
 \\\\
@@ -264,12 +277,17 @@ rpm 形式的反而比 deb 的複雜很多。就先不管它了
 
 \subsection{最小安裝 - 從CTAN}
 如果沒有 root 權限，或不想裝 Linux 系統 package ，那麼就自己從 CTAN 抓 texlive
-來，只是這我裝起來也要1G，也蠻大的。
+來，只是這裝起來也要1G，他會把所有文件包括 pdf 檔都裝起來，所以也蠻大的。
 \begin{enumerate}
-\item \href {http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz}{CTAN 下載}
+\item \href {http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz}
+  {CTAN 下載}
 \item 執行 ./install-tl
+\item 這會需要 wget 下載
 \item 調整選項，按 S 選 c ，small scheme, 這個會裝 xetex 引擎。
-\item 繼續調整其他，按 D 像是 TEXDIR TEXMFHOME 目錄。
+\item 繼續調整其他，按 D 像是 TEXDIR TEXMFHOME 目錄，TeXLive library，傳統字
+  型，文件尋找都根據這些環境變數，不過 -local -config -var 這些只是 Unix
+  local 目錄小參數設定，自動相對於 TEXDIR ，先不用管，TEXMFHOME 是給個人
+  HOME 目錄設定，沒有 root 權限就放在個人的 TEXDIR 下也可以。
 \item 裝完後，要多增加 PATH, MANPATH, INFOPATH，就可以用了。
 \end{enumerate}
 \begin{center}
@@ -292,11 +310,13 @@ package 管理只有幾件重要事情
 \item 如何升級？
 \item 怎麼移除全部安裝？
 \end{itemize}
-看看裝了什麼 package
+看看裝了什麼 texlive 套件，這邊要小心的這是 texlive distro 套件，不是 \LaTeX{}
+package，不是 sty 檔，一個 texlive 套件含多個 \verb=\usepackage= 要用的 sty 檔。
 \begin{verbatim}
 $ tlmgr list
 \end{verbatim}
-安裝移除。我們是要裝 xecjk 的，所以 remove 只是命令。
+安裝移除，需要多安裝 texlive xecjk 套件，這個 xecjk 名字是 texlive 不是
+\LaTeX{} sty 引入 package 名。
 \begin{verbatim}
 $ tlmgr install xecjk
 $ tlmgr remove xecjk
@@ -304,18 +324,24 @@ $ tlmgr remove xecjk
 package 的資訊
 \begin{verbatim}
 $ tlmgr info xecjk
-$ tlmgr info --list xecjk
+$ tlmgr info --list xecjk 抓出 texlive 套件所有檔案列表，在找需要的 cls sty 檔名有用
 \end{verbatim}
 尋找
 \begin{verbatim}
-$ tlmgr search --global --file cfr-lm.sty
-$ tlmgr list | grep ducks 用 search 有的是找不到，用 grep 比較好
+$ tlmgr search --global --file cfr-lm.sty 尋找真正 \usepackage 需要的 sty 檔
+$ tlmgr info pgffor 使用 info 找不到套件名，會自動找有關字串
+$ tlmgr list | grep ducks 用 list 是找不到 sty 檔的，用 search 或 info 比較好
 \end{verbatim}
-升級
+升級，更新同步遠端 repository 與本地的資訊
 \begin{verbatim}
+$ tlmgr update --self
 $ tlmgr update --list
 $ tlmgr update --all
 \end{verbatim}
+當 tlmgr update 失敗時，會請求下載
+\href{https://mirrors.ctan.org/systems/texlive/tlnet/update-tlmgr-latest.sh}
+{update-tlmgr-latest.sh} 執行一次 update。
+\\\\
 設定原本的內定值，例如換掉遠端 repository 的位址
 \begin{verbatim}
 $ tlmgr option repsoitory https://mirror.ctan.org/systems/texlive/tlnet
@@ -334,20 +360,12 @@ $HOME/.local/share/fonts
 或者舊的
 $HOME/.fonts 下
 \end{verbatim}
-然後用
-\begin{verbatim}
-$ mkfontscale
-$ mkfontdir
-$ fc-list
-\end{verbatim}
-製作向量字型 index 。
-\\\\
 下載中文字型，不過這很多在系統 package 上也是有啦，現在主要用 google
 Adobe 合作的 opensource 思源字體，Noto 字體，不過用系統裝的跟下載的名字
-有時會不同，不知為啥，我用 debian 系統package裝的是
-Noto Sans CJK TC 但自己下載的變成 Noto Sans TC，所以這個名字要自己根據
-fc-list 看到得來。不過台灣官方的全字庫跟教育部標準應該蒐集字是最齊全的，有些
-冷門字，或許他們才有。
+有時會不同，可能 OS distro 套件包裝者自己真的重新編譯字型，用 debian 系統
+package裝的是 Noto Sans CJK TC 但自己下載的變成 Noto Sans TC，所以這個名字要
+自己根據 fc-list 看到得來。不過台灣官方的全字庫跟教育部標準應該蒐集字是最齊全
+的，有些冷門字，或許他們才有。
 \begin{enumerate}
 \item \href{https://data.gov.tw/dataset/5961}{數位發展部的全字庫宋體與楷書}
 \item \href{https://language.moe.gov.tw/result.aspx?classify_sn=23&subclassify_sn=436}{教育部國字標準字體-宋楷隸}
@@ -357,6 +375,7 @@ fc-list 看到得來。不過台灣官方的全字庫跟教育部標準應該蒐
 \item \href{https://github.com/googlefonts/kosugi-maru}{日本-日文小杉丸體}
 \item \href{https://github.com/ichitenfont/I.Ming}{一點明體-修改日本 ichiten 的明體}
 \item \href{https://sites.google.com/view/jtfoundry/zh-tw}{台北黑體-翰字鑄造公司改造思源適合印刷字型}
+\item \href{https://zi-hi.com/}{字嗨}
 \item \href{https://github.com/ButTaiwan/iansui}{芫荽字體-新增改造fontworks 的klee而來}
 \item \href{https://github.com/justfont/open-huninn-font}{粉圓體-新增改造小杉丸來}
 \item \href{https://github.com/l10n-tw/cwtex-q-fonts}{cwTeX truetype}
@@ -384,7 +403,7 @@ fonts.conf 與裡面的 conf.d 目 錄。 所以如果是手動用 install-tl �
 texlive 在他目錄下 texmf-dist/fonts/type1 裡面 cjk 帶有 arphic 繁體字字型，
 是文鼎以前 open 的字型，texmf-dist/fonts/misc/cns 裡面有 CNS 國家中央標準局
 的 bitmap 字型，這好像是現在數位發展部負責了。但 arphic 是 Big5，而 cns 是
-CNS 碼還是 bitmap，所以我想應該沒人會用了，不知道為啥安裝 cjk 套件還裝這些。
+CNS 碼還是 bitmap，所以應該沒人會用了，不知道為啥安裝 cjk 套件還裝這些。
 當用
 \begin{verbatim}
 tlmgr list | grep arphic

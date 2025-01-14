@@ -605,6 +605,38 @@ git show .git/lost-found/other/048b54843c14fa344ecb11a70860a53acb3bff24
   \end{verbatim}
   可以看到被殺掉的檔案。
   \\\\
+  基本上所有在 branch 上有過的紀錄都會在 .git/objects 下面，如果真的莫名其妙
+  東西不見了，例如 hard reset, git pull 回 commit amend 連 commit sha id 都沒
+  ，可以用 git cat-file 找回來，在 .git/objects 目錄有時間，先找出
+  \begin{verbatim}
+ls -lsrt
+  \end{verbatim}
+  則會有目錄與檔案，目錄是 sha id 的 prefix 前兩碼，所以真正 sha id 是目錄加上
+  檔名，例如 .git/objects/b9/425871d4495437efb7db6991f09c5a25e2b6ad
+  \begin{verbatim}
+git cat-file -p b9425871d4495437efb7db6991f09c5a25e2b6ad
+  \end{verbatim}
+  可用
+  \begin{verbatim}
+git verify-pack -v .git/objects/pack/pack*.idx
+  \end{verbatim}
+  找出消失的 object id，
+  用以下 shell scripts 找出真正的 object sha id 與檔名
+  \begin{verbatim}
+  #!/bin/bash
+
+for f in .git/objects/*/*;
+  do prefix=$(echo $f | cut -d / -f 3);
+  obj=$(echo $f | cut -d / -f 4);
+  type=$(git cat-file -t $prefix$obj);
+
+  if [[ $type == 'tree' ]];
+  then
+    echo $prefix$obj;
+    git cat-file -p $prefix$obj;
+  fi;
+done;
+  \end{verbatim}
   也可以使用rebase來回到想要的原本那點，例如回去兩個commit點
   \begin{verbatim}
   $ git rebase -i HEAD^^  past 2 commits
