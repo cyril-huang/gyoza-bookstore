@@ -1,0 +1,77 @@
+1702/2702/3702
+==============
+
+我們曾經撿到很多3702i， 但後來我有更好的機器，所以我都把3702丟掉了。
+這是因為朋友想改 3702 給家人用，所以我就跟著玩了一下 3702 機器，畢竟
+這也有 WIFI 5 wave 1 的能力，還是不錯用的，但二手市場價錢沒有很好，
+很多賣的跟 3802 一樣價錢，但他比較簡單設定。
+
+- 1702/2702/3702 只有 lightweight 或 autonomous mode
+- autonomous mode 跟家用一樣，只有一個 IP ，不像 controller/AP 有兩個 IP
+- lightweight image 都是xxxxw8xxxx.tar, autonomous mode 是 xxxxw7xxxx.tar
+- 一樣要去software.cisco.com 下載
+- 命令是
+
+::
+
+  archive download-sw tftp://TFTP_SERVER_IP/ap3g2-k9w7-tar.153-3.JPK6.tar
+    /overwrite /force-reload
+
+- 轉完後，才會有 IOS 完整命令，show run, show version, enable, config t, ...
+- default uid/passwd/enable : Cisco/Cisco/Cisco
+- show ip int br 真正的 ethernet port access 是 BVI 那個 interface。如果是
+  自己設 static IP ，請設定 BVI interface。
+
+最基本能動的設定，不用 RADIUS，用 CLI
+
+* 設定 SSID
+
+::
+
+  ap(config) dot11 ssid my3702
+  ap(config-ssid) guest-mode
+  ap(config-ssid) authentication open
+  ap(config-ssid) authentication key-management wpa version 2
+  ap(config-ssid) wpa-psk ascii Cisco123
+
+
+* 設定 2.4G interface
+
+::
+
+  ap(config) interface Dot11Radio 0
+  ap(config-if) encryption mode ciphers aes-ccm
+  ap(config-if) ssid my3702
+  ap(config-if) channel least-congested
+  ap(config-if) no shut
+
+* 設定 5G interface
+
+::
+
+  ap(config) interface Dot11Radio 1
+  ap(config-if) encryption mode ciphers aes-ccm
+  ap(config-if) ssid my3702
+  ap(config-if) channel dfs
+  ap(config-if) no shut
+
+因為在 2020 年後這產品已經EOL不支援了，然後新版本的 GUI 已經根本不能用，
+新版本只做 security update。如果是舊版
+
+* 改 enable password
+
+::
+
+  ap(config) enable secret 0 myNewEnablePasswd
+
+* 必須打開 http server
+
+::
+
+ ap(config)# ip forward-protocol nd
+ ap(config)# ip http server
+ ap(config)# ip http secure-server
+
+* 很多網路講解是設定 BVI interface ip/mask/gw ，這樣會自動轉dhcp 成 manual
+  好像一定要這樣才能用 https:// 進去，但我試的新版本是不行的。
+* 總之 GUI 在新版應該是不能用了，一般人也都用 CLI 設定。

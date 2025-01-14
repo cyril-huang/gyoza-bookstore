@@ -189,8 +189,10 @@ luatex
 
 debian套件:
 
-  texlive, latex2html, latex2rtf, texlive-xetex,
-  latex-cjk-chinese (可不裝，如果使用xetex的話)
+  texlive, texlive-xetex,
+  texlive-extra-utils (裡面有轉換 html 的 make4ht)
+  latex2html, latex2rtf, (額外轉換工具)
+  latex-cjk-chinese (可不裝，如果使用 xetex 的話)
 
 網頁文件:
 
@@ -293,6 +295,7 @@ Example
 ::
 
   $ xelatex xxx.tex; xelatex xxx.tex
+  $ make4ht xxx.tex xxx.html
   $ latex2html xxx.tex
   $ latex2rtf xxx.tex
 

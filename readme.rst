@@ -10,9 +10,9 @@
 * scripts 包含常用 scripts 大集合第二版
 * opentoolsv2 開發軟體中常使用到的 opensource 工具第二版
 * api 撰寫 application 使用的不同 API 介紹
-* lnx-device Linux device driver 與 embedded system。
+* lnx-device Linux device driver 與 embedded system。(未完待續 ...)
 * c-system C 語言與系統程式寫作
-* admin Linux System Admin 說明
+* admin Linux System Admin 說明 (未完待續 ...)
 * cisco-wireless 是我閒暇玩 Cisco 無線網路的心得。
 
 如果要從 tex 檔製作 pdf，那要小心使用字型可能不存在，必須去改 latex 檔的字型
